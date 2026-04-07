@@ -1,6 +1,6 @@
 # backend/cli/commands/chat.py
 """
-Chat command for GenZ AI CLI.
+Chat command for ASTRAMIND CLI.
 Sends a chat message to the backend and displays the response.
 """
 
@@ -19,12 +19,12 @@ def chat_command(
     stream: bool = typer.Option(True, help="Stream the response"),
 ) -> None:
     """
-    Send a chat message to the GenZ AI backend.
+Send a chat message to the AstraMind backend.
 
-    This command makes an HTTP request to the chat endpoint,
-    passing the prompt and optional parameters.
-    Requires authentication token.
-    """
+This command makes an HTTP request to the chat endpoint,
+passing the prompt and optional parameters.
+Requires authentication token.
+"""
     async def _chat():
         if not token:
             typer.echo("Error: Authentication token required (--token)", err=True)

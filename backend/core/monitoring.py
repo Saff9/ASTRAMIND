@@ -8,7 +8,7 @@ import json
 import logging
 import asyncio
 from typing import Dict, List, Any, Optional, Callable
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass, asdict
 from collections import defaultdict, deque
 from enum import Enum
@@ -103,7 +103,7 @@ class MetricsCollector:
                 value=value,
                 type=metric_type,
                 labels=labels or {},
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(timezone.utc),
                 description=description
             )
             
@@ -122,7 +122,7 @@ class MetricsCollector:
     
     def get_metric_history(self, name: str, hours: int = 1) -> List[Metric]:
         """Get metric history for the last N hours."""
-        cutoff = datetime.utcnow() - timedelta(hours=hours)
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
         with self._lock:
             return [m for m in self.metrics.get(name, []) if m.timestamp >= cutoff]
     
@@ -188,7 +188,7 @@ class MetricsCollector:
         """Background thread to evaluate alert rules."""
         while self._running:
             try:
-                current_time = datetime.utcnow()
+                current_time = datetime.now(timezone.utc)
                 
                 for rule in self.alert_rules:
                     metric_name = rule["metric"]
@@ -221,7 +221,8 @@ class MetricsCollector:
                                     timestamp=current_time
                                 )
                                 self.alerts[alert_id] = alert
-                                logger.warning(f"ALERT: {alert.message}")
+                                if settings.ENABLE_ALERT_LOGS and not settings.is_development():
+                                    logger.warning(f"ALERT: {alert.message}")
                         else:
                             if alert_id in self.alerts:
                                 self.alerts[alert_id].resolved = True
@@ -260,12 +261,12 @@ class MetricsCollector:
             "active_alerts": len([a for a in self.alerts.values() if not a.resolved]),
             "total_alerts": len(self.alerts),
             "app_metrics": self.app_metrics.copy(),
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
     
     def cleanup(self):
         """Clean up old metrics."""
-        cutoff = datetime.utcnow() - timedelta(hours=24)
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
         
         with self._lock:
             for metric_name in list(self.metrics.keys()):

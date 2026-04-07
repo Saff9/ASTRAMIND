@@ -14,6 +14,8 @@ from app.models.provider_status import ProviderStatus
 from services.adapters.groq import GroqProvider
 from services.adapters.openrouter import OpenRouterProvider
 from services.adapters.huggingface import HuggingFaceProvider
+from services.adapters.openai_compatible import OpenAICompatibleHealthProvider
+from core.config import settings
 import logging
 
 logger = logging.getLogger(__name__)
@@ -27,11 +29,51 @@ def get_providers():
     """
     Get provider instances for health checking.
     """
-    return {
+    providers = {
         "groq": GroqProvider(),
         "openrouter": OpenRouterProvider(),
         "huggingface": HuggingFaceProvider(),
     }
+
+    # Conditionally add additional configured providers (OpenAI-compatible)
+    if settings.together_api_keys:
+        providers["together"] = OpenAICompatibleHealthProvider(
+            name="together",
+            base_url=settings.TOGETHER_BASE_URL,
+            api_key=settings.together_api_keys[0],
+        )
+    if settings.mistral_api_keys:
+        providers["mistral"] = OpenAICompatibleHealthProvider(
+            name="mistral",
+            base_url=settings.MISTRAL_BASE_URL,
+            api_key=settings.mistral_api_keys[0],
+        )
+    if settings.cerebras_api_keys:
+        providers["cerebras"] = OpenAICompatibleHealthProvider(
+            name="cerebras",
+            base_url=settings.CEREBRAS_BASE_URL,
+            api_key=settings.cerebras_api_keys[0],
+        )
+    if settings.siliconflow_api_keys:
+        providers["siliconflow"] = OpenAICompatibleHealthProvider(
+            name="siliconflow",
+            base_url=settings.SILICONFLOW_BASE_URL,
+            api_key=settings.siliconflow_api_keys[0],
+        )
+    if settings.alibaba_bailian_api_keys:
+        providers["alibaba_bailian"] = OpenAICompatibleHealthProvider(
+            name="alibaba_bailian",
+            base_url=settings.ALIBABA_BAILIAN_BASE_URL,
+            api_key=settings.alibaba_bailian_api_keys[0],
+        )
+    if settings.OPENAI_API_KEY:
+        providers["openai"] = OpenAICompatibleHealthProvider(
+            name="openai",
+            base_url=settings.OPENAI_BASE_URL,
+            api_key=settings.OPENAI_API_KEY,
+        )
+
+    return providers
 
 
 async def check_providers_loop(stop_event: asyncio.Event):

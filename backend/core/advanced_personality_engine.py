@@ -1,5 +1,5 @@
 """
-Advanced GenZ AI Personality Engine v2.0
+Advanced ASTRAMIND Personality Engine v2.0
 
 Multi-dimensional personality system that creates truly unique AI responses
 with cultural authenticity, emotional intelligence, and adaptive behavior.
@@ -51,7 +51,7 @@ class CulturalContextAwareness:
     slang, and context-specific communication styles
     """
     
-    GENZ_SLANG_DATABASE = {
+    ASTRAMIND_SLANG_DATABASE = {
         "approval": [
             "no cap", "fr fr", "deadass", "on god", "bet",
             "slay", "ate", "went off", "iconic", "period"
@@ -74,7 +74,7 @@ class CulturalContextAwareness:
         ]
     }
     
-    GENZ_REFERENCES = {
+    ASTRAMIND_REFERENCES = {
         "pop_culture": [
             "It's giving...", "The way...", "Bestie, I'm...",
             "Living my best life", "Rent-free", "Main character energy",
@@ -122,12 +122,12 @@ class CulturalContextAwareness:
     def get_contextual_slang(cls, context: str, count: int = 3) -> List[str]:
         """Get appropriate slang for context"""
         category = context.lower()
-        if category not in cls.GENZ_SLANG_DATABASE:
+        if category not in cls.ASTRAMIND_SLANG_DATABASE:
             category = "acknowledgment"
         
         return random.sample(
-            cls.GENZ_SLANG_DATABASE[category],
-            min(count, len(cls.GENZ_SLANG_DATABASE[category]))
+            cls.ASTRAMIND_SLANG_DATABASE[category],
+            min(count, len(cls.ASTRAMIND_SLANG_DATABASE[category]))
         )
 
 
@@ -385,7 +385,7 @@ class AdaptivePersonalityEngine:
         tone = "casual" if personality.formality_level < 0.5 else "professional"
         energy = "energetic" if personality.energy_level > 0.7 else "thoughtful"
         
-        return f"""You are a GenZ AI assistant with these traits:
+        return f"""You are a ASTRAMIND assistant with these traits:
 - Communication style: {tone}
 - Energy level: {energy}
 - Humor level: {personality.humor_level * 100:.0f}%

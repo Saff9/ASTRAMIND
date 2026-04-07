@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-GenZ AI Backend Deployment Test Script
+ASTRAMIND Backend Deployment Test Script
 Tests all critical dependencies and configuration for production deployment
 """
 
@@ -309,8 +309,8 @@ class DeploymentTester:
         pass_rate = (self.test_results["passed"] / total_tests * 100) if total_tests > 0 else 0
 
         report = {
-            "project": "GenZ AI Backend",
-            "version": "1.1.4",
+            "project": "ASTRAMIND Backend",
+            "version": "1.1.2",
             "test_type": "Deployment Readiness",
             "summary": {
                 "total_tests": total_tests,
@@ -337,7 +337,7 @@ class DeploymentTester:
     def print_test_report(self, report: Dict[str, Any]):
         """Print a formatted test report"""
         print("\n" + "=" * 70)
-        print(f"GenZ AI Backend - Deployment Readiness Test Report")
+        print(f"ASTRAMIND Backend - Deployment Readiness Test Report")
         print(f"Version: {report['version']}")
         print(f"Test Type: {report['test_type']}")
         print("=" * 70)
@@ -371,7 +371,7 @@ class DeploymentTester:
 
     def run_all_tests(self) -> bool:
         """Run all deployment tests"""
-        logger.info("Starting GenZ AI Backend deployment readiness tests...")
+        logger.info("Starting ASTRAMIND Backend deployment readiness tests...")
 
         # Run individual tests
         tests = [

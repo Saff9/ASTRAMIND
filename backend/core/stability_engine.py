@@ -1,14 +1,14 @@
 # backend/core/stability_engine.py
 """
-STABILITY ENGINE v1.1.4 - Advanced error recovery and system stability
-Ensures GenZ AI runs smoothly with intelligent recovery mechanisms.
+STABILITY ENGINE v1.1.2 - Advanced error recovery and system stability
+Ensures ASTRAMIND runs smoothly with intelligent recovery mechanisms.
 """
 
 import asyncio
 import logging
 import time
 from typing import Dict, List, Optional, Any, Callable, Awaitable
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass, field
 import traceback
 import sys
@@ -66,7 +66,7 @@ class StabilityEngine:
             active_connections=0,
             error_rate=0.0,
             recovery_success_rate=0.0,
-            last_health_check=datetime.utcnow()
+            last_health_check=datetime.now(timezone.utc)
         )
         self.circuit_breakers: Dict[str, CircuitBreaker] = {}
         self.recovery_strategies: Dict[str, Callable] = {}
@@ -182,7 +182,7 @@ class StabilityEngine:
         """Record error for analysis and recovery."""
         error_record = ErrorRecord(
             error_id=f"{int(time.time())}_{len(self.error_records)}",
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             error_type=error_type,
             error_message=error_message,
             stack_trace=context.get("stack_trace", ""),
@@ -325,7 +325,7 @@ class StabilityEngine:
         """Update system health metrics."""
         try:
             import psutil
-            current_time = datetime.utcnow()
+            current_time = datetime.now(timezone.utc)
 
             self.system_health.uptime = time.time() - self.start_time
             self.system_health.memory_usage = psutil.virtual_memory().percent
@@ -349,7 +349,7 @@ class StabilityEngine:
 
         except ImportError:
             # psutil not available, use basic metrics
-            current_time = datetime.utcnow()
+            current_time = datetime.now(timezone.utc)
             self.system_health.uptime = time.time() - self.start_time
             self.system_health.memory_usage = 0.0  # Unknown
             self.system_health.cpu_usage = 0.0  # Unknown
@@ -365,7 +365,7 @@ class StabilityEngine:
 
     async def _cleanup_old_errors(self):
         """Clean up old error records."""
-        cutoff_time = datetime.utcnow() - timedelta(hours=24)
+        cutoff_time = datetime.now(timezone.utc) - timedelta(hours=24)
         self.error_records = [
             e for e in self.error_records
             if e.timestamp > cutoff_time
@@ -388,7 +388,7 @@ class StabilityEngine:
             },
             "recent_errors": len([
                 e for e in self.error_records
-                if (datetime.utcnow() - e.timestamp).total_seconds() < 3600
+                if (datetime.now(timezone.utc) - e.timestamp).total_seconds() < 3600
             ])
         }
 

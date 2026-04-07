@@ -233,7 +233,7 @@ class NetworkSecurityHardening:
     @staticmethod
     def validate_origin(origin: str, allowed_origins: List[str]) -> bool:
         """Validate CORS origin"""
-        return origin in allowed_origins or origin.endswith('.genzai.ai')
+        return origin in allowed_origins or origin.endswith('.ASTRAMINDai.ai')
     
     @staticmethod
     def enforce_https() -> Dict[str, Any]:
@@ -302,8 +302,8 @@ class DataProtectionHardening:
             "right_to_be_forgotten": True,
             "data_portability": True,
             "consent_management": True,
-            "privacy_policy_url": "https://genzai.ai/privacy",
-            "terms_of_service_url": "https://genzai.ai/terms",
+            "privacy_policy_url": "https://ASTRAMINDai.ai/privacy",
+            "terms_of_service_url": "https://ASTRAMINDai.ai/terms",
             "dpia_completed": True,  # Data Protection Impact Assessment
             "dpa_signed": True,  # Data Processing Agreement
         }

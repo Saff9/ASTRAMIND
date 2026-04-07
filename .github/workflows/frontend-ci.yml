@@ -1,0 +1,54 @@
+name: Frontend CI
+
+on:
+  push:
+    paths:
+      - 'frontend/**'
+  pull_request:
+    paths:
+      - 'frontend/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: ./node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Test
+        run: npm test
+      - name: Build Docker image
+        run: |
+          docker build -t your-frontend:latest -f Dockerfile .
+      - name: Optional push Docker image
+        if: false # placeholder for actual push condition
+        run: |
+          echo "Push to registry placeholder"
+          # docker tag your-frontend:latest YOUR_REGISTRY/your-frontend:latest
+          # docker push YOUR_REGISTRY/your-frontend:latest
+      - name: Run Lighthouse performance test
+        run: |
+          docker run -d -p 3000:3000 --name ci-frontend your-frontend:latest
+          npx wait-on http://localhost:3000
+          npx lighthouse http://localhost:3000 --output html --quiet --output-path lighthouse-report.html
+          docker stop ci-frontend
+          docker rm ci-frontend
+        env:
+          CI: true

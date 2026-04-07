@@ -1,6 +1,6 @@
-# GenZ AI Backend - Production Deployment Guide
+# ASTRAMIND Backend - Production Deployment Guide
 
-This guide covers deploying the GenZ AI Backend to Render.com or similar cloud platforms.
+This guide covers deploying the ASTRAMIND Backend to Render.com or similar cloud platforms.
 
 ## Pre-Deployment Checklist
 
@@ -95,7 +95,7 @@ alembic upgrade head
 
 For development, SQLite is used automatically:
 - No DATABASE_URL needed
-- Auto-creates `genzai_local.db`
+- Auto-creates `ASTRAMINDai_local.db`
 - Creates admin user `admin@localhost`
 
 ## Testing Deployment
@@ -206,4 +206,4 @@ For deployment issues:
 
 **Deployment Status:** ✅ **PRODUCTION READY**
 **Last Updated:** $(date)
-**Version:** 1.1.4
+**Version:** 1.1.2

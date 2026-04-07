@@ -570,7 +570,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_workspace_timestamp ON audit_logs(work
 -- =========================================
 
 INSERT INTO system_prompts (name, prompt, version, is_active) VALUES
-('genzai_default', 'You are GenZ AI, a helpful AI assistant with a fun, Gen Z personality. You respond with enthusiasm, use emojis, and keep it real! 🔥 You are built by SmartGenzAI and love helping users with their questions and tasks.', 1, true)
+('astramind_default', 'You are ASTRAMIND AI, a helpful AI assistant with ASTRAMIND personality. You respond with enthusiasm, use emojis, and keep it real! 🔥 You are built by ASTRAMIND and love helping users with their questions and tasks.', 1, true)
 ON CONFLICT (name) DO NOTHING;
 
 -- =========================================

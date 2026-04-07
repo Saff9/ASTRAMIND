@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to GenZ AI will be documented in this file.
+All notable changes to AstraMind will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -86,12 +86,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **API Routes**: Fixed TypeScript casting issues in all streaming API routes
-- **Command Route**: Updated to use GPT-4o model with GenZ personality system prompt
+- **Command Route**: Updated to use GPT-4o model with ASTRAMIND personality system prompt
 - **Type Safety**: Added @ts-nocheck to prevent build failures while maintaining functionality
 
 ### Changed
 - **Version Update**: Bumped to v2.1.1 across all manifests and metadata
-- **Enhanced UI**: Improved conversation templates with better GenZ styling
+- **Enhanced UI**: Improved conversation templates with better ASTRAMIND styling
 - **Error Handling**: More robust error recovery throughout the application
 
 ## [1.2.0] - 2026-01-20
@@ -99,19 +99,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Comprehensive Metadata**: SEO optimization with OpenGraph, Twitter cards, and structured data
 - **PWA Enhancements**: Improved manifest with categories, screenshots, and better offline support
-- **GenZ Personality**: Complete UI makeover with GenZ slang, emojis, and modern styling
-- **Conversation Templates**: 8+ pre-built templates with GenZ themes (meme generator, trend spotter, etc.)
+- **ASTRAMIND Personality**: Complete UI makeover with ASTRAMIND slang, emojis, and modern styling
+- **Conversation Templates**: 8+ pre-built templates with ASTRAMIND themes (meme generator, trend spotter, etc.)
 - **Enhanced Homepage**: Feature highlights and modern landing page design
 
 ### Changed
 - **Package Metadata**: Added author, keywords, repository links, and comprehensive package info
 - **Manifest Updates**: Versioned PWA with better app store presentation
-- **UI Components**: GenZ-themed help menu, input placeholders, and assistant indicators
+- **UI Components**: ASTRAMIND-themed help menu, input placeholders, and assistant indicators
 
 ### Fixed
 - **Build Issues**: Resolved TypeScript compilation errors
 - **Linting**: Fixed ESLint warnings and improved code quality
-- **Announcements**: Fixed component logic and added default GenZ-style notifications
+- **Announcements**: Fixed component logic and added default ASTRAMIND-style notifications
 
 ## [2.0.0] - 2026-01-20
 
@@ -144,4 +144,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ❌ **Removed** for now removed features
 - 🔒 **Security** in case of vulnerabilities
 
-Built for Gen Z, by Gen Z • v1.1.2 🚀 [SmartGenzAI](https://github.com/SmartGenzAI1)
+Built for Gen Z, by Gen Z • v1.1.2 🚀 [SmartASTRAMINDAI](https://github.com/SmartASTRAMINDAI1)

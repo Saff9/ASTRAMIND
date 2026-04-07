@@ -1,6 +1,6 @@
 # backend/app/db/models.py
 """
-SQLAlchemy models for GenZ AI Platform.
+SQLAlchemy models for ASTRAMIND Platform.
 All fields required for quota tracking and authentication.
 """
 

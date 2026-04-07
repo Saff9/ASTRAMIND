@@ -1,6 +1,6 @@
 # backend/cli/commands/config.py
 """
-Config command for GenZ AI CLI.
+Config command for ASTRAMIND CLI.
 Manages configuration settings.
 """
 
@@ -10,10 +10,10 @@ from pathlib import Path
 from typing import Optional
 
 # Create config sub-app
-app = typer.Typer(help="Manage GenZ AI configuration settings")
+app = typer.Typer(help="Manage AstraMind configuration settings")
 
 # Config file location
-CONFIG_FILE = Path.home() / ".genzai" / "config.ini"
+CONFIG_FILE = Path.home() / ".astramind" / "config.ini"
 
 
 def _ensure_config_dir():
@@ -43,7 +43,7 @@ def _write_config(config: dict):
     """Write config file."""
     _ensure_config_dir()
     with open(CONFIG_FILE, 'w') as f:
-        f.write("# GenZ AI CLI Configuration\n")
+        f.write("# AstraMind CLI Configuration\n")
         for key, value in config.items():
             f.write(f"{key}={value}\n")
 

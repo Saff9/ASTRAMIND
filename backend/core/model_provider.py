@@ -22,6 +22,11 @@ class ModelProvider(Enum):
     LOCAL = "local"      # Ollama, local servers
     GROQ = "groq"        # Fast remote inference
     OPENROUTER = "openrouter"  # Broad model selection
+    TOGETHER = "together"
+    MISTRAL = "mistral"
+    CEREBRAS = "cerebras"
+    SILICONFLOW = "siliconflow"
+    ALIBABA_BAILIAN = "alibaba_bailian"
     OPENAI = "openai"    # Fallback premium models
 
 
@@ -60,7 +65,16 @@ class ModelRouter:
         healthy_providers = await self._get_healthy_providers()
 
         # Priority order for fallback
-        priority = [ModelProvider.GROQ, ModelProvider.OPENROUTER, ModelProvider.OPENAI]
+        priority = [
+            ModelProvider.GROQ,
+            ModelProvider.OPENROUTER,
+            ModelProvider.TOGETHER,
+            ModelProvider.MISTRAL,
+            ModelProvider.CEREBRAS,
+            ModelProvider.SILICONFLOW,
+            ModelProvider.ALIBABA_BAILIAN,
+            ModelProvider.OPENAI,
+        ]
 
         for provider in priority:
             if provider in healthy_providers:
@@ -111,7 +125,16 @@ class ModelRouter:
 
     async def _get_healthy_providers(self) -> List[ModelProvider]:
         """Get list of healthy remote providers."""
-        providers = [ModelProvider.GROQ, ModelProvider.OPENROUTER, ModelProvider.OPENAI]
+        providers = [
+            ModelProvider.GROQ,
+            ModelProvider.OPENROUTER,
+            ModelProvider.TOGETHER,
+            ModelProvider.MISTRAL,
+            ModelProvider.CEREBRAS,
+            ModelProvider.SILICONFLOW,
+            ModelProvider.ALIBABA_BAILIAN,
+            ModelProvider.OPENAI,
+        ]
         healthy = []
 
         for provider in providers:
@@ -137,6 +160,16 @@ class ModelRouter:
                     await self._test_groq_health(session)
                 elif provider == ModelProvider.OPENROUTER:
                     await self._test_openrouter_health(session)
+                elif provider == ModelProvider.TOGETHER:
+                    await self._test_openai_compatible_health(session, settings.TOGETHER_BASE_URL, settings.together_api_keys)
+                elif provider == ModelProvider.MISTRAL:
+                    await self._test_openai_compatible_health(session, settings.MISTRAL_BASE_URL, settings.mistral_api_keys)
+                elif provider == ModelProvider.CEREBRAS:
+                    await self._test_openai_compatible_health(session, settings.CEREBRAS_BASE_URL, settings.cerebras_api_keys)
+                elif provider == ModelProvider.SILICONFLOW:
+                    await self._test_openai_compatible_health(session, settings.SILICONFLOW_BASE_URL, settings.siliconflow_api_keys)
+                elif provider == ModelProvider.ALIBABA_BAILIAN:
+                    await self._test_openai_compatible_health(session, settings.ALIBABA_BAILIAN_BASE_URL, settings.alibaba_bailian_api_keys)
                 elif provider == ModelProvider.OPENAI:
                     await self._test_openai_health(session)
 
@@ -151,22 +184,22 @@ class ModelRouter:
 
     async def _test_groq_health(self, session: aiohttp.ClientSession) -> None:
         """Test Groq API health."""
-        if not settings.GROQ_API_KEYS:
+        if not settings.groq_api_keys:
             raise ValueError("No Groq API keys")
 
         # Simple models list request
-        headers = {"Authorization": f"Bearer {settings.GROQ_API_KEYS[0]}"}
-        async with session.get("https://api.groq.com/openai/v1/models", headers=headers) as response:
+        headers = {"Authorization": f"Bearer {settings.groq_api_keys[0]}"}
+        async with session.get(f"{settings.GROQ_BASE_URL.rstrip('/')}/models", headers=headers) as response:
             response.raise_for_status()
 
     async def _test_openrouter_health(self, session: aiohttp.ClientSession) -> None:
         """Test OpenRouter API health."""
-        if not settings.OPENROUTER_API_KEYS:
+        if not settings.openrouter_api_keys:
             raise ValueError("No OpenRouter API keys")
 
         # Simple models list request
-        headers = {"Authorization": f"Bearer {settings.OPENROUTER_API_KEYS[0]}"}
-        async with session.get("https://openrouter.ai/api/v1/models", headers=headers) as response:
+        headers = {"Authorization": f"Bearer {settings.openrouter_api_keys[0]}"}
+        async with session.get(f"{settings.OPENROUTER_BASE_URL.rstrip('/')}/models", headers=headers) as response:
             response.raise_for_status()
 
     async def _test_openai_health(self, session: aiohttp.ClientSession) -> None:
@@ -176,7 +209,21 @@ class ModelRouter:
 
         # Simple models list request
         headers = {"Authorization": f"Bearer {settings.OPENAI_API_KEY}"}
-        async with session.get("https://api.openai.com/v1/models", headers=headers) as response:
+        async with session.get(f"{settings.OPENAI_BASE_URL.rstrip('/')}/models", headers=headers) as response:
+            response.raise_for_status()
+
+    async def _test_openai_compatible_health(
+        self,
+        session: aiohttp.ClientSession,
+        base_url: str,
+        keys: list[str],
+    ) -> None:
+        """Test OpenAI-compatible provider health by listing models."""
+        if not keys:
+            raise ValueError("No API keys")
+        headers = {"Authorization": f"Bearer {keys[0]}"}
+        url = f"{base_url.rstrip('/')}/models"
+        async with session.get(url, headers=headers) as response:
             response.raise_for_status()
 
     def _update_health(self, provider: ModelProvider, healthy: bool, latency: Optional[float] = None) -> None:
@@ -202,18 +249,43 @@ class ModelRouter:
                 "type": "ollama"
             },
             ModelProvider.GROQ: {
-                "api_key": settings.GROQ_API_KEYS[0] if settings.GROQ_API_KEYS else None,
-                "base_url": "https://api.groq.com/openai/v1",
+                "api_key": settings.groq_api_keys[0] if settings.groq_api_keys else None,
+                "base_url": settings.GROQ_BASE_URL,
                 "type": "openai-compatible"
             },
             ModelProvider.OPENROUTER: {
-                "api_key": settings.OPENROUTER_API_KEYS[0] if settings.OPENROUTER_API_KEYS else None,
-                "base_url": "https://openrouter.ai/api/v1",
+                "api_key": settings.openrouter_api_keys[0] if settings.openrouter_api_keys else None,
+                "base_url": settings.OPENROUTER_BASE_URL,
                 "type": "openai-compatible"
+            },
+            ModelProvider.TOGETHER: {
+                "api_key": settings.together_api_keys[0] if settings.together_api_keys else None,
+                "base_url": settings.TOGETHER_BASE_URL,
+                "type": "openai-compatible",
+            },
+            ModelProvider.MISTRAL: {
+                "api_key": settings.mistral_api_keys[0] if settings.mistral_api_keys else None,
+                "base_url": settings.MISTRAL_BASE_URL,
+                "type": "openai-compatible",
+            },
+            ModelProvider.CEREBRAS: {
+                "api_key": settings.cerebras_api_keys[0] if settings.cerebras_api_keys else None,
+                "base_url": settings.CEREBRAS_BASE_URL,
+                "type": "openai-compatible",
+            },
+            ModelProvider.SILICONFLOW: {
+                "api_key": settings.siliconflow_api_keys[0] if settings.siliconflow_api_keys else None,
+                "base_url": settings.SILICONFLOW_BASE_URL,
+                "type": "openai-compatible",
+            },
+            ModelProvider.ALIBABA_BAILIAN: {
+                "api_key": settings.alibaba_bailian_api_keys[0] if settings.alibaba_bailian_api_keys else None,
+                "base_url": settings.ALIBABA_BAILIAN_BASE_URL,
+                "type": "openai-compatible",
             },
             ModelProvider.OPENAI: {
                 "api_key": settings.OPENAI_API_KEY,
-                "base_url": "https://api.openai.com/v1",
+                "base_url": settings.OPENAI_BASE_URL,
                 "type": "openai"
             }
         }

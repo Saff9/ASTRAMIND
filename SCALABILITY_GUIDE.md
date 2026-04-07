@@ -1,4 +1,4 @@
-# 🚀 Scalability & Performance Guide - GenZ AI v1.1.4
+# 🚀 Scalability & Performance Guide - ASTRAMIND v1.1.4
 
 **Target**: 100,000+ concurrent users without crashes  
 **Status**: ✅ Enterprise-Grade Architecture  
@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-GenZ AI v1.1.4 is architected to handle **100,000+ concurrent users** with:
+ASTRAMIND v1.1.4 is architected to handle **100,000+ concurrent users** with:
 - **Zero downtime** deployments
 - **Sub-200ms** average response times
 - **99.99%** uptime SLA
@@ -190,7 +190,7 @@ async def call_with_retry(func, max_retries=3, initial_delay=1):
 ```python
 # backend/core/logging.py
 handler = RotatingFileHandler(
-    "logs/genzai.log",
+    "logs/ASTRAMINDai.log",
     maxBytes=10 * 1024 * 1024,  # 10MB per file
     backupCount=5                 # Keep 5 backup files
 )
@@ -236,20 +236,20 @@ Redis Cache
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: genzai-backend
+  name: ASTRAMINDai-backend
 spec:
   replicas: 10
   selector:
     matchLabels:
-      app: genzai-backend
+      app: ASTRAMINDai-backend
   template:
     metadata:
       labels:
-        app: genzai-backend
+        app: ASTRAMINDai-backend
     spec:
       containers:
       - name: backend
-        image: genzai:1.1.4
+        image: ASTRAMINDai:1.1.4
         resources:
           requests:
             memory: "256Mi"
@@ -276,12 +276,12 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: genzai-hpa
+  name: ASTRAMINDai-hpa
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: genzai-backend
+    name: ASTRAMINDai-backend
   minReplicas: 5
   maxReplicas: 50
   metrics:

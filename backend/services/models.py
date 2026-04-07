@@ -15,26 +15,67 @@ logger = logging.getLogger(__name__)
 # Base model configurations (fallback when auto-detection fails)
 MODEL_CONFIGS = {
     "fast": {
-        "preferred_providers": [ModelProvider.GROQ, ModelProvider.OPENROUTER],
+        "preferred_providers": [
+            ModelProvider.GROQ,
+            ModelProvider.OPENROUTER,
+            ModelProvider.TOGETHER,
+            ModelProvider.MISTRAL,
+            ModelProvider.CEREBRAS,
+            ModelProvider.SILICONFLOW,
+            ModelProvider.ALIBABA_BAILIAN,
+        ],
         "models": {
             ModelProvider.GROQ: "llama-3.1-8b-instant",
             ModelProvider.OPENROUTER: "meta-llama/llama-3.1-8b-instruct",
+            ModelProvider.TOGETHER: "meta-llama/Llama-3.1-8B-Instruct-Turbo",
+            ModelProvider.MISTRAL: "mistral-small-latest",
+            ModelProvider.CEREBRAS: "llama3.1-8b",
+            ModelProvider.SILICONFLOW: "Qwen/Qwen2.5-7B-Instruct",
+            ModelProvider.ALIBABA_BAILIAN: "qwen-plus",
             ModelProvider.LOCAL: "llama3.1:8b",  # Ollama format
         }
     },
     "balanced": {
-        "preferred_providers": [ModelProvider.GROQ, ModelProvider.OPENROUTER],
+        "preferred_providers": [
+            ModelProvider.GROQ,
+            ModelProvider.OPENROUTER,
+            ModelProvider.TOGETHER,
+            ModelProvider.MISTRAL,
+            ModelProvider.CEREBRAS,
+            ModelProvider.SILICONFLOW,
+            ModelProvider.ALIBABA_BAILIAN,
+        ],
         "models": {
             ModelProvider.GROQ: "llama-3.1-70b-versatile",
             ModelProvider.OPENROUTER: "anthropic/claude-3-haiku",
+            ModelProvider.TOGETHER: "meta-llama/Llama-3.1-70B-Instruct-Turbo",
+            ModelProvider.MISTRAL: "mistral-medium-latest",
+            ModelProvider.CEREBRAS: "llama3.1-70b",
+            ModelProvider.SILICONFLOW: "Qwen/Qwen2.5-72B-Instruct",
+            ModelProvider.ALIBABA_BAILIAN: "qwen-max",
             ModelProvider.LOCAL: "llama3.1:70b",  # Ollama format
         }
     },
     "smart": {
-        "preferred_providers": [ModelProvider.OPENROUTER, ModelProvider.GROQ],
+        "preferred_providers": [
+            ModelProvider.OPENROUTER,
+            ModelProvider.OPENAI,
+            ModelProvider.MISTRAL,
+            ModelProvider.TOGETHER,
+            ModelProvider.GROQ,
+            ModelProvider.CEREBRAS,
+            ModelProvider.SILICONFLOW,
+            ModelProvider.ALIBABA_BAILIAN,
+        ],
         "models": {
             ModelProvider.OPENROUTER: "openai/gpt-4o-mini",
             ModelProvider.GROQ: "mixtral-8x7b-32768",
+            ModelProvider.OPENAI: "gpt-4o-mini",
+            ModelProvider.TOGETHER: "Qwen/Qwen2.5-72B-Instruct-Turbo",
+            ModelProvider.MISTRAL: "mistral-large-latest",
+            ModelProvider.CEREBRAS: "llama3.1-70b",
+            ModelProvider.SILICONFLOW: "deepseek-ai/DeepSeek-R1",
+            ModelProvider.ALIBABA_BAILIAN: "qwen-max",
             ModelProvider.LOCAL: "mistral",  # Ollama format
         }
     },

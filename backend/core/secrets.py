@@ -33,7 +33,7 @@ class SecretsManager:
             raise ValueError("MASTER_ENCRYPTION_KEY environment variable is required")
 
         # Use PBKDF2 to derive a 32-byte key
-        salt = b'genzai_salt_2024'  # In production, use a random salt per deployment
+        salt = b'ASTRAMINDai_salt_2024'  # In production, use a random salt per deployment
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
             length=32,

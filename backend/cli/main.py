@@ -1,6 +1,6 @@
 # backend/cli/main.py
 """
-GenZ AI CLI - Command-line interface for GenZ AI platform.
+AstraMind CLI - Command-line interface for AstraMind platform.
 Production-grade CLI for managing and interacting with the AI backend.
 """
 
@@ -20,8 +20,8 @@ from .commands.config import config_app
 
 # Create main Typer app
 app = typer.Typer(
-    name="genz-ai",
-    help="GenZ AI - Multi-provider AI orchestration platform CLI",
+    name="astramind",
+    help="AstraMind - Multi-provider AI orchestration platform CLI",
     add_completion=False,
 )
 

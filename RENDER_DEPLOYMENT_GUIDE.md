@@ -1,6 +1,6 @@
-# 🚀 GenZ AI - Render Deployment Guide (v1.1.3)
+# 🚀 ASTRAMIND - Render Deployment Guide (v1.1.3)
 
-This guide provides step-by-step instructions for deploying GenZ AI on Render with separate backend and frontend services.
+This guide provides step-by-step instructions for deploying ASTRAMIND on Render with separate backend and frontend services.
 
 ---
 
@@ -38,7 +38,7 @@ backend/
 
 ```bash
 # Render Web Service Configuration
-Name: genzai-backend-v1.1.3
+Name: ASTRAMINDai-backend-v1.1.3
 Region: Oregon (US West)  # or closest to your users
 Branch: main
 Root Directory: backend
@@ -124,7 +124,7 @@ curl https://your-backend.onrender.com/docs
 {
   "status": "healthy",
   "version": "1.1.3",
-  "service": "GenZ AI Backend",
+  "service": "ASTRAMIND Backend",
   "uptime": 123.45,
   "stability_metrics": {
     "error_rate": 0.0,
@@ -158,7 +158,7 @@ frontend/
 
 ```bash
 # Render Static Site Configuration
-Name: genzai-frontend-v1.1.3
+Name: ASTRAMINDai-frontend-v1.1.3
 Region: Oregon (US West)  # match backend region
 Branch: main
 Root Directory: frontend
@@ -396,7 +396,7 @@ git push origin main
 
 ---
 
-**🎉 Your GenZ AI v1.1.3 application is now ready for production deployment on Render!**
+**🎉 Your ASTRAMIND v1.1.3 application is now ready for production deployment on Render!**
 
 **Deployment Status**: ✅ **READY FOR PRODUCTION**
 **Version**: v1.1.3

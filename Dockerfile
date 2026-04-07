@@ -1,4 +1,4 @@
-# Production Dockerfile for GenZ AI Backend
+# Production Dockerfile for ASTRAMIND Backend
 # - Slim Python base
 # - Non-root user
 # - Gunicorn with Uvicorn workers

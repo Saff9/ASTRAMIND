@@ -28,7 +28,7 @@ class LoginRequest(BaseModel):
     email: EmailStr = Field(
         ...,
         description="User email address",
-        example="user@example.com"
+        json_schema_extra={"example": "user@example.com"},
     )
 
 

@@ -1,6 +1,6 @@
 # backend/core/content_filter.py
 """
-Advanced content filtering for GenZ AI safety.
+Advanced content filtering for ASTRAMIND safety.
 Prevents harmful, illegal, or inappropriate content.
 """
 
@@ -34,7 +34,7 @@ class FilterResult:
 class ContentFilter:
     """
     Multi-layer content filtering system.
-    GenZ-safe with comprehensive protection.
+    ASTRAMIND-safe with comprehensive protection.
     """
 
     def __init__(self):
@@ -75,7 +75,7 @@ class ContentFilter:
     def filter_content(self, content: str) -> FilterResult:
         """
         Comprehensive content filtering with multiple security layers.
-        GenZ-friendly but with robust safety protections.
+        ASTRAMIND-friendly but with robust safety protections.
 
         Args:
             content: User input to filter
@@ -159,9 +159,9 @@ class ContentFilter:
 
         return sanitized
 
-    def is_genz_safe(self, content: str) -> bool:
+    def is_ASTRAMIND_safe(self, content: str) -> bool:
         """
-        Quick check if content meets GenZ AI safety standards.
+        Quick check if content meets ASTRAMIND safety standards.
         Returns True if safe, False if potentially harmful.
         """
         result = self.filter_content(content)

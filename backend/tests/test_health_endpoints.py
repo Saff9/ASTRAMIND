@@ -12,7 +12,7 @@ async def test_root_ok():
         assert r.status_code == 200
         data = r.json()
         assert data["status"] == "ok"
-        assert data["service"] == "GenZ AI Backend"
+        assert data["service"] == "ASTRAMIND Backend"
 
 
 @pytest.mark.anyio

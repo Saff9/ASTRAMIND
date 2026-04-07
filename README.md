@@ -1,4 +1,4 @@
-# 🚀 GenZ AI - Enterprise-Grade AI Chat Platform
+# 🚀 AstraMind - Enterprise-Grade AI Chat Platform
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-1.1.5-brightgreen.svg)](CHANGELOG.md)
@@ -16,7 +16,7 @@
 [![Next.js](https://img.shields.io/badge/next.js-14.x-black.svg)](frontend/)
 [![PostgreSQL](https://img.shields.io/badge/database-PostgreSQL%2014%2B-336791.svg)](#prerequisites)
 
-> **Enterprise-ready AI chat platform with multi-provider support, real-time streaming, and GenZ personality engine**
+> **Enterprise-ready AI chat platform with multi-provider support, real-time streaming, and AstraMind personality engine**
 
 **🎖️ Certifications & Achievements**
 - ✅ Production Ready (v1.1.5)
@@ -33,7 +33,7 @@
 ### Core Capabilities
 - ✅ **Multi-AI Provider Support** - Groq, OpenRouter, HuggingFace, OpenAI, Anthropic
 - ✅ **Real-Time Streaming** - Instant responses with chunked data
-- ✅ **GenZ Personality Engine** - Unique AI character system (proprietary)
+- ✅ **AstraMind Personality Engine** - Unique AI character system (proprietary)
 - ✅ **Knowledge Base Integration** - RAG-ready with file uploads
 - ✅ **Workspace Management** - Multi-workspace per user
 - ✅ **Authentication** - Supabase JWT + OAuth support
@@ -152,10 +152,10 @@ Permissions-Policy: geolocation=(), microphone=(), camera=()
 
 ## 🎨 Unique Features
 
-### GenZ AI Personality Engine
-GenZ AI differentiates itself with a proprietary **personality engine** that:
+### AstraMind Personality Engine
+AstraMind differentiates itself with a proprietary **personality engine** that:
 - 🌈 Adapts tone and style based on conversation context
-- 🎯 Uses GenZ slang and cultural references naturally
+- 🎯 Uses ASTRAMIND slang and cultural references naturally
 - 💡 Generates creative, engaging responses
 - 🚀 Maintains personality consistency across conversations
 - 🎭 Supports multiple persona templates
@@ -186,7 +186,7 @@ GenZ AI differentiates itself with a proprietary **personality engine** that:
 
 **1. Clone Repository**
 ```bash
-git clone https://github.com/SmartGenzAI1/Aii.git
+git clone https://github.com/SmartASTRAMINDAI1/Aii.git
 cd Aii
 ```
 
@@ -197,7 +197,7 @@ pip install -r requirements.txt
 
 # Set environment variables
 export JWT_SECRET="your-secret-min-32-chars"
-export DATABASE_URL="postgresql://user:pass@localhost:5432/genzai"
+export DATABASE_URL="postgresql://user:pass@localhost:5432/astramind"
 export GROQ_API_KEYS="key1,key2"
 
 # Run migrations
@@ -348,7 +348,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-For support, email support@genzai.ai or open an issue on GitHub.
+For support, email support@astramind.ai or open an issue on GitHub.
 
 ---
 
@@ -367,11 +367,11 @@ For support, email support@genzai.ai or open an issue on GitHub.
 
 ## 🔗 Links
 
-- [GitHub Repository](https://github.com/SmartGenzAI1/Aii)
-- [Live Demo](https://genzai.ai)
-- [Status Page](https://status.genzai.ai)
-- [Blog](https://blog.genzai.ai)
-- [Twitter](https://twitter.com/genzai)
+- [GitHub Repository](https://github.com/SmartASTRAMINDAI1/Aii)
+- [Live Demo](https://astramind.ai)
+- [Status Page](https://status.astramind.ai)
+- [Blog](https://blog.astramind.ai)
+- [Twitter](https://twitter.com/astramind)
 
 ---
 
@@ -379,6 +379,6 @@ For support, email support@genzai.ai or open an issue on GitHub.
 **Status**: ✅ Production Ready  
 **Maintainers**: Active Development Team
 
-Made with ❤️ by the GenZ AI Team
+Made with ❤️ by the AstraMind Team
 
 ⭐ Please star this repository if you find it helpful!

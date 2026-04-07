@@ -38,7 +38,7 @@ def get_engine_kwargs() -> dict:
     # If you're using direct PostgreSQL, uncomment below:
     # if settings.is_production():
     #     kwargs["connect_args"] = {
-    #         "server_settings": {"application_name": "genzai_backend"}
+    #         "server_settings": {"application_name": "ASTRAMINDai_backend"}
     #     }
 
     return kwargs

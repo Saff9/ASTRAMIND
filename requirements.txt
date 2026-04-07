@@ -1,4 +1,4 @@
-# GenZ AI Backend - Production Requirements
+# ASTRAMIND Backend - Production Requirements
 # Core Framework Dependencies
 fastapi>=0.111
 uvicorn[standard]>=0.30

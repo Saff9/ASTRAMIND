@@ -8,7 +8,7 @@ import httpx
 from bs4 import BeautifulSoup
 
 
-_USER_AGENT = "Mozilla/5.0 (compatible; GenZAI/1.1; +https://genz-ai.com)"
+_USER_AGENT = "Mozilla/5.0 (compatible; ASTRAMINDAI/1.1; +https://ASTRAMIND-ai.com)"
 _HEADERS = {"User-Agent": _USER_AGENT, "Accept": "text/html,application/xhtml+xml"}
 
 

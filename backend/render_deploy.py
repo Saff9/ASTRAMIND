@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Render Deployment Script for GenZ AI Backend
+Render Deployment Script for ASTRAMIND Backend
 This script helps configure and validate the backend for Render deployment
 """
 
@@ -205,8 +205,8 @@ class RenderDeployment:
     def generate_deployment_report(self) -> Dict[str, Any]:
         """Generate a deployment readiness report"""
         report = {
-            "project": "GenZ AI Backend",
-            "version": "1.1.3",
+            "project": "ASTRAMIND Backend",
+            "version": "1.1.2",
             "deployment_target": "Render",
             "checks": [],
             "warnings": [],
@@ -255,7 +255,7 @@ class RenderDeployment:
     def print_deployment_report(self, report: Dict[str, Any]):
         """Print a formatted deployment report"""
         print("\n" + "=" * 60)
-        print(f"GenZ AI Backend - Render Deployment Report")
+        print(f"ASTRAMIND Backend - Render Deployment Report")
         print(f"Version: {report['version']}")
         print(f"Target: {report['deployment_target']}")
         print("=" * 60)
@@ -294,7 +294,7 @@ class RenderDeployment:
 
     def deploy(self) -> bool:
         """Run complete deployment validation"""
-        logger.info("Starting GenZ AI Backend deployment validation for Render")
+        logger.info("Starting ASTRAMIND Backend deployment validation for Render")
 
         # Generate and display report
         report = self.generate_deployment_report()

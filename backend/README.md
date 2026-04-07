@@ -1,4 +1,4 @@
-# 🚀 GenZ AI Backend - Enterprise Production Guide
+# 🚀 ASTRAMIND Backend - Enterprise Production Guide
 
 > **High-scale FastAPI backend supporting 100,000+ users and 50,000+ concurrent connections with multi-provider AI routing, JWT authentication, and comprehensive monitoring.**
 
@@ -86,8 +86,8 @@ Browser (displays tokens as they arrive)
 
 ```bash
 # Clone and setup
-git clone https://github.com/yourusername/genzai.git
-cd genzai/backend
+git clone https://github.com/yourusername/ASTRAMINDai.git
+cd ASTRAMINDai/backend
 
 # Virtual environment
 python -m venv venv
@@ -100,7 +100,7 @@ pip install -r requirements.txt
 cp .env.example .env
 
 # Edit .env - set these as minimum:
-# DATABASE_URL=postgresql+asyncpg://localhost/genzai_dev
+# DATABASE_URL=postgresql+asyncpg://localhost/ASTRAMINDai_dev
 # JWT_SECRET=your-super-secret-key-min-32-chars
 # GROQ_API_KEYS=your_groq_key
 # OPENROUTER_API_KEYS=your_openrouter_key
@@ -129,13 +129,13 @@ curl http://localhost:8000/health
 
 # Using local PostgreSQL
 1. Install PostgreSQL 14+
-2. Create database: createdb genzai_dev
-3. Set DATABASE_URL=postgresql://user:pass@localhost/genzai_dev
+2. Create database: createdb ASTRAMINDai_dev
+3. Set DATABASE_URL=postgresql://user:pass@localhost/ASTRAMINDai_dev
 ```
 
-### 3. GenZ AI CLI Setup
+### 3. ASTRAMIND CLI Setup
 
-The GenZ AI CLI provides professional command-line management:
+The ASTRAMIND CLI provides professional command-line management:
 
 ```bash
 # Install CLI dependencies (included in requirements.txt)
@@ -182,7 +182,7 @@ python -m backend.cli.main config set host http://localhost:8000
 
 ---
 
-## 🖥️ GenZ AI CLI
+## 🖥️ ASTRAMIND CLI
 
 Professional command-line interface for backend operations:
 
@@ -341,7 +341,7 @@ Response (200):
 {
   "status": "healthy",
   "version": "1.0.0",
-  "service": "GenZ AI Backend"
+  "service": "ASTRAMIND Backend"
 }
 ```
 
@@ -731,7 +731,7 @@ backend/
 │   ├── ai_router.py        # Multi-provider routing
 │   ├── provider_monitor.py # Health check background task
 │   └── web_search.py       # DuckDuckGo search
-└── cli/                    # GenZ AI CLI (Python)
+└── cli/                    # ASTRAMIND CLI (Python)
     ├── main.py             # CLI entry point
     └── commands/
         ├── chat.py         # Chat command
@@ -758,9 +758,9 @@ backend/
 
 ## 📞 Support & Issues
 
-- GitHub Issues: https://github.com/yourusername/genzai/issues
-- Email: support@genzai.app
-- Docs: https://docs.genzai.app
+- GitHub Issues: https://github.com/yourusername/ASTRAMINDai/issues
+- Email: support@ASTRAMINDai.app
+- Docs: https://docs.ASTRAMINDai.app
 
 ---
 

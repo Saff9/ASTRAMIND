@@ -22,7 +22,7 @@ except KeyboardInterrupt:
     pass
 
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
@@ -32,6 +32,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from api.v1 import chat, status, health, admin, web_search, auth
 from core.config import settings, validate_startup
 from core.logging import setup_logging
+from core.version import APP_VERSION
 from app.db.session import check_database_connection, cleanup_database
 from app.middleware.request_id import RequestIDMiddleware
 from app.middleware.security import SecurityHeadersMiddleware
@@ -84,8 +85,15 @@ async def lifespan(app: FastAPI):
         # Individual calls may override timeouts as needed.
         app.state.http_client = httpx.AsyncClient(
             follow_redirects=True,
-            timeout=httpx.Timeout(10.0, connect=3.0, read=10.0),
-            limits=httpx.Limits(max_connections=500, max_keepalive_connections=100),
+            timeout=httpx.Timeout(
+                settings.OUTBOUND_HTTP_READ_TIMEOUT_SECONDS,
+                connect=settings.OUTBOUND_HTTP_CONNECT_TIMEOUT_SECONDS,
+                read=settings.OUTBOUND_HTTP_READ_TIMEOUT_SECONDS,
+            ),
+            limits=httpx.Limits(
+                max_connections=settings.OUTBOUND_HTTP_MAX_CONNECTIONS,
+                max_keepalive_connections=settings.OUTBOUND_HTTP_MAX_KEEPALIVE,
+            ),
         )
         logger.info("[OK] Shared HTTP client initialized")
 
@@ -102,13 +110,13 @@ async def lifespan(app: FastAPI):
         else:
             logger.info("[SKIP] Background tasks disabled")
 
-        logger.info(f"[START] GenZ AI Backend starting in {settings.ENV} mode")
+        logger.info(f"[START] ASTRAMIND Backend starting in {settings.ENV} mode")
 
         # Configure OpenTelemetry tracing if endpoint provided
         try:
             otel_endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
             if otel_endpoint and trace and OTLPSpanExporter:
-                resource = Resource.create({"service.name": "genz-ai-backend", "environment": settings.ENV})
+                resource = Resource.create({"service.name": "ASTRAMIND-ai-backend", "environment": settings.ENV})
                 provider = TracerProvider(resource=resource)
                 exporter = OTLPSpanExporter(endpoint=otel_endpoint, timeout=5)
                 provider.add_span_processor(BatchSpanProcessor(exporter))
@@ -162,8 +170,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="GenZ AI Backend",
-    version="1.1.4",
+    title="ASTRAMIND Backend",
+    version=APP_VERSION,
     description="Multi-provider AI orchestration platform with enterprise-grade stability and security",
     lifespan=lifespan,
     docs_url="/docs",
@@ -281,9 +289,9 @@ async def root():
     """Root endpoint."""
     return {
         "status": "ok",
-        "service": "GenZ AI Backend",
+        "service": "ASTRAMIND Backend",
         "environment": settings.ENV,
-        "version": "1.1.4",
+        "version": APP_VERSION,
         "docs": {
             "swagger": "/docs",
             "redoc": "/redoc",
@@ -312,8 +320,8 @@ async def health_check():
 
         return {
             "status": "healthy" if is_healthy else "degraded",
-            "version": "1.1.4",
-            "service": "GenZ AI Backend",
+            "version": APP_VERSION,
+            "service": "ASTRAMIND Backend",
             "uptime": health_status.get("uptime", 0),
             "stability_metrics": {
                 "error_rate": error_rate,
@@ -321,7 +329,7 @@ async def health_check():
                 "active_circuit_breakers": len([cb for cb in circuit_breakers.values() if cb.get("state") != "closed"]),
                 "recent_errors": health_status.get("recent_errors", 0)
             },
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
     except Exception as e:
         logger.error(f"Error in health check: {e}", exc_info=e)
@@ -330,7 +338,7 @@ async def health_check():
             content={
                 "status": "unknown",
                 "error": str(e),
-                "version": "1.1.4",
+                "version": APP_VERSION,
                 "timestamp": datetime.utcnow().isoformat(),
             },
         )
@@ -347,6 +355,13 @@ async def ready_check():
         ai_ready = (
             len(settings.groq_api_keys) > 0 or
             len(settings.openrouter_api_keys) > 0 or
+            len(settings.together_api_keys) > 0 or
+            len(settings.mistral_api_keys) > 0 or
+            len(settings.cerebras_api_keys) > 0 or
+            len(settings.siliconflow_api_keys) > 0 or
+            len(settings.google_ai_studio_api_keys) > 0 or
+            len(settings.alibaba_bailian_api_keys) > 0 or
+            (settings.CLOUDFLARE_ACCOUNT_ID is not None and settings.CLOUDFLARE_API_TOKEN is not None) or
             settings.HUGGINGFACE_API_KEY is not None or
             settings.OPENAI_API_KEY is not None
         )
@@ -369,7 +384,7 @@ async def ready_check():
                 "database": "disconnected" if not db_ready else "connected",
                 "ai_providers": "not_configured" if not ai_ready else "configured",
                 "environment": settings.ENV,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             },
         )
     except Exception as e:
@@ -379,7 +394,7 @@ async def ready_check():
             content={
                 "ready": False,
                 "error": str(e),
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             },
         )
 

@@ -1,6 +1,6 @@
-# 🚀 GenZ AI Production Deployment Guide
+# 🚀 AstraMind Production Deployment Guide
 
-**Deploy GenZ AI backend (Python/FastAPI) on Render and frontend (Next.js) on Render/Vercel**
+**Deploy AstraMind backend (Python/FastAPI) on Render and frontend (Next.js) on Render/Vercel**
 
 ---
 
@@ -30,7 +30,7 @@ Ensure your backend code is in the `backend/` directory with:
 3. Connect your GitHub repository
 4. Configure service:
    ```
-   Name: genzai-backend
+   Name: ASTRAMINDai-backend
    Runtime: Python 3
    Build Command: pip install -r requirements.txt
    Start Command: python main.py
@@ -89,7 +89,7 @@ ALLOWED_ORIGINS=https://your-frontend-domain.com,https://www.your-frontend-domai
 {
   "status": "healthy",
   "version": "1.0.0",
-  "service": "GenZ AI Backend"
+  "service": "AstraMind Backend"
 }
 ```
 
@@ -110,7 +110,7 @@ Ensure your frontend code is in the `frontend/` directory with:
 2. Connect your GitHub repository
 3. Configure site:
    ```
-   Name: genzai-frontend
+   Name: ASTRAMINDai-frontend
    Build Command: cd frontend && npm install && npm run build
    Publish Directory: frontend/out
    ```
@@ -290,4 +290,4 @@ postgresql://postgres:[password]@db.xxxxx.supabase.co:5432/postgres
 
 ---
 
-**🎉 GenZ AI is now live and ready to serve users!**
+**🎉 AstraMind is now live and ready to serve users!**

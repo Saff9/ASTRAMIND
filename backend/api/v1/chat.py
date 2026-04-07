@@ -1,6 +1,6 @@
 # backend/api/v1/chat.py
 """
-GenZ AI Chat API - Production-ready streaming chat endpoint.
+ASTRAMIND Chat API - Production-ready streaming chat endpoint.
 """
 
 from fastapi import APIRouter, Depends, Request, HTTPException, BackgroundTasks
@@ -14,7 +14,7 @@ from core.enhanced_security import (
     validate_model_access,
     log_security_event
 )
-from core.genz_ai_personality import genz_personality_engine
+from core.ASTRAMIND_ai_personality import ASTRAMIND_personality_engine
 from app.db.session import get_db
 from services.ai_router import AIRouter
 from services.stream import stream_response
@@ -26,6 +26,7 @@ from core.stability_engine import stability_engine
 from app.db.models import User
 import logging
 import time
+from core.version import APP_VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +63,14 @@ def get_ai_router(request: Request) -> AIRouter:
     return AIRouter(
         groq_keys=settings.groq_api_keys,
         openrouter_keys=settings.openrouter_api_keys,
+        together_keys=settings.together_api_keys,
+        mistral_keys=settings.mistral_api_keys,
+        cerebras_keys=settings.cerebras_api_keys,
+        siliconflow_keys=settings.siliconflow_api_keys,
+        google_keys=settings.google_ai_studio_api_keys,
+        alibaba_bailian_keys=settings.alibaba_bailian_api_keys,
         hf_key=settings.HUGGINGFACE_API_KEY,
+        openai_key=settings.OPENAI_API_KEY,
         http_client=getattr(request.app.state, "http_client", None),
     )
 
@@ -382,7 +390,7 @@ async def get_stability_status(
     error_summary = stability_engine.get_error_summary()
 
     return {
-        "version": "1.1.4",
+        "version": APP_VERSION,
         "health": health_status,
         "errors": error_summary,
         "stability_score": min(100, max(0, 100 - (health_status["error_rate"] * 10))),  # 0-100 score

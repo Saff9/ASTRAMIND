@@ -1,8 +1,8 @@
-# 🚀 GenZ AI - Production Deployment Checklist
+# 🚀 ASTRAMIND - Production Deployment Checklist
 
 ## Executive Summary
 
-This checklist ensures secure, scalable deployment of GenZ AI on **Render (backend)** and **Vercel (frontend)** with all security fixes, scalability improvements, and the 14-day retention policy implemented.
+This checklist ensures secure, scalable deployment of ASTRAMIND on **Render (backend)** and **Vercel (frontend)** with all security fixes, scalability improvements, and the 14-day retention policy implemented.
 
 ---
 
@@ -40,8 +40,8 @@ This checklist ensures secure, scalable deployment of GenZ AI on **Render (backe
 ### Step 1: Prepare Backend Repository
 ```bash
 # Create backend-only repository (if separate)
-mkdir genzai-backend
-cd genzai-backend
+mkdir ASTRAMINDai-backend
+cd ASTRAMINDai-backend
 
 # Copy backend files
 cp -r ../frontend/app/api ./api
@@ -52,7 +52,7 @@ cp ../frontend/tsconfig.json .
 
 # Create backend-specific package.json
 {
-  "name": "genzai-backend",
+  "name": "ASTRAMINDai-backend",
   "version": "2.0.0",
   "main": "index.js",
   "scripts": {
@@ -95,7 +95,7 @@ const PORT = process.env.PORT || 3001
 // Security middleware
 app.use(helmet())
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'https://genzai-ai.vercel.app',
+  origin: process.env.FRONTEND_URL || 'https://ASTRAMINDai-ai.vercel.app',
   credentials: true
 }))
 app.use(compression())
@@ -159,7 +159,7 @@ ENCRYPTION_KEY=your_encryption_key
 # App Config
 NODE_ENV=production
 PORT=10000
-FRONTEND_URL=https://genzai-ai.vercel.app
+FRONTEND_URL=https://ASTRAMINDai-ai.vercel.app
 
 # Monitoring
 SENTRY_DSN=your_sentry_dsn
@@ -269,7 +269,7 @@ Set these in Vercel dashboard under Project Settings > Environment Variables:
 
 ```bash
 # Frontend-only variables
-NEXT_PUBLIC_APP_URL=https://genzai-ai.vercel.app
+NEXT_PUBLIC_APP_URL=https://ASTRAMINDai-ai.vercel.app
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
@@ -319,8 +319,8 @@ git push origin main
 // Render backend CORS
 app.use(cors({
   origin: [
-    'https://genzai-ai.vercel.app',
-    'https://www.genzai-ai.vercel.app'
+    'https://ASTRAMINDai-ai.vercel.app',
+    'https://www.ASTRAMINDai-ai.vercel.app'
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -354,7 +354,7 @@ import { withSentryConfig } from '@sentry/nextjs'
 
 export default withSentryConfig(nextConfig, {
   org: 'your-org',
-  project: 'genzai-ai',
+  project: 'ASTRAMINDai-ai',
   dsn: process.env.SENTRY_DSN,
   tracesSampleRate: 1.0,
 })
@@ -615,7 +615,7 @@ curl https://your-backend.onrender.com/health
 vercel --prod
 
 # Verify frontend
-curl https://genzai-ai.vercel.app
+curl https://ASTRAMINDai-ai.vercel.app
 ```
 
 ### Day 1: Monitoring & Optimization
@@ -629,9 +629,9 @@ curl https://genzai-ai.vercel.app
 ## 📞 SUPPORT & ROLLBACK
 
 ### Emergency Contacts
-- **Technical Issues**: dev@genzai.ai
-- **Infrastructure**: infra@genzai.ai
-- **Security**: security@genzai.ai
+- **Technical Issues**: dev@ASTRAMINDai.ai
+- **Infrastructure**: infra@ASTRAMINDai.ai
+- **Security**: security@ASTRAMINDai.ai
 
 ### Rollback Plan
 ```bash
@@ -666,4 +666,4 @@ supabase db restore [backup-id]
 
 ---
 
-**🎉 Your GenZ AI application is now ready for production deployment with enterprise-grade security, massive scalability, and optimal cost efficiency!**
+**🎉 Your ASTRAMIND application is now ready for production deployment with enterprise-grade security, massive scalability, and optimal cost efficiency!**

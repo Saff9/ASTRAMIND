@@ -1,50 +1,66 @@
-const withBundleAnalyzer = require("@next/bundle-analyzer")({
-  enabled: process.env.ANALYZE === "true"
-})
+/** @type {import('next').NextConfig} */
+require('dotenv').config({ path: '.env.production' });
+const path = require('path');
+const nextConfig = {
+  reactStrictMode: true,
+  // Image domains for media uploads
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'your-backend-domain.com',
+      },
+    ],
+  },
+  env: {
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+    API_SECRET_KEY: process.env.API_SECRET_KEY,
+  },
+  // Enable standalone output for Docker deployments
+  output: 'standalone',
+  // Security and caching headers
+  async headers() {
+    return [
+      {
+        // Security headers for all routes
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: "default-src 'self'; script-src 'self'; object-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:",
+          },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'Referrer-Policy', value: 'same-origin' },
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=63072000; includeSubDomains; preload',
+          },
+        ],
+      },
+      {
+        // Caching for static assets
+        source: '/static/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        source: '/_next/static/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+    ];
+  },
+turbopack: {},
+// Removed custom webpack alias configuration; Turbopack handles module resolution.
+};
 
-const withPWA = require("next-pwa")({
-  dest: "public"
-})
-
-function parseHostname(url) {
-  try {
-    return new URL(url).hostname
-  } catch {
-    return null
-  }
-}
-
-const isProd = process.env.NODE_ENV === "production"
-
-// Comma-separated allowlist of remote image hostnames (no wildcards).
-// Example: NEXT_IMAGE_REMOTE_HOSTS=cdn.example.com,images.example.com
-const extraImageHosts = (process.env.NEXT_IMAGE_REMOTE_HOSTS || "")
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean)
-
-const supabaseHost = parseHostname(process.env.NEXT_PUBLIC_SUPABASE_URL || "")
-const imageHosts = Array.from(new Set([supabaseHost, ...extraImageHosts].filter(Boolean)))
-
-const remotePatterns = []
-if (!isProd) {
-  remotePatterns.push(
-    { protocol: "http", hostname: "localhost" },
-    { protocol: "http", hostname: "127.0.0.1" }
-  )
-}
-for (const host of imageHosts) {
-  remotePatterns.push({ protocol: "https", hostname: host })
-}
-
-module.exports = withBundleAnalyzer(
-  withPWA({
-    reactStrictMode: true,
-    images: {
-      remotePatterns
-    },
-    experimental: {
-      serverComponentsExternalPackages: ["sharp", "onnxruntime-node"]
-    }
-  })
-)
+module.exports = nextConfig;

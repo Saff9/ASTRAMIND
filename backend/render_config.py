@@ -1,6 +1,6 @@
 # backend/render_config.py
 """
-Render-specific configuration and deployment settings for GenZ AI Backend
+Render-specific configuration and deployment settings for ASTRAMIND Backend
 """
 
 import os
@@ -91,8 +91,8 @@ def configure_render_middleware(app):
         allowed_origins.append(render_url)
 
     # Add common Render domains
-    if "https://genzai.onrender.com" not in allowed_origins:
-        allowed_origins.append("https://genzai.onrender.com")
+    if "https://ASTRAMINDai.onrender.com" not in allowed_origins:
+        allowed_origins.append("https://ASTRAMINDai.onrender.com")
 
     return allowed_origins
 
@@ -127,14 +127,14 @@ def get_render_security_config() -> Dict[str, Any]:
     """
     return {
         "trusted_hosts": [
-            "genzai.onrender.com",
+            "ASTRAMINDai.onrender.com",
             "*.onrender.com",
             "localhost",
             "127.0.0.1",
         ],
         "allowed_origins": [
-            "https://genzai.onrender.com",
-            "https://www.genzai.onrender.com",
+            "https://ASTRAMINDai.onrender.com",
+            "https://www.ASTRAMINDai.onrender.com",
             "http://localhost:3000",
             "https://localhost:3000",
         ],

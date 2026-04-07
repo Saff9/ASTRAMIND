@@ -1,7 +1,7 @@
 # backend/core/performance_monitor.py
 """
-PERFORMANCE MONITOR v1.1.4 - Advanced performance tracking and optimization
-Ensures GenZ AI delivers lightning-fast responses with intelligent caching.
+PERFORMANCE MONITOR v1.1.2 - Advanced performance tracking and optimization
+Ensures ASTRAMIND delivers lightning-fast responses with intelligent caching.
 """
 
 import time

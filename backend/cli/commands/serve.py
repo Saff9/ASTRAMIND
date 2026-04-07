@@ -1,6 +1,6 @@
 # backend/cli/commands/serve.py
 """
-Serve command for GenZ AI CLI.
+Serve command for ASTRAMIND CLI.
 Starts the FastAPI backend server.
 """
 
@@ -17,17 +17,17 @@ def serve_command(
     workers: int = typer.Option(1, help="Number of worker processes"),
 ) -> None:
     """
-    Start the GenZ AI backend server.
+Start the AstraMind backend server.
 
-    Launches the FastAPI application using uvicorn,
-    with configurable host, port, and reload options.
-    """
+Launches the FastAPI application using uvicorn,
+with configurable host, port, and reload options.
+"""
     try:
         # Set environment variable for workers if > 1
         if workers > 1:
             os.environ["WEB_CONCURRENCY"] = str(workers)
 
-        typer.echo(f"Starting GenZ AI backend on {host}:{port}")
+        typer.echo(f"Starting AstraMind backend on {host}:{port}")
 
         uvicorn.run(
             "main:app",

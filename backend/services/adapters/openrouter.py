@@ -17,8 +17,8 @@ class OpenRouterProvider(BaseProvider):
 async def generate(prompt: str, api_key: str):
     headers = {
         "Authorization": f"Bearer {api_key}",
-        "HTTP-Referer": "https://genz.ai",
-        "X-Title": "GenZ AI",
+        "HTTP-Referer": "https://ASTRAMIND.ai",
+        "X-Title": "ASTRAMIND",
     }
 
     data = {

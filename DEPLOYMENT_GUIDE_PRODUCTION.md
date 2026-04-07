@@ -1,6 +1,6 @@
 # Production Deployment Guide
 
-Comprehensive guide for deploying GenZ AI Backend to production with 100k+ concurrent user support.
+Comprehensive guide for deploying ASTRAMIND Backend to production with 100k+ concurrent user support.
 
 ## Table of Contents
 
@@ -158,16 +158,16 @@ data:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: genz-ai-prod
+  name: ASTRAMIND-ai-prod
   labels:
     environment: production
-    app: genz-ai
+    app: ASTRAMIND-ai
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  namespace: genz-ai-prod
+  namespace: ASTRAMIND-ai-prod
   name: app-role
 rules:
 - apiGroups: [""]
@@ -182,11 +182,11 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: app-rolebinding
-  namespace: genz-ai-prod
+  namespace: ASTRAMIND-ai-prod
 subjects:
 - kind: ServiceAccount
   name: default
-  namespace: genz-ai-prod
+  namespace: ASTRAMIND-ai-prod
 roleRef:
   kind: Role
   name: app-role
@@ -201,7 +201,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: app-config
-  namespace: genz-ai-prod
+  namespace: ASTRAMIND-ai-prod
 data:
   ENV: "production"
   LOG_LEVEL: "INFO"
@@ -216,7 +216,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: app-secrets
-  namespace: genz-ai-prod
+  namespace: ASTRAMIND-ai-prod
 type: Opaque
 stringData:
   JWT_SECRET: "your-super-secret-jwt-key-here"
@@ -234,7 +234,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: postgres-db
-  namespace: genz-ai-prod
+  namespace: ASTRAMIND-ai-prod
 spec:
   serviceName: postgres-service
   replicas: 3
@@ -251,7 +251,7 @@ spec:
         image: postgres:15
         env:
         - name: POSTGRES_DB
-          value: "genzai"
+          value: "ASTRAMINDai"
         - name: POSTGRES_USER
           valueFrom:
             secretKeyRef:
@@ -289,7 +289,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: postgres-service
-  namespace: genz-ai-prod
+  namespace: ASTRAMIND-ai-prod
 spec:
   selector:
     app: postgres
@@ -308,7 +308,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: redis-cluster
-  namespace: genz-ai-prod
+  namespace: ASTRAMIND-ai-prod
 spec:
   serviceName: redis-service
   replicas: 3
@@ -357,7 +357,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: redis-config
-  namespace: genz-ai-prod
+  namespace: ASTRAMIND-ai-prod
 data:
   redis.conf: |
     maxmemory 2gb
@@ -370,7 +370,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: redis-service
-  namespace: genz-ai-prod
+  namespace: ASTRAMIND-ai-prod
 spec:
   selector:
     app: redis
@@ -388,25 +388,25 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: genz-ai-backend
-  namespace: genz-ai-prod
+  name: ASTRAMIND-ai-backend
+  namespace: ASTRAMIND-ai-prod
   labels:
-    app: genz-ai-backend
+    app: ASTRAMIND-ai-backend
     version: v1.1.4
 spec:
   replicas: 10
   selector:
     matchLabels:
-      app: genz-ai-backend
+      app: ASTRAMIND-ai-backend
   template:
     metadata:
       labels:
-        app: genz-ai-backend
+        app: ASTRAMIND-ai-backend
         version: v1.1.4
     spec:
       containers:
       - name: backend
-        image: genzai/backend:v1.1.4
+        image: ASTRAMINDai/backend:v1.1.4
         ports:
         - containerPort: 8000
         envFrom:
@@ -453,10 +453,10 @@ apiVersion: v1
 kind: Service
 metadata:
   name: backend-service
-  namespace: genz-ai-prod
+  namespace: ASTRAMIND-ai-prod
 spec:
   selector:
-    app: genz-ai-backend
+    app: ASTRAMIND-ai-backend
   ports:
   - protocol: TCP
     port: 80
@@ -468,7 +468,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: backend-ingress
-  namespace: genz-ai-prod
+  namespace: ASTRAMIND-ai-prod
   annotations:
     kubernetes.io/ingress.class: "nginx"
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
@@ -482,7 +482,7 @@ spec:
   tls:
   - hosts:
     - api.yourdomain.com
-    secretName: genz-ai-tls
+    secretName: ASTRAMIND-ai-tls
   rules:
   - host: api.yourdomain.com
     http:
@@ -503,13 +503,13 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: genz-ai-hpa
-  namespace: genz-ai-prod
+  name: ASTRAMIND-ai-hpa
+  namespace: ASTRAMIND-ai-prod
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: genz-ai-backend
+    name: ASTRAMIND-ai-backend
   minReplicas: 10
   maxReplicas: 100
   metrics:
@@ -619,15 +619,15 @@ services:
   postgres:
     image: postgres:15
     environment:
-      POSTGRES_DB: genzai
-      POSTGRES_USER: genzai
-      POSTGRES_PASSWORD: genzai123
+      POSTGRES_DB: ASTRAMINDai
+      POSTGRES_USER: ASTRAMINDai
+      POSTGRES_PASSWORD: ASTRAMINDai123
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U genzai"]
+      test: ["CMD-SHELL", "pg_isready -U ASTRAMINDai"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -649,7 +649,7 @@ services:
   backend:
     build: .
     environment:
-      DATABASE_URL: postgresql://genzai:genzai123@postgres:5432/genzai
+      DATABASE_URL: postgresql://ASTRAMINDai:ASTRAMINDai123@postgres:5432/ASTRAMINDai
       REDIS_URL: redis://redis:6379
       JWT_SECRET: dev-secret-key
       LOG_LEVEL: DEBUG
@@ -687,17 +687,17 @@ volumes:
 ```sql
 -- production-db-setup.sql
 -- Create database and users
-CREATE DATABASE genzai_prod;
-CREATE DATABASE genzai_staging;
-CREATE DATABASE genzai_dev;
+CREATE DATABASE ASTRAMINDai_prod;
+CREATE DATABASE ASTRAMINDai_staging;
+CREATE DATABASE ASTRAMINDai_dev;
 
 -- Create application user
-CREATE USER genzai_app WITH PASSWORD 'secure_password_here';
-GRANT ALL PRIVILEGES ON DATABASE genzai_prod TO genzai_app;
-GRANT ALL PRIVILEGES ON DATABASE genzai_staging TO genzai_app;
+CREATE USER ASTRAMINDai_app WITH PASSWORD 'secure_password_here';
+GRANT ALL PRIVILEGES ON DATABASE ASTRAMINDai_prod TO ASTRAMINDai_app;
+GRANT ALL PRIVILEGES ON DATABASE ASTRAMINDai_staging TO ASTRAMINDai_app;
 
 -- Enable required extensions
-\c genzai_prod
+\c ASTRAMINDai_prod
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pg_stat_statements";
 
@@ -723,8 +723,8 @@ ALTER SYSTEM SET effective_io_concurrency = 200;
 
 BACKUP_DIR="/backups/postgresql"
 DATE=$(date +%Y%m%d_%H%M%S)
-DB_NAME="genzai_prod"
-BACKUP_FILE="$BACKUP_DIR/genzai_prod_$DATE.sql"
+DB_NAME="ASTRAMINDai_prod"
+BACKUP_FILE="$BACKUP_DIR/ASTRAMINDai_prod_$DATE.sql"
 
 # Create backup
 pg_dump -h $DB_HOST -U $DB_USER -d $DB_NAME -f $BACKUP_FILE
@@ -733,7 +733,7 @@ pg_dump -h $DB_HOST -U $DB_USER -d $DB_NAME -f $BACKUP_FILE
 gzip $BACKUP_FILE
 
 # Upload to cloud storage (example for AWS S3)
-aws s3 cp ${BACKUP_FILE}.gz s3://genzai-backups/daily/
+aws s3 cp ${BACKUP_FILE}.gz s3://ASTRAMINDai-backups/daily/
 
 # Keep only last 30 days
 find $BACKUP_DIR -name "*.gz" -mtime +30 -delete
@@ -809,7 +809,7 @@ data:
         - role: pod
           namespaces:
             names:
-            - genz-ai-prod
+            - ASTRAMIND-ai-prod
         relabel_configs:
         - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
           action: keep
@@ -835,7 +835,7 @@ data:
 
   alert_rules.yml: |
     groups:
-    - name: genz-ai-alerts
+    - name: ASTRAMIND-ai-alerts
       rules:
       - alert: HighErrorRate
         expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
@@ -871,8 +871,8 @@ data:
 {
   "dashboard": {
     "id": null,
-    "title": "GenZ AI Backend Monitoring",
-    "tags": ["genz-ai", "production"],
+    "title": "ASTRAMIND Backend Monitoring",
+    "tags": ["ASTRAMIND-ai", "production"],
     "timezone": "browser",
     "panels": [
       {
@@ -960,19 +960,19 @@ async def get_metrics():
     metrics = []
     
     # System metrics
-    metrics.append(f'genzai_system_cpu_usage {health["cpu_usage"]}')
-    metrics.append(f'genzai_system_memory_usage {health["memory_usage"]}')
-    metrics.append(f'genzai_system_disk_usage {health["disk_usage"]}')
+    metrics.append(f'ASTRAMINDai_system_cpu_usage {health["cpu_usage"]}')
+    metrics.append(f'ASTRAMINDai_system_memory_usage {health["memory_usage"]}')
+    metrics.append(f'ASTRAMINDai_system_disk_usage {health["disk_usage"]}')
     
     # Application metrics
     app_metrics = health["app_metrics"]
     for key, value in app_metrics.items():
-        metrics.append(f'genzai_app_{key} {value}')
+        metrics.append(f'ASTRAMINDai_app_{key} {value}')
     
     # Request metrics
-    metrics.append(f'genzai_active_requests {health["active_requests"]}')
-    metrics.append(f'genzai_slow_requests {health["slow_requests"]}')
-    metrics.append(f'genzai_error_rate_5min {health["error_rate_5min"]}')
+    metrics.append(f'ASTRAMINDai_active_requests {health["active_requests"]}')
+    metrics.append(f'ASTRAMINDai_slow_requests {health["slow_requests"]}')
+    metrics.append(f'ASTRAMINDai_error_rate_5min {health["error_rate_5min"]}')
     
     return "\n".join(metrics)
 
@@ -992,7 +992,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: deny-all-ingress
-  namespace: genz-ai-prod
+  namespace: ASTRAMIND-ai-prod
 spec:
   podSelector: {}
   policyTypes:
@@ -1003,11 +1003,11 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-ingress
-  namespace: genz-ai-prod
+  namespace: ASTRAMIND-ai-prod
 spec:
   podSelector:
     matchLabels:
-      app: genz-ai-backend
+      app: ASTRAMIND-ai-backend
   policyTypes:
   - Ingress
   - Egress
@@ -1095,7 +1095,7 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 subjects:
 - kind: Group
-  name: system:serviceaccounts:genz-ai-prod
+  name: system:serviceaccounts:ASTRAMIND-ai-prod
   apiGroup: rbac.authorization.k8s.io
 ```
 
@@ -1107,7 +1107,7 @@ apiVersion: bitnami.com/v1alpha1
 kind: SealedSecret
 metadata:
   name: app-secrets
-  namespace: genz-ai-prod
+  namespace: ASTRAMIND-ai-prod
   annotations:
     sealedsecrets.bitnami.com/cluster-wide: "true"
 spec:
@@ -1140,7 +1140,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: backend-ingress
-  namespace: genz-ai-prod
+  namespace: ASTRAMIND-ai-prod
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
@@ -1151,7 +1151,7 @@ spec:
   tls:
   - hosts:
     - api.yourdomain.com
-    secretName: genz-ai-tls
+    secretName: ASTRAMIND-ai-tls
   rules:
   - host: api.yourdomain.com
     http:
@@ -1178,7 +1178,7 @@ from starlette.middleware.cors import CORSMiddleware
 
 def create_app():
     app = FastAPI(
-        title="GenZ AI Backend",
+        title="ASTRAMIND Backend",
         version="1.1.4",
         docs_url="/docs",
         redoc_url="/redoc",
@@ -1320,13 +1320,13 @@ rdb-save-incremental-fsync yes
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: genz-ai-hpa
-  namespace: genz-ai-prod
+  name: ASTRAMIND-ai-hpa
+  namespace: ASTRAMIND-ai-prod
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: genz-ai-backend
+    name: ASTRAMIND-ai-backend
   minReplicas: 10
   maxReplicas: 200
   metrics:
@@ -1417,7 +1417,7 @@ spec:
         - --cloud-provider=aws
         - --skip-nodes-with-local-storage=false
         - --expander=least-waste
-        - --node-group-auto-discovery=asg:tag=k8s.io/cluster-autoscaler/enabled,k8s.io/cluster-autoscaler/genz-ai-prod
+        - --node-group-auto-discovery=asg:tag=k8s.io/cluster-autoscaler/enabled,k8s.io/cluster-autoscaler/ASTRAMIND-ai-prod
         - --balance-similar-node-groups
         - --scale-down-enabled=true
         - --scale-down-delay-after-add=10m
@@ -1445,7 +1445,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: postgres-read
-  namespace: genz-ai-prod
+  namespace: ASTRAMIND-ai-prod
 spec:
   selector:
     app: postgres-read
@@ -1459,7 +1459,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: postgres-read-replica
-  namespace: genz-ai-prod
+  namespace: ASTRAMIND-ai-prod
 spec:
   replicas: 2
   selector:
@@ -1479,7 +1479,7 @@ spec:
         - name: PG_MODE
           value: "slave"
         - name: PG_DATABASE
-          value: "genzai"
+          value: "ASTRAMINDai"
         - name: PG_USER
           valueFrom:
             secretKeyRef:
@@ -1602,17 +1602,17 @@ jobs:
         aws-region: us-east-1
     
     - name: Configure kubectl
-      run: aws eks update-kubeconfig --name genz-ai-cluster
+      run: aws eks update-kubeconfig --name ASTRAMIND-ai-cluster
     
     - name: Deploy to Kubernetes
       run: |
-        kubectl set image deployment/genz-ai-backend backend=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-        kubectl rollout status deployment/genz-ai-backend -n genz-ai-prod
+        kubectl set image deployment/ASTRAMIND-ai-backend backend=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        kubectl rollout status deployment/ASTRAMIND-ai-backend -n ASTRAMIND-ai-prod
     
     - name: Run smoke tests
       run: |
         kubectl run smoke-test --image=curlimages/curl --rm -i --restart=Never -- \
-          curl -f http://backend-service.genz-ai-prod.svc.cluster.local/health
+          curl -f http://backend-service.ASTRAMIND-ai-prod.svc.cluster.local/health
 ```
 
 ### Terraform Infrastructure
@@ -1633,7 +1633,7 @@ terraform {
   }
   
   backend "s3" {
-    bucket = "genz-ai-terraform-state"
+    bucket = "ASTRAMIND-ai-terraform-state"
     key    = "production/terraform.tfstate"
     region = "us-east-1"
   }
@@ -1654,7 +1654,7 @@ provider "kubernetes" {
 module "vpc" {
   source = "terraform-aws-modules/vpc/aws"
   
-  name = "genz-ai-vpc"
+  name = "ASTRAMIND-ai-vpc"
   cidr = "10.0.0.0/16"
   
   azs             = ["${var.aws_region}a", "${var.aws_region}b", "${var.aws_region}c"]
@@ -1666,7 +1666,7 @@ module "vpc" {
   
   tags = {
     Environment = "production"
-    Project     = "genz-ai"
+    Project     = "ASTRAMIND-ai"
   }
 }
 
@@ -1675,7 +1675,7 @@ module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 19.0"
   
-  cluster_name    = "genz-ai-prod"
+  cluster_name    = "ASTRAMIND-ai-prod"
   cluster_version = "1.27"
   subnets         = module.vpc.private_subnets
   
@@ -1726,13 +1726,13 @@ module "eks" {
   
   tags = {
     Environment = "production"
-    Project     = "genz-ai"
+    Project     = "ASTRAMIND-ai"
   }
 }
 
 # RDS PostgreSQL
 resource "aws_db_instance" "postgres" {
-  identifier = "genz-ai-prod"
+  identifier = "ASTRAMIND-ai-prod"
   
   engine         = "postgres"
   engine_version = "15.3"
@@ -1743,7 +1743,7 @@ resource "aws_db_instance" "postgres" {
   storage_type          = "gp2"
   storage_encrypted     = true
   
-  db_name  = "genzai"
+  db_name  = "ASTRAMINDai"
   username = var.db_username
   password = var.db_password
   
@@ -1755,7 +1755,7 @@ resource "aws_db_instance" "postgres" {
   maintenance_window     = "sun:04:00-sun:05:00"
   
   skip_final_snapshot = false
-  final_snapshot_identifier = "genz-ai-prod-final-snapshot-${formatdate("YYYY-MM-DD-hhmm", timestamp())}"
+  final_snapshot_identifier = "ASTRAMIND-ai-prod-final-snapshot-${formatdate("YYYY-MM-DD-hhmm", timestamp())}"
   
   enabled_cloudwatch_logs_exports = ["postgresql", "upgrade"]
   
@@ -1764,14 +1764,14 @@ resource "aws_db_instance" "postgres" {
   
   tags = {
     Environment = "production"
-    Project     = "genz-ai"
+    Project     = "ASTRAMIND-ai"
   }
 }
 
 # Redis (Elasticache)
 resource "aws_elasticache_replication_group" "redis" {
-  replication_group_id       = "genz-ai-prod"
-  description                = "GenZ AI Redis Cluster"
+  replication_group_id       = "ASTRAMIND-ai-prod"
+  description                = "ASTRAMIND Redis Cluster"
   
   port               = 6379
   parameter_group_name = "default.redis7"
@@ -1790,7 +1790,7 @@ resource "aws_elasticache_replication_group" "redis" {
   
   tags = {
     Environment = "production"
-    Project     = "genz-ai"
+    Project     = "ASTRAMIND-ai"
   }
 }
 ```
@@ -1814,8 +1814,8 @@ kubectl get all --all-namespaces -o yaml > /backups/k8s_config_$(date +%Y%m%d_%H
 kubectl get secrets --all-namespaces -o yaml > /backups/k8s_secrets_$(date +%Y%m%d_%H%M%S).yaml
 
 # Upload to multiple regions
-aws s3 cp /backups/ s3://genz-ai-backups-us-east-1/ --recursive --storage-class STANDARD_IA
-aws s3 cp /backups/ s3://genz-ai-backups-us-west-2/ --recursive --storage-class STANDARD_IA
+aws s3 cp /backups/ s3://ASTRAMIND-ai-backups-us-east-1/ --recursive --storage-class STANDARD_IA
+aws s3 cp /backups/ s3://ASTRAMIND-ai-backups-us-west-2/ --recursive --storage-class STANDARD_IA
 
 # Clean up local backups older than 7 days
 find /backups -name "*.gz" -mtime +7 -delete
@@ -1838,7 +1838,7 @@ kubectl apply -f /backups/k8s_config_YYYYMMDD_HHMMSS.yaml
 kubectl apply -f /backups/k8s_secrets_YYYYMMDD_HHMMSS.yaml
 
 # Verify restoration
-kubectl get pods -n genz-ai-prod
+kubectl get pods -n ASTRAMIND-ai-prod
 curl -f http://api.yourdomain.com/health
 ```
 
@@ -1850,21 +1850,21 @@ curl -f http://api.yourdomain.com/health
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: genz-ai-prod-us-east-1
+  name: ASTRAMIND-ai-prod-us-east-1
 
 ---
 # Secondary region (us-west-2)
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: genz-ai-prod-us-west-2
+  name: ASTRAMIND-ai-prod-us-west-2
 
 ---
 # Global load balancer configuration
 apiVersion: networking.gke.io/v1
 kind: ManagedCertificate
 metadata:
-  name: genz-ai-tls
+  name: ASTRAMIND-ai-tls
 spec:
   domains:
     - api.yourdomain.com
@@ -1873,16 +1873,16 @@ spec:
 apiVersion: networking.gke.io/v1beta1
 kind: MultiClusterIngress
 metadata:
-  name: genz-ai-global-ingress
+  name: ASTRAMIND-ai-global-ingress
 spec:
   template:
     spec:
       backend:
-        serviceName: genz-ai-backend
+        serviceName: ASTRAMIND-ai-backend
         servicePort: 80
   defaultBackend:
     service:
-      name: genz-ai-backend
+      name: ASTRAMIND-ai-backend
       port:
         number: 80
   rules:
@@ -1891,7 +1891,7 @@ spec:
       paths:
       - path: /*
         backend:
-          serviceName: genz-ai-backend
+          serviceName: ASTRAMIND-ai-backend
           servicePort: 80
 ```
 
@@ -1905,7 +1905,7 @@ apiVersion: v1
 kind: LimitRange
 metadata:
   name: resource-limits
-  namespace: genz-ai-prod
+  namespace: ASTRAMIND-ai-prod
 spec:
   limits:
   - default:
@@ -1921,7 +1921,7 @@ apiVersion: v1
 kind: ResourceQuota
 metadata:
   name: compute-resources
-  namespace: genz-ai-prod
+  namespace: ASTRAMIND-ai-prod
 spec:
   hard:
     requests.cpu: "50"
@@ -1936,7 +1936,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: spot-instances-config
-  namespace: genz-ai-prod
+  namespace: ASTRAMIND-ai-prod
 data:
   use-spot-instances: "true"
   spot-instance-percentage: "50"
@@ -1994,13 +1994,13 @@ if __name__ == "__main__":
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: genz-ai-cost-optimized-hpa
-  namespace: genz-ai-prod
+  name: ASTRAMIND-ai-cost-optimized-hpa
+  namespace: ASTRAMIND-ai-prod
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: genz-ai-backend
+    name: ASTRAMIND-ai-backend
   minReplicas: 5    # Lower minimum for cost savings
   maxReplicas: 50   # Lower maximum to control costs
   metrics:
@@ -2025,4 +2025,4 @@ spec:
         periodSeconds: 60
 ```
 
-This comprehensive deployment guide provides everything needed to deploy GenZ AI Backend to production with enterprise-grade reliability, security, and scalability for 100k+ concurrent users.
+This comprehensive deployment guide provides everything needed to deploy ASTRAMIND Backend to production with enterprise-grade reliability, security, and scalability for 100k+ concurrent users.

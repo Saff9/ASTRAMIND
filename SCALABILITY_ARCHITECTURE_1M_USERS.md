@@ -1,4 +1,4 @@
-# 🚀 GenZ AI - Scalability Architecture for 1 Million Users
+# 🚀 ASTRAMIND - Scalability Architecture for 1 Million Users
 
 **Version**: v1.1.3
 **Target**: 1M registered users, 100K concurrent users
@@ -9,7 +9,7 @@
 
 ## 🎯 Executive Summary
 
-This document outlines the comprehensive scalability architecture designed to support **1 million registered users** with **100,000 concurrent users** for GenZ AI v1.1.3. The architecture ensures **high availability, performance, and reliability** while maintaining **enterprise-grade security**.
+This document outlines the comprehensive scalability architecture designed to support **1 million registered users** with **100,000 concurrent users** for ASTRAMIND v1.1.3. The architecture ensures **high availability, performance, and reliability** while maintaining **enterprise-grade security**.
 
 ---
 
@@ -17,7 +17,7 @@ This document outlines the comprehensive scalability architecture designed to su
 
 ```
 ┌───────────────────────────────────────────────────────────────────────────────┐
-│                            GENZ AI SCALABILITY ARCHITECTURE                    │
+│                            ASTRAMIND SCALABILITY ARCHITECTURE                    │
 ├───────────────────────────────────────────────────────────────────────────────┤
 │  🌐 CLIENT LAYER                                                               │
 │  ┌─────────────────────────────────────────────────────────────────────────┐  │
@@ -152,7 +152,7 @@ module.exports = {
   output: 'standalone',
   compress: true,
   images: {
-    domains: ['cdn.genzai.com', 'supabase.co'],
+    domains: ['cdn.ASTRAMINDai.com', 'supabase.co'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     minimumCacheTTL: 60 * 60 * 24 * 30, // 30 days
@@ -258,9 +258,9 @@ CREATE INDEX idx_users_last_active ON users(last_active);
 REDIS_CONFIG = {
     'cluster': True,
     'nodes': [
-        {'host': 'redis-1.genzai.com', 'port': 6379},
-        {'host': 'redis-2.genzai.com', 'port': 6379},
-        {'host': 'redis-3.genzai.com', 'port': 6379},
+        {'host': 'redis-1.ASTRAMINDai.com', 'port': 6379},
+        {'host': 'redis-2.ASTRAMINDai.com', 'port': 6379},
+        {'host': 'redis-3.ASTRAMINDai.com', 'port': 6379},
     ],
     'maxmemory_policy': 'allkeys-lru',
     'maxmemory': '8gb',
@@ -344,7 +344,7 @@ REDIS_CONFIG = {
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: genzai-backend
+  name: ASTRAMINDai-backend
 spec:
   replicas: 20
   strategy:
@@ -368,12 +368,12 @@ spec:
 apiVersion: flagger.app/v1beta1
 kind: Canary
 metadata:
-  name: genzai-backend
+  name: ASTRAMINDai-backend
 spec:
   targetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: genzai-backend
+    name: ASTRAMINDai-backend
   service:
     port: 8000
   analysis:
@@ -436,7 +436,7 @@ spec:
 
 ## 🏆 Scalability Certification
 
-**GenZ AI v1.1.3 scalability architecture is designed to handle:**
+**ASTRAMIND v1.1.3 scalability architecture is designed to handle:**
 - ✅ **1,000,000 registered users**
 - ✅ **100,000 concurrent users**
 - ✅ **5,000 requests per second**

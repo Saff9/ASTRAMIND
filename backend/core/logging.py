@@ -39,7 +39,7 @@ def setup_logging():
     # File handler with rotation (max 10MB, keep 5 backups)
     try:
         file_handler = RotatingFileHandler(
-            "logs/genzai.log",
+            "logs/ASTRAMINDai.log",
             maxBytes=10 * 1024 * 1024,  # 10MB
             backupCount=5
         )
@@ -52,7 +52,7 @@ def setup_logging():
     # Error log file for ERROR and CRITICAL
     try:
         error_handler = RotatingFileHandler(
-            "logs/genzai_errors.log",
+            "logs/ASTRAMINDai_errors.log",
             maxBytes=10 * 1024 * 1024,
             backupCount=5
         )

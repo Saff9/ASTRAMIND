@@ -39,6 +39,51 @@ class Settings(BaseSettings):
         default="",
         description="Comma-separated OpenRouter API keys"
     )
+    TOGETHER_API_KEYS: str = Field(
+        default="",
+        description="Comma-separated Together AI API keys",
+    )
+    MISTRAL_API_KEYS: str = Field(
+        default="",
+        description="Comma-separated Mistral AI API keys",
+    )
+    CEREBRAS_API_KEYS: str = Field(
+        default="",
+        description="Comma-separated Cerebras API keys",
+    )
+    SILICONFLOW_API_KEYS: str = Field(
+        default="",
+        description="Comma-separated SiliconFlow (硅基流动) API keys",
+    )
+    GOOGLE_AI_STUDIO_API_KEYS: str = Field(
+        default="",
+        description="Comma-separated Google AI Studio (Gemini) API keys",
+    )
+    ALIBABA_BAILIAN_API_KEYS: str = Field(
+        default="",
+        description="Comma-separated Alibaba Bailian (阿里云百炼) API keys",
+    )
+
+    # Cloudflare Workers AI (token + account id)
+    CLOUDFLARE_ACCOUNT_ID: Optional[str] = Field(
+        default=None,
+        description="Cloudflare account id for Workers AI",
+    )
+    CLOUDFLARE_API_TOKEN: Optional[str] = Field(
+        default=None,
+        description="Cloudflare API token for Workers AI",
+    )
+
+    # Optional base URLs for OpenAI-compatible providers (override defaults if needed)
+    TOGETHER_BASE_URL: str = Field(default="https://api.together.xyz/v1")
+    MISTRAL_BASE_URL: str = Field(default="https://api.mistral.ai/v1")
+    CEREBRAS_BASE_URL: str = Field(default="https://api.cerebras.ai/v1")
+    SILICONFLOW_BASE_URL: str = Field(default="https://api.siliconflow.cn/v1")
+    OPENROUTER_BASE_URL: str = Field(default="https://openrouter.ai/api/v1")
+    GROQ_BASE_URL: str = Field(default="https://api.groq.com/openai/v1")
+    OPENAI_BASE_URL: str = Field(default="https://api.openai.com/v1")
+    # Alibaba Bailian compatible-mode endpoint (often DashScope compatible mode)
+    ALIBABA_BAILIAN_BASE_URL: str = Field(default="https://dashscope.aliyuncs.com/compatible-mode/v1")
     HUGGINGFACE_API_KEY: Optional[str] = None
     OPENAI_API_KEY: Optional[str] = Field(
         default=None,
@@ -75,6 +120,12 @@ class Settings(BaseSettings):
     MAX_REQUEST_SIZE_BYTES: int = Field(default=50_000)
     REQUEST_TIMEOUT_SECONDS: int = Field(default=30)
 
+    # ===== OUTBOUND HTTP (provider calls) =====
+    OUTBOUND_HTTP_MAX_CONNECTIONS: int = Field(default=2000)
+    OUTBOUND_HTTP_MAX_KEEPALIVE: int = Field(default=500)
+    OUTBOUND_HTTP_CONNECT_TIMEOUT_SECONDS: float = Field(default=3.0)
+    OUTBOUND_HTTP_READ_TIMEOUT_SECONDS: float = Field(default=30.0)
+
     # ===== ENVIRONMENT =====
     ENV: str = Field(default="development")
     LOG_LEVEL: str = Field(default="INFO")
@@ -86,12 +137,16 @@ class Settings(BaseSettings):
     OPENROUTER_BALANCED_MODEL: str = Field(default="openai/gpt-4-turbo-preview")
 
     # ===== ENDPOINTS =====
-    APP_URL: str = Field(default="https://genzai.ai")
+    APP_URL: str = Field(default="https://ASTRAMINDai.ai")
     HF_MODEL_ENDPOINT: str = Field(default="https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium")
 
     # ===== FEATURE FLAGS =====
     ENABLE_WEB_SEARCH: bool = Field(default=True)
     ENABLE_IMAGE_GENERATION: bool = Field(default=False)
+
+    # ===== MONITORING / NOISE CONTROL =====
+    # When false, alert logs are suppressed (still tracked internally).
+    ENABLE_ALERT_LOGS: bool = Field(default=True)
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -115,21 +170,48 @@ class Settings(BaseSettings):
     # ===== COMPUTED PROPERTIES =====
     # These parse the string fields into lists at runtime
 
+    @staticmethod
+    def _parse_csv(value: str, *, placeholder_prefixes: tuple[str, ...] = ()) -> list[str]:
+        if not value:
+            return []
+        keys = [k.strip() for k in value.split(",") if k.strip()]
+        if not placeholder_prefixes:
+            return keys
+        return [k for k in keys if k and not any(k.startswith(p) for p in placeholder_prefixes)]
+
     @property
     def groq_api_keys(self) -> list[str]:
         """Parse GROQ_API_KEYS into list, filtering placeholders."""
-        if not self.GROQ_API_KEYS:
-            return []
-        keys = [k.strip() for k in self.GROQ_API_KEYS.split(",") if k.strip()]
-        return [k for k in keys if k and not k.startswith("GROQ_KEY")]
+        return self._parse_csv(self.GROQ_API_KEYS, placeholder_prefixes=("GROQ_KEY",))
 
     @property
     def openrouter_api_keys(self) -> list[str]:
         """Parse OPENROUTER_API_KEYS into list, filtering placeholders."""
-        if not self.OPENROUTER_API_KEYS:
-            return []
-        keys = [k.strip() for k in self.OPENROUTER_API_KEYS.split(",") if k.strip()]
-        return [k for k in keys if k and not k.startswith("OR_KEY")]
+        return self._parse_csv(self.OPENROUTER_API_KEYS, placeholder_prefixes=("OR_KEY",))
+
+    @property
+    def together_api_keys(self) -> list[str]:
+        return self._parse_csv(self.TOGETHER_API_KEYS, placeholder_prefixes=("TOGETHER_KEY",))
+
+    @property
+    def mistral_api_keys(self) -> list[str]:
+        return self._parse_csv(self.MISTRAL_API_KEYS, placeholder_prefixes=("MISTRAL_KEY",))
+
+    @property
+    def cerebras_api_keys(self) -> list[str]:
+        return self._parse_csv(self.CEREBRAS_API_KEYS, placeholder_prefixes=("CEREBRAS_KEY",))
+
+    @property
+    def siliconflow_api_keys(self) -> list[str]:
+        return self._parse_csv(self.SILICONFLOW_API_KEYS, placeholder_prefixes=("SILICONFLOW_KEY",))
+
+    @property
+    def google_ai_studio_api_keys(self) -> list[str]:
+        return self._parse_csv(self.GOOGLE_AI_STUDIO_API_KEYS, placeholder_prefixes=("GOOGLE_KEY", "GEMINI_KEY"))
+
+    @property
+    def alibaba_bailian_api_keys(self) -> list[str]:
+        return self._parse_csv(self.ALIBABA_BAILIAN_API_KEYS, placeholder_prefixes=("BAILIAN_KEY", "DASHSCOPE_KEY"))
 
     @property
     def admin_emails(self) -> list[str]:
@@ -171,7 +253,7 @@ class Settings(BaseSettings):
             # Fallback to local SQLite database for development/demo mode
             import os
             db_dir = os.path.dirname(os.path.dirname(__file__))
-            db_path = os.path.join(db_dir, "genzai_local.db")
+            db_path = os.path.join(db_dir, "ASTRAMINDai_local.db")
             # Use absolute path for SQLite
             return f"sqlite+aiosqlite:///{db_path.replace(os.sep, '/')}"
 
@@ -206,12 +288,23 @@ def validate_startup():
     has_providers = (
         len(settings.groq_api_keys) > 0 or
         len(settings.openrouter_api_keys) > 0 or
+        len(settings.together_api_keys) > 0 or
+        len(settings.mistral_api_keys) > 0 or
+        len(settings.cerebras_api_keys) > 0 or
+        len(settings.siliconflow_api_keys) > 0 or
+        len(settings.google_ai_studio_api_keys) > 0 or
+        len(settings.alibaba_bailian_api_keys) > 0 or
+        (settings.CLOUDFLARE_ACCOUNT_ID is not None and settings.CLOUDFLARE_API_TOKEN is not None) or
         settings.HUGGINGFACE_API_KEY or
         settings.OPENAI_API_KEY
     )
 
     if settings.is_production() and not has_providers:
-        errors.append("No AI providers configured - configure at least one provider (Groq, OpenRouter, HuggingFace, or OpenAI)")
+        errors.append(
+            "No AI providers configured - configure at least one provider "
+            "(Groq, OpenRouter, Together, Mistral, Cerebras, SiliconFlow, Google AI Studio, "
+            "Cloudflare Workers AI, Alibaba Bailian, HuggingFace, or OpenAI)"
+        )
     elif settings.is_production() and not has_providers:
         warnings.append("No AI providers configured - application will run in limited mode")
 
@@ -241,6 +334,20 @@ def validate_startup():
         providers.append(f"Groq ({len(settings.groq_api_keys)} keys)")
     if settings.openrouter_api_keys:
         providers.append(f"OpenRouter ({len(settings.openrouter_api_keys)} keys)")
+    if settings.together_api_keys:
+        providers.append(f"Together ({len(settings.together_api_keys)} keys)")
+    if settings.mistral_api_keys:
+        providers.append(f"Mistral ({len(settings.mistral_api_keys)} keys)")
+    if settings.cerebras_api_keys:
+        providers.append(f"Cerebras ({len(settings.cerebras_api_keys)} keys)")
+    if settings.siliconflow_api_keys:
+        providers.append(f"SiliconFlow ({len(settings.siliconflow_api_keys)} keys)")
+    if settings.google_ai_studio_api_keys:
+        providers.append(f"Google AI Studio ({len(settings.google_ai_studio_api_keys)} keys)")
+    if settings.CLOUDFLARE_ACCOUNT_ID and settings.CLOUDFLARE_API_TOKEN:
+        providers.append("Cloudflare Workers AI")
+    if settings.alibaba_bailian_api_keys:
+        providers.append(f"Alibaba Bailian ({len(settings.alibaba_bailian_api_keys)} keys)")
     if settings.HUGGINGFACE_API_KEY:
         providers.append("HuggingFace")
     if settings.OPENAI_API_KEY:

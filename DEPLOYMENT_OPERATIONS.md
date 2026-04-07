@@ -1,4 +1,4 @@
-# 🌍 Production Deployment & Operations - GenZ AI v1.1.4
+# 🌍 Production Deployment & Operations - ASTRAMIND v1.1.4
 
 **Production Status**: ✅ Ready to Deploy  
 **Target Scale**: 100,000+ concurrent users  
@@ -12,8 +12,8 @@
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/genzai.git
-cd genzai
+git clone https://github.com/yourusername/ASTRAMINDai.git
+cd ASTRAMINDai
 
 # Create environment file
 cp .env.example .env.production
@@ -21,7 +21,7 @@ cp .env.example .env.production
 # Production environment variables
 cat > .env.production << EOF
 # Database
-DATABASE_URL=postgresql+asyncpg://user:password@prod-db:5432/genzai_prod
+DATABASE_URL=postgresql+asyncpg://user:password@prod-db:5432/ASTRAMINDai_prod
 DATABASE_POOL_SIZE=20
 DATABASE_POOL_MAX_OVERFLOW=40
 
@@ -58,45 +58,45 @@ EOF
 **Using Docker**
 ```bash
 # Build production image
-docker build -t genzai:1.1.4 -f Dockerfile .
+docker build -t ASTRAMINDai:1.1.4 -f Dockerfile .
 
 # Tag for registry
-docker tag genzai:1.1.4 your-registry/genzai:1.1.4
+docker tag ASTRAMINDai:1.1.4 your-registry/ASTRAMINDai:1.1.4
 
 # Push to registry
-docker push your-registry/genzai:1.1.4
+docker push your-registry/ASTRAMINDai:1.1.4
 
 # Run container
 docker run -d \
-  --name genzai-prod \
+  --name ASTRAMINDai-prod \
   --env-file .env.production \
   -p 8000:8000 \
-  -v /var/log/genzai:/app/logs \
-  your-registry/genzai:1.1.4
+  -v /var/log/ASTRAMINDai:/app/logs \
+  your-registry/ASTRAMINDai:1.1.4
 ```
 
 **Using Kubernetes**
 ```bash
 # Create namespace
-kubectl create namespace genzai-prod
+kubectl create namespace ASTRAMINDai-prod
 
 # Create secrets
-kubectl create secret generic genzai-secrets \
+kubectl create secret generic ASTRAMINDai-secrets \
   --from-file=.env.production \
-  -n genzai-prod
+  -n ASTRAMINDai-prod
 
 # Deploy
 kubectl apply -f infrastructure/k8s/deployment.yaml \
-  -n genzai-prod
+  -n ASTRAMINDai-prod
 
 # Verify deployment
-kubectl rollout status deployment/genzai-backend \
-  -n genzai-prod
+kubectl rollout status deployment/ASTRAMINDai-backend \
+  -n ASTRAMINDai-prod
 
 # Scale to 10 replicas
-kubectl scale deployment genzai-backend \
+kubectl scale deployment ASTRAMINDai-backend \
   --replicas=10 \
-  -n genzai-prod
+  -n ASTRAMINDai-prod
 ```
 
 ### 3️⃣ Frontend Deployment
@@ -135,8 +135,8 @@ CMD ["npm", "start"]
 EOF
 
 # Build and push
-docker build -t genzai-frontend:1.1.4 .
-docker push your-registry/genzai-frontend:1.1.4
+docker build -t ASTRAMINDai-frontend:1.1.4 .
+docker push your-registry/ASTRAMINDai-frontend:1.1.4
 ```
 
 ---
@@ -316,10 +316,10 @@ done
 ```bash
 # Monitor key metrics
 kubectl top nodes
-kubectl top pods -n genzai-prod
+kubectl top pods -n ASTRAMINDai-prod
 
 # Check logs for errors
-kubectl logs -f deployment/genzai-backend -n genzai-prod
+kubectl logs -f deployment/ASTRAMINDai-backend -n ASTRAMINDai-prod
 
 # Verify database
 SELECT count(*) FROM users;
@@ -353,7 +353,7 @@ k6 run --vus 100 --duration 5m tests/load-test.js
 **Diagnosis**:
 ```bash
 # Check logs
-kubectl logs deployment/genzai-backend -n genzai-prod | grep ERROR
+kubectl logs deployment/ASTRAMINDai-backend -n ASTRAMINDai-prod | grep ERROR
 
 # Check database
 SELECT COUNT(*) FROM pg_stat_activity;
@@ -365,7 +365,7 @@ curl https://api.yourdomain.com/health
 **Solution**:
 ```bash
 # Increase replicas
-kubectl scale deployment genzai-backend --replicas=20
+kubectl scale deployment ASTRAMINDai-backend --replicas=20
 
 # Check database connections
 # Increase POOL_SIZE if needed
@@ -423,7 +423,7 @@ FROM pg_stat_activity
 WHERE state = 'idle' AND query_start < NOW() - INTERVAL '5 minutes';
 
 # Restart backend pods
-kubectl rollout restart deployment/genzai-backend -n genzai-prod
+kubectl rollout restart deployment/ASTRAMINDai-backend -n ASTRAMINDai-prod
 ```
 
 ---
@@ -485,8 +485,8 @@ kubectl rollout restart deployment/genzai-backend -n genzai-prod
 # 1-year retention (monthly archives)
 
 # Test restore monthly
-pg_dump genzai_prod > backup.sql
-psql genzai_test < backup.sql
+pg_dump ASTRAMINDai_prod > backup.sql
+psql ASTRAMINDai_test < backup.sql
 ```
 
 ### Disaster Recovery

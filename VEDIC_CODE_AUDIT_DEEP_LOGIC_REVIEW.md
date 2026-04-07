@@ -626,14 +626,14 @@ for (const msg of messages) {
 
 **File**: `backend/api/v1/chat.py` (Line 21 - Commented TODO)  
 **Severity**: Medium  
-**Issue**: GenZ personality adaptation commented out
+**Issue**: ASTRAMIND personality adaptation commented out
 
 ```python
-# from services.genz_stream import adapt_response_to_genz  # TODO: Implement post-streaming adaptation
+# from services.ASTRAMIND_stream import adapt_response_to_ASTRAMIND  # TODO: Implement post-streaming adaptation
 ```
 
 **Problem**:
-- GenZ personality engine not applied to responses
+- ASTRAMIND personality engine not applied to responses
 - Responses are raw AI output, not adapted
 - Feature documented but not implemented
 
@@ -894,7 +894,7 @@ def invalidate_user_caches(user_id):
 8. Implement better key rotation
 
 ### Long-term (v1.1.5)
-- GenZ response adaptation (already documented)
+- ASTRAMIND response adaptation (already documented)
 - Cache tagging for granular invalidation
 - Dynamic connection pool sizing
 - N+1 query audit and optimization

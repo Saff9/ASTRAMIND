@@ -1,4 +1,4 @@
-Alembic migrations for GenZ AI Backend.
+Alembic migrations for ASTRAMIND Backend.
 
 - Configure DATABASE_URL in the environment to run migrations.
 - Example: export DATABASE_URL=postgresql+psycopg://user:pass@host:5432/db

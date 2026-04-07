@@ -60,6 +60,6 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             pass  # Header doesn't exist, that's fine
 
         # Set custom server header
-        response.headers["Server"] = "GenZ AI"
+        response.headers["Server"] = "ASTRAMIND"
 
         return response

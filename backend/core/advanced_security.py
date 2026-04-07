@@ -1,6 +1,6 @@
 # backend/core/advanced_security.py
 """
-ADVANCED SECURITY ORCHESTRATION - v1.1.3 Deep Security Enhancements
+ADVANCED SECURITY ORCHESTRATION - v1.1.2 Deep Security Enhancements
 Enterprise-grade security beyond basic requirements.
 """
 
@@ -42,7 +42,7 @@ class HierarchicalEncryption:
     def _generate_key_hierarchy(self):
         """Generate hierarchical encryption keys."""
         # Master key derivation
-        master_salt = b'genzai_master_salt_2024'
+        master_salt = b'ASTRAMINDai_master_salt_2024'
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
             length=32,
@@ -54,7 +54,7 @@ class HierarchicalEncryption:
 
         # Generate version-specific keys
         for version in range(10):  # Keep 10 key versions for rotation
-            version_salt = f'genzai_key_v{version}_2024'.encode()
+            version_salt = f'ASTRAMINDai_key_v{version}_2024'.encode()
             version_kdf = PBKDF2HMAC(
                 algorithm=hashes.SHA256(),
                 length=32,
@@ -632,7 +632,7 @@ class SecurityIntelligence:
 
 class AdvancedSecurityOrchestrator:
     """
-    Master security orchestration system for v1.1.3
+    Master security orchestration system for v1.1.2
     """
 
     def __init__(self):
@@ -784,14 +784,14 @@ class AdvancedSecurityOrchestrator:
             'risk_assessment': risk_assessment,
             'response_actions': response_actions,
             'timestamp': datetime.utcnow().isoformat(),
-            'processed_by': 'AdvancedSecurityOrchestrator_v1.1.3'
+            'processed_by': 'AdvancedSecurityOrchestrator_v1.1.2'
         }
 
         # Store in security alerts queue
         self.security_alerts.append(log_entry)
 
         # Write to security log file
-        async with aiofiles.open('/var/log/genzai/security.log', 'a') as f:
+        async with aiofiles.open('/var/log/ASTRAMINDai/security.log', 'a') as f:
             await f.write(json.dumps(log_entry) + '\n')
 
     async def _generate_alerts(

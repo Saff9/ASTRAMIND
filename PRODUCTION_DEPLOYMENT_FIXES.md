@@ -1,8 +1,8 @@
-# 🚀 GenZ AI Backend - Production Deployment Fixes
+# 🚀 ASTRAMIND Backend - Production Deployment Fixes
 
 ## 📋 Summary of Changes
 
-This document summarizes all the production deployment fixes implemented to resolve the deployment errors and make the GenZ AI Backend fully production-ready.
+This document summarizes all the production deployment fixes implemented to resolve the deployment errors and make the ASTRAMIND Backend fully production-ready.
 
 ## 🔧 Critical Fixes Implemented
 
@@ -157,8 +157,8 @@ python test_deployment.py
 1. **Install Dependencies**: `pip install -r requirements.txt`
 2. **Run Tests**: `python test_deployment.py`
 3. **Validate Configuration**: Ensure all environment variables are set
-4. **Build Docker Image**: `docker build -t genzai-backend .`
-5. **Run Container**: `docker run -p 8000:8000 genzai-backend`
+4. **Build Docker Image**: `docker build -t ASTRAMINDai-backend .`
+5. **Run Container**: `docker run -p 8000:8000 ASTRAMINDai-backend`
 6. **Verify Health**: `curl http://localhost:8000/health`
 
 ## 🚀 Production Deployment
@@ -263,4 +263,4 @@ ALLOWED_ORIGINS=https://your-frontend-domain.com
 **Version**: 1.1.4
 **Status**: Production Ready ✅
 
-This comprehensive deployment fix document ensures that the GenZ AI Backend is now fully production-ready with all critical dependencies resolved, enhanced security, and comprehensive testing capabilities.
+This comprehensive deployment fix document ensures that the ASTRAMIND Backend is now fully production-ready with all critical dependencies resolved, enhanced security, and comprehensive testing capabilities.

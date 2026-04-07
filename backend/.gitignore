@@ -52,7 +52,7 @@ venv.bak/
 *.sqlite
 *.sqlite3
 database.db
-genzai.db
+astramind.db
 
 # Logs
 logs/

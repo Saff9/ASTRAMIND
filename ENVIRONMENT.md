@@ -1,4 +1,4 @@
-# 🔧 GenZ AI Environment Variables Configuration
+# 🔧 ASTRAMIND Environment Variables Configuration
 
 **Complete guide to configuring environment variables for backend and frontend deployment**
 
@@ -172,7 +172,7 @@ EMAIL_WHITELIST=user@yourdomain.com,admin@yourdomain.com
 # Local development settings
 ENV=development
 LOG_LEVEL=DEBUG
-DATABASE_URL=postgresql://localhost/genzai_dev
+DATABASE_URL=postgresql://localhost/ASTRAMINDai_dev
 
 # Test API keys (limited quota)
 GROQ_API_KEYS=gsk_test_key

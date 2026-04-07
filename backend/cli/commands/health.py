@@ -1,6 +1,6 @@
 # backend/cli/commands/health.py
 """
-Health command for GenZ AI CLI.
+Health command for ASTRAMIND CLI.
 Checks the health of the backend service.
 """
 
@@ -16,11 +16,11 @@ def health_command(
     detailed: bool = typer.Option(False, help="Show detailed health information"),
 ) -> None:
     """
-    Check the health of the GenZ AI backend.
+Check the health of the AstraMind backend.
 
-    Makes a request to the health endpoint to verify
-    service availability and basic functionality.
-    """
+Makes a request to the health endpoint to verify
+service availability and basic functionality.
+"""
     async def _health():
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
@@ -34,7 +34,7 @@ def health_command(
                     typer.echo(json.dumps(data, indent=2))
                 else:
                     status = data.get("status", "unknown")
-                    service = data.get("service", "GenZ AI")
+                    service = data.get("service", "AstraMind")
                     typer.echo(f"✅ {service} is {status}")
 
         except httpx.HTTPError as e:

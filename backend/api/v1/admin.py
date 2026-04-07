@@ -18,7 +18,7 @@ async def overview(user: User = Depends(get_current_user)):
     require_admin(user)
 
     return {
-        "service": "GenZ AI",
+        "service": "ASTRAMIND",
         "status": "operational",
         "timestamp": datetime.utcnow().isoformat(),
         "notes": "All systems nominal"

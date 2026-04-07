@@ -498,17 +498,17 @@ class SecurityLogger:
 #### Environment Separation
 ```bash
 # .env.development
-DATABASE_URL="postgresql://dev_user:dev_pass@localhost:5432/genzai_dev"
+DATABASE_URL="postgresql://dev_user:dev_pass@localhost:5432/ASTRAMINDai_dev"
 JWT_SECRET="dev_jwt_secret_12345"
 REDIS_URL="redis://localhost:6379/0"
 
 # .env.staging
-DATABASE_URL="postgresql://staging_user:staging_pass@staging-db.example.com:5432/genzai_staging"
+DATABASE_URL="postgresql://staging_user:staging_pass@staging-db.example.com:5432/ASTRAMINDai_staging"
 JWT_SECRET="staging_jwt_secret_67890"
 REDIS_URL="redis://staging-redis.example.com:6379/0"
 
 # .env.production
-DATABASE_URL="postgresql://prod_user:prod_pass@prod-db.example.com:5432/genzai_prod"
+DATABASE_URL="postgresql://prod_user:prod_pass@prod-db.example.com:5432/ASTRAMINDai_prod"
 JWT_SECRET="prod_jwt_secret_abcdef"
 REDIS_URL="redis://prod-redis.example.com:6379/0"
 ```

@@ -1,6 +1,6 @@
 # backend/cli/commands/status.py
 """
-Status command for GenZ AI CLI.
+Status command for ASTRAMIND CLI.
 Checks the status of AI providers.
 """
 
@@ -41,7 +41,7 @@ def status_command(
                     typer.echo("AI Provider Status:")
                     typer.echo(json.dumps(data, indent=2))
                 else:
-                    typer.echo("GenZ AI Status:")
+                    typer.echo("AstraMind Status:")
                     for provider, status in data.get("providers", {}).items():
                         status_icon = "✅" if status.get("available") else "❌"
                         typer.echo(f"  {status_icon} {provider}")
