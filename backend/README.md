@@ -1,6 +1,6 @@
 # 🚀 ASTRAMIND Backend - Enterprise Production Guide
 
-> **High-scale FastAPI backend supporting 100,000+ users and 50,000+ concurrent connections with multi-provider AI routing, JWT authentication, and comprehensive monitoring.**
+> **High-scale FastAPI backend supporting 100,000+ users and 50,000+ concurrent connections with multi-provider AI routing, JWT authentication, comprehensive monitoring, and customizable AI personality.**
 
 ---
 
@@ -11,9 +11,9 @@
 | **Framework** | FastAPI + Uvicorn | ✅ Production |
 | **Database** | PostgreSQL 14+ (Async) | ✅ Connected |
 | **Authentication** | JWT (HS256) | ✅ Implemented |
-| **Providers** | Groq, OpenRouter, HF | ✅ Configured |
-| **Deployment** | Render | ✅ Live |
-| **Monitoring** | Provider health checks | ✅ Running |
+| **AI Providers** | 15+ providers | ✅ Configured |
+| **Personality Engine** | Configurable YAML | ✅ Supported |
+| **Testing** | pytest (28 tests) | ✅ Passing |
 
 ---
 
@@ -44,33 +44,36 @@ Browser Request
 [HTTPS]
     ↓
 ┌─────────────────────────────────────────┐
-│ FastAPI Server (Port 10000)             │
+│ FastAPI Server (Port 8000)             │
 ├─────────────────────────────────────────┤
-│ 1. RequestID Middleware (tracing)      │
-│ 2. SecurityHeaders Middleware           │
-│ 3. RequestValidation Middleware         │
-│ 4. TrustedHost Middleware               │
-│ 5. CORS Middleware                      │
+│ 1. RequestID Middleware (tracing)       │
+│ 2. SecurityHeaders Middleware          │
+│ 3. RequestValidation Middleware       │
+│ 4. Rate Limiting Middleware            │
+│ 5. CORS Middleware                    │
 ├─────────────────────────────────────────┤
-│ Authentication: verify_jwt()            │
+│ Authentication: JWT verification        │
 │ ↓                                       │
-│ Rate Limiting: check_quota()            │
+│ Rate Limiting: check_quota()           │
 │ ↓                                       │
-│ Request Handler: /api/v1/chat           │
+│ Personality Engine: apply_style()      │
+│ ↓                                       │
+│ Request Handler: /api/v1/chat          │
 ├─────────────────────────────────────────┤
-│ Service Layer:                          │
-│ • AIRouter.stream()                     │
-│ • ProviderMonitor.check_health()        │
-│ • WebSearch.scrape()                    │
+│ Service Layer:                         │
+│ • AIRouter.stream()                    │
+│ • StabilityEngine.execute_with_stability│
+│ • ModelRouter.get_best_provider()     │
 ├─────────────────────────────────────────┤
-│ External APIs:                          │
-│ • Groq (llama-3.1-8b/70b)              │
-│ • OpenRouter (GPT-4o-mini)             │
-│ • HuggingFace (inference endpoint)     │
+│ AI Providers (15+):                    │
+│ • Groq, OpenRouter, Together, Mistral  │
+│ • Cerebras, SiliconFlow, Google AI     │
+│ • DeepSeek, xAI, Anthropic, Cohere    │
+│ • AI21, Novita, SambaNova, HuggingFace │
 ├─────────────────────────────────────────┤
-│ PostgreSQL Database:                    │
+│ PostgreSQL Database:                   │
 │ • users (id, email, quota, is_admin)   │
-│ • provider_status (uptime tracking)    │
+│ • provider_status (uptime tracking)   │
 └─────────────────────────────────────────┘
     ↓
 [Streaming Response: Server-Sent Events]
@@ -103,18 +106,11 @@ cp .env.example .env
 # DATABASE_URL=postgresql+asyncpg://localhost/ASTRAMINDai_dev
 # JWT_SECRET=your-super-secret-key-min-32-chars
 # GROQ_API_KEYS=your_groq_key
-# OPENROUTER_API_KEYS=your_openrouter_key
 
 # Run server
 uvicorn main:app --reload --port 8000
 
-# Or use CLI
-python -m backend.cli.main serve --reload --port 8000
-
-# Test with CLI
-python -m backend.cli.main health
-
-# Or test with curl
+# Test with curl
 curl http://localhost:8000/health
 ```
 
@@ -133,35 +129,7 @@ curl http://localhost:8000/health
 3. Set DATABASE_URL=postgresql://user:pass@localhost/ASTRAMINDai_dev
 ```
 
-### 3. ASTRAMIND CLI Setup
-
-The ASTRAMIND CLI provides professional command-line management:
-
-```bash
-# Install CLI dependencies (included in requirements.txt)
-pip install -r requirements.txt
-
-# Show available commands
-python -m backend.cli.main --help
-
-# Check backend health
-python -m backend.cli.main health --detailed
-
-# Check provider status
-python -m backend.cli.main status
-
-# Start server
-python -m backend.cli.main serve --host 0.0.0.0 --port 8000
-
-# Send chat message (requires token)
-python -m backend.cli.main chat --token YOUR_JWT_TOKEN "Hello AI!"
-
-# Config management
-python -m backend.cli.main config get host
-python -m backend.cli.main config set host http://localhost:8000
-```
-
-### 4. API Keys Setup
+### 3. API Keys Setup
 
 ```bash
 # Groq (fastest)
@@ -174,42 +142,33 @@ python -m backend.cli.main config set host http://localhost:8000
 2. Create API key
 3. Add to .env: OPENROUTER_API_KEYS=sk-or-xxxxx
 
-# HuggingFace (optional)
-1. Go to https://huggingface.co/settings/tokens
-2. Create token
-3. Add to .env: HUGGINGFACE_API_KEY=hf_xxxxx
+# DeepSeek (free tier available)
+1. Go to https://platform.deepseek.com/
+2. Add to .env: DEEPSEEK_API_KEYS=sk-xxxxx
+
+# xAI (Grok)
+1. Go to https://console.x.ai/
+2. Add to .env: XAI_API_KEYS=xai-xxxxx
+
+# Anthropic (Claude)
+1. Go to https://console.anthropic.com/
+2. Add to .env: ANTHROPIC_API_KEYS=sk-ant-xxxxx
 ```
 
----
-
-## 🖥️ ASTRAMIND CLI
-
-Professional command-line interface for backend operations:
+### 4. Configure AI Personality
 
 ```bash
-# Health monitoring
-python -m backend.cli.main health --detailed
-python -m backend.cli.main status
+# Option 1: Use default personality (casual/hip style)
+# No additional config needed
 
-# Server management
-python -m backend.cli.main serve --port 8000
+# Option 2: Point to custom config file
+PERSONALITY_CONFIG_PATH=/path/to/my_config.yaml
 
-# AI interactions (requires JWT token)
-python -m backend.cli.main chat --token JWT_TOKEN "Hello AI!"
-
-# Configuration
-python -m backend.cli.main config get host
-python -m backend.cli.main config set host http://localhost:8000
+# Option 3: Use built-in profile
+PERSONALITY_PROFILE=professional
 ```
 
-**Features:**
-- ✅ Production-grade Python CLI built with Typer
-- ✅ Full backend service integration
-- ✅ Comprehensive error handling and logging
-- ✅ Real-time health monitoring
-- ✅ AI provider status checking
-- ✅ Interactive AI chat with streaming support
-- ✅ Configuration management
+See `PERSONALITY_SKILLS.md` for full customization options.
 
 ---
 
@@ -230,7 +189,14 @@ Response (200):
 {
   "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "token_type": "bearer",
-  "expires_in": 86400
+  "expires_in": 86400,
+  "user": {
+    "id": 1,
+    "email": "user@example.com",
+    "daily_quota": 50,
+    "daily_used": 0,
+    "is_admin": false
+  }
 }
 ```
 
@@ -250,10 +216,8 @@ Body:
 
 Response (200):
 Server-Sent Events stream
-data: "This"
-data: " is"
-data: " artificial"
-data: " intelligence"
+data: {"choices":[{"delta":{"content":"This"},"index":0,"finish_reason":null}]}
+data: {"choices":[{"delta":{"content":" is"},"index":0,"finish_reason":null}]}
 ```
 
 #### Get User Quota
@@ -266,7 +230,7 @@ Response (200):
   "used": 15,
   "limit": 50,
   "remaining": 35,
-  "resets_at": "2025-12-26T00:00:00Z",
+  "resets_at": "2026-04-11T00:00:00",
   "reset_time_utc": "00:00 UTC"
 }
 ```
@@ -279,59 +243,19 @@ Header: Authorization: Bearer {token}
 Response (200):
 {
   "models": [
-    {
-      "id": "fast",
-      "name": "Fast ⚡",
-      "provider": "groq",
-      "description": "Quick responses, good for simple queries",
-      "available": true
-    },
-    {
-      "id": "balanced",
-      "name": "Balanced ⚖️",
-      "provider": "openrouter",
-      "description": "Balance of speed and quality",
-      "available": true
-    },
-    {
-      "id": "smart",
-      "name": "Smart 🧠",
-      "provider": "openrouter",
-      "description": "Best quality, slower responses",
-      "available": true
-    }
-  ]
+    {"id": "fast", "name": "Fast ⚡", "description": "Quick responses", "available": true, "auto_provider": true},
+    {"id": "balanced", "name": "Balanced ⚖️", "description": "Balance of speed and quality", "available": true, "auto_provider": true},
+    {"id": "smart", "name": "Smart 🧠", "description": "Best quality", "available": true, "auto_provider": true}
+  ],
+  "features": {
+    "local_detection": true,
+    "auto_fallback": true,
+    "health_monitoring": true
+  }
 }
 ```
 
 ### Status & Health
-
-#### Provider Status
-```bash
-GET /api/v1/status
-
-Response (200):
-[
-  {
-    "provider": "groq",
-    "status": "up",
-    "uptime": 99.82,
-    "last_checked": "2025-12-24T12:50:26Z"
-  },
-  {
-    "provider": "openrouter",
-    "status": "up",
-    "uptime": 98.45,
-    "last_checked": "2025-12-24T12:50:27Z"
-  },
-  {
-    "provider": "huggingface",
-    "status": "up",
-    "uptime": 95.12,
-    "last_checked": "2025-12-24T12:50:27Z"
-  }
-]
-```
 
 #### Backend Health
 ```bash
@@ -340,121 +264,59 @@ GET /health
 Response (200):
 {
   "status": "healthy",
-  "version": "1.0.0",
-  "service": "ASTRAMIND Backend"
+  "version": "1.1.2",
+  "service": "ASTRAMIND Backend",
+  "providers_configured": 15
 }
 ```
 
-#### Readiness Check
+#### Provider Status
 ```bash
-GET /ready
+GET /api/v1/status
 
 Response (200):
-{
-  "ready": true,
-  "environment": "production"
-}
-```
-
-### Web Search
-
-#### Search Web
-```bash
-GET /api/v1/web-search?q=machine+learning
-Header: Authorization: Bearer {token}
-
-Response (200):
-{
-  "status": "success",
-  "source": "scrape",
-  "query": "machine learning",
-  "results": [
-    {
-      "title": "Machine Learning - Wikipedia",
-      "url": "https://en.wikipedia.org/wiki/Machine_learning"
-    }
-  ]
-}
+[
+  {"provider": "groq", "status": "up", "uptime": 99.82},
+  {"provider": "deepseek", "status": "up", "uptime": 98.45},
+  {"provider": "anthropic", "status": "up", "uptime": 95.12}
+]
 ```
 
 ---
 
 ## 🔐 Security Details
 
-### JWT Token Structure
-
-```json
-{
-  "sub": "12345",                    // User ID
-  "email": "user@example.com",       // Email
-  "iat": 1703433026,                 // Issued at (now)
-  "exp": 1703519426                  // Expires in 24 hours
-}
-```
-
 ### Middleware Security Stack
 
 ```
 Request
    ↓
-[1] RequestIDMiddleware    → Adds X-Request-ID header for tracing
+[1] RequestIDMiddleware    → Adds X-Request-ID header
    ↓
-[2] SecurityHeadersMiddleware → Adds HSTS, X-Frame-Options, CSP
+[2] SecurityHeadersMiddleware → CSP, HSTS, X-Frame-Options
    ↓
-[3] RequestValidationMiddleware → Checks Content-Type, size limits
+[3] RateLimitingMiddleware  → 60 req/min per IP
    ↓
-[4] TrustedHostMiddleware  → Whitelists allowed hosts
+[4] CORSMiddleware         → Allowed origins only
    ↓
-[5] CORSMiddleware         → Allows only specified origins
+[5] JWT Verification       → Validates Bearer token
    ↓
-[6] verify_jwt()           → Validates JWT token
+[6] Quota Check           → Enforces daily limits
    ↓
-[7] check_quota()          → Enforces daily limits
+[7] Content Filter        → Safety checks
    ↓
 Handler
 ```
 
-### Rate Limiting Strategy
+### Quota System (Role-based)
 
-```
-Global: 60 requests/minute per IP
-User: 50 requests/day per user
-Provider: Varies (Groq: 49/min, OR: 60/min, HF: 25/min)
+| Role | Daily Quota | Env Variable |
+|------|-------------|--------------|
+| Regular User | 50 | `USER_DAILY_QUOTA` |
+| Admin | 500 | `ADMIN_DAILY_QUOTA` |
+| Premium | 200 | `PREMIUM_DAILY_QUOTA` |
 
-If quota exceeded:
-Response: 429 Too Many Requests
-{
-  "error": "Daily quota exceeded",
-  "used": 50,
-  "limit": 50
-}
-```
-
----
-
-## ⚡ Performance & Scalability
-
-### Database Optimization
-- **Connection Pooling**: 20 min, 40 max connections
-- **Async Queries**: Non-blocking database operations
-- **Background Tasks**: Quota updates moved off critical path
-- **Connection Recycling**: 1-hour timeout
-
-### Request Handling
-- **Async Endpoints**: All routes fully async
-- **Streaming Responses**: Real-time AI output without buffering
-- **Background Processing**: DB writes via FastAPI BackgroundTasks
-- **Dependency Injection**: AI router per-request isolation
-
-### Caching Strategy
-- **Response Caching**: Redis for repeated prompts (planned)
-- **Rate Limit Caching**: In-memory with Redis backup (planned)
-- **Health Status Caching**: 30-second provider status cache
-
-### Load Balancing
-- **Stateless Design**: Any instance can handle any request
-- **Session Affinity**: Not required (JWT stateless auth)
-- **Auto-scaling**: Kubernetes HPA based on CPU/memory
+Quotas reset at midnight UTC daily.
 
 ---
 
@@ -464,180 +326,106 @@ Response: 429 Too Many Requests
 
 ```bash
 # === CORE ===
-ENV=production                    # development|production
-LOG_LEVEL=INFO                   # DEBUG|INFO|WARNING|ERROR
+ENV=production
+LOG_LEVEL=INFO
 
 # === DATABASE ===
 DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/dbname
-DATABASE_POOL_SIZE=20            # Connection pool size
-DATABASE_POOL_MAX_OVERFLOW=40    # Overflow connections
-DATABASE_POOL_RECYCLE_SECONDS=3600
+DATABASE_POOL_SIZE=20
+DATABASE_POOL_MAX_OVERFLOW=40
 
 # === SECURITY ===
 JWT_SECRET=min-32-characters-very-secure-string
 JWT_ALGORITHM=HS256
 JWT_EXPIRATION_HOURS=24
 
-# === API KEYS (comma-separated) ===
+# === API KEYS (comma-separated for multiple) ===
 GROQ_API_KEYS=key1,key2,key3
 OPENROUTER_API_KEYS=key1,key2
-HUGGINGFACE_API_KEY=single_key
+TOGETHER_API_KEYS=key1
+CEREBRAS_API_KEYS=key1
+MISTRAL_API_KEYS=key1
+SILICONFLOW_API_KEYS=key1
+GOOGLE_AI_STUDIO_API_KEYS=key1
+DEEPSEEK_API_KEYS=key1
+XAI_API_KEYS=key1
+ANTHROPIC_API_KEYS=key1
+COHERE_API_KEYS=key1
+AI21_API_KEYS=key1
+NOVITA_API_KEYS=key1
+SAMBANOVA_API_KEYS=key1
+HUGGINGFACE_API_KEY=key1
+
+# === QUOTA TIERS ===
+USER_DAILY_QUOTA=50
+ADMIN_DAILY_QUOTA=500
+PREMIUM_DAILY_QUOTA=200
+ENABLE_QUOTA_TIERS=true
+
+# === PERSONALITY (optional) ===
+# PERSONALITY_CONFIG_PATH=./custom_personality.yaml
+# PERSONALITY_PROFILE=professional
 
 # === ADMIN USERS ===
 ADMIN_EMAILS=admin@example.com,owner@example.com
 
 # === CORS ===
 ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
-
-# === RATE LIMITS ===
-RATE_LIMIT_PER_MINUTE=60
-RATE_LIMIT_WINDOW_SECONDS=60
-USER_DAILY_QUOTA=50
-MAX_REQUEST_SIZE_BYTES=50000
-REQUEST_TIMEOUT_SECONDS=30
-
-# === MODEL SELECTION ===
-GROQ_FAST_MODEL=llama-3.1-8b-instant
-GROQ_BALANCED_MODEL=llama-3.1-70b
-OPENROUTER_SMART_MODEL=openai/gpt-4o-mini
-
-# === FEATURES ===
-ENABLE_WEB_SEARCH=true
-ENABLE_IMAGE_GENERATION=false
-
-# === DEPLOYMENT (Render) ===
-PORT=10000
-RENDER_EXTERNAL_URL=https://your-service.onrender.com
 ```
 
 ---
 
-## 🚢 Production Deployment
+## 🎨 AI Personality Configuration
 
-### Render Deployment Checklist
+Customize how ASTRAMIND responds using `PERSONALITY_SKILLS.md`:
 
-- [ ] Push code to GitHub
-- [ ] Create new Web Service on Render
-- [ ] Configure:
-  ```
-  Runtime: Python 3.11
-  Build: pip install -r requirements.txt
-  Start: uvicorn app.main:app --host 0.0.0.0 --port 10000
-  ```
-- [ ] Add environment variables in Render dashboard
-- [ ] Set DATABASE_URL to Supabase PostgreSQL
-- [ ] Enable automatic deploys from GitHub
-- [ ] Test: `curl https://your-service.onrender.com/health`
+```yaml
+# personality settings
+personality:
+  energy_level: 0.8        # 0.0 = chill, 1.0 = hype
+  sarcasm_level: 0.6       # 0.0 = straight, 1.0 = savage  
+  meme_level: 0.7          # 0.0 = formal, 1.0 = meme lord
+  emoji_usage: 0.9         # 0.0 = none, 1.0 = emoji overload
+  slang_frequency: 0.8    # How often to use slang
 
-### Pre-Deployment Checks
-
-```bash
-# 1. Run tests locally
-pytest tests/
-
-# 2. Check all env vars set
-python -c "from app.core.config import settings; print(settings)"
-
-# 3. Verify database connection
-python -c "from app.db.session import check_database_connection; \
-  import asyncio; asyncio.run(check_database_connection())"
-
-# 4. Lint code
-flake8 app/
-
-# 5. Type check
-mypy app/
-
-# 6. Build requirements
-pip freeze > requirements.txt
+# conversation styles
+styles:
+  default: "casual"       # casual, hype, chill, savage, professional, witty
+  
+# custom slang
+slang:
+  greeting: ["yo", "hey", "vibes"]
+  agreement: ["bet", "facts", "no cap"]
 ```
 
 ---
 
-## 📊 Monitoring & Logging
+## 🧪 Testing
 
-### Structured Logs
-
-```
-2025-12-24 12:50:20,838 | INFO | app.main | ✅ Configuration validated
-2025-12-24 12:50:25,082 | INFO | app.db.session | ✅ Database connection verified
-2025-12-24 12:50:27,032 | WARNING | app.main | HTTP 405: Method Not Allowed
-```
-
-### Log Levels
-
-- **DEBUG:** Internal flow, SQL queries, API calls
-- **INFO:** Startup events, user actions, important transitions
-- **WARNING:** Quota exceeded, provider failures, non-critical issues
-- **ERROR:** Unhandled exceptions, database errors, security violations
-
-### Key Metrics to Monitor
-
-```
-Provider Status:
-  ✅ All green → 99%+ uptime
-  🟠 Orange → One provider degraded
-  🔴 Red → One or more providers down
-
-User Activity:
-  Daily active users (DAU)
-  Average quota used per user
-  Top 10 most active users
-
-API Performance:
-  Response time (P50, P95, P99)
-  Error rate (4xx, 5xx)
-  Throughput (requests/sec)
-  Database query time
-```
-
----
-
-## 🆘 Troubleshooting
-
-### Database Connection Failed
 ```bash
-Error: "cannot connect to server"
+# Run all tests
+cd backend
+python -m pytest tests/ -v
 
-Solution:
-1. Check DATABASE_URL is correct
-2. Verify PostgreSQL is running
-3. Test with: psql $DATABASE_URL
-4. Check firewall/security group settings
+# Run specific test files
+python -m pytest tests/test_stability.py -v
+python -m pytest tests/test_ai_router.py -v
+
+# Run with coverage
+python -m pytest tests/ --cov=. --cov-report=html
+
+# Test output:
+# ============================= 28 passed in 5s ==============================
 ```
 
-### JWT Token Expired
-```bash
-Error: 401 Unauthorized "Token has expired"
+### Test Coverage
 
-Solution:
-1. Request new token via /auth/login
-2. Token is valid for 24 hours
-3. Frontend should refresh before expiry
-4. Check server time is correct (NTP)
-```
-
-### Provider Rate Limit Hit
-```bash
-Error: 429 "AI provider rate limited"
-
-Solution:
-1. Add more API keys to .env (comma-separated)
-2. Router automatically tries next key
-3. Check provider dashboard for limits
-4. Spread requests across time
-```
-
-### Quota Exceeded
-```bash
-Error: 429 "Daily quota exceeded"
-
-Solution:
-1. Check /api/v1/quota endpoint
-2. Quota resets at midnight UTC
-3. Admin can increase USER_DAILY_QUOTA
-4. User must wait for reset
-```
+| Test File | Tests | Description |
+|-----------|-------|-------------|
+| `test_stability.py` | 9 | Circuit breaker, recovery, health |
+| `test_ai_router.py` | 9 | Provider routing, validation |
+| `test_health_endpoints.py` | 3 | Health, ready, root |
+| `test_security.py` | 7 | Auth, validation |
 
 ---
 
@@ -646,53 +434,23 @@ Solution:
 ```
 When User Requests Response:
 
-1. Try Primary Provider
+1. Check circuit breaker
+   ├─ Open? → Use fallback response
+   └─ Closed? → Continue
+
+2. Try Primary Provider
    ├─ Success? → Return response ✅
-   ├─ Rate limited? → Try next
-   ├─ Error? → Try next
-   └─ All failed? → Return 503
+   ├─ Rate limited? → Try next key, then next provider
+   ├─ Error? → Try next provider
+   └─ All failed? → Use stability fallback
 
-2. Fallback Chain:
-   Fast:     Groq → (no fallback, fail)
-   Balanced: Groq → OpenRouter → HF
-   Smart:    OpenRouter → Groq → HF
+3. Fallback Response:
+   "Sorry, we're experiencing technical difficulties. Please try again!"
 
-3. Key Rotation:
-   Multiple keys per provider
-   Least-used key selected first
-   Automatic cooldown on rate limit
-```
-
----
-
-## 🧪 Testing Locally
-
-```bash
-# 1. Start server
-uvicorn app.main:app --reload
-
-# 2. Get token
-TOKEN=$(curl -X POST http://localhost:8000/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com"}' \
-  | jq -r '.access_token')
-
-# 3. Check quota
-curl http://localhost:8000/api/v1/quota \
-  -H "Authorization: Bearer $TOKEN"
-
-# 4. Send chat message
-curl -X POST http://localhost:8000/api/v1/chat \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{
-    "prompt": "Hello!",
-    "model": "fast",
-    "stream": true
-  }'
-
-# 5. Check provider status
-curl http://localhost:8000/api/v1/status
+4. Circuit Breaker:
+   - Opens after 5 consecutive failures
+   - Half-open after 60 seconds
+   - Closed on successful retry
 ```
 
 ---
@@ -701,44 +459,119 @@ curl http://localhost:8000/api/v1/status
 
 ```
 backend/
-├── main.py                 # FastAPI app entry point + middleware stack
-├── app/                    # FastAPI application core
+├── main.py                     # FastAPI app + middleware
+├── PERSONALITY_SKILLS.md       # AI personality config guide
+├── .env.example                # Environment template
+│
+├── app/
 │   ├── db/
-│   │   ├── models.py       # SQLAlchemy ORM models
-│   │   └── session.py      # Async database session
+│   │   ├── models.py          # SQLAlchemy User model
+│   │   └── session.py          # AsyncDB session
 │   ├── middleware/
-│   │   ├── request_id.py   # Request tracing
-│   │   ├── security.py     # Security headers
-│   │   └── request_validation.py
-│   ├── deps/
-│   │   └── auth.py         # Authentication dependency
-│   └── providers/
-│       ├── groq.py         # Groq API client
-│       ├── openrouter.py   # OpenRouter API client
-│       └── huggingface.py  # HuggingFace API client
-├── api/v1/                 # API endpoints
-│   ├── chat.py             # Chat endpoint
-│   ├── auth.py             # Authentication endpoint
-│   ├── status.py           # Provider status endpoint
-│   ├── health.py           # Health check endpoint
-│   └── web_search.py       # Web search endpoint
-├── core/                   # Core configuration and utilities
-│   ├── config.py           # Settings management
-│   ├── security.py         # JWT utilities
-│   ├── exceptions.py       # Global error handler
-│   └── logging.py          # Logging setup
-├── services/               # Business logic services
-│   ├── ai_router.py        # Multi-provider routing
-│   ├── provider_monitor.py # Health check background task
-│   └── web_search.py       # DuckDuckGo search
-└── cli/                    # ASTRAMIND CLI (Python)
-    ├── main.py             # CLI entry point
-    └── commands/
-        ├── chat.py         # Chat command
-        ├── serve.py        # Server command
-        ├── status.py       # Status command
-        ├── health.py       # Health command
-        └── config.py       # Config command
+│   │   ├── security.py         # CSP, HSTS headers
+│   │   ├── rate_limit.py       # Rate limiting
+│   │   └── request_id.py       # Request tracing
+│   ├── providers/
+│   │   ├── base.py             # AIProvider interface
+│   │   ├── openai_compatible.py# OpenAI-compatible clients
+│   │   ├── anthropic.py        # Claude provider
+│   │   ├── google_ai_studio.py # Gemini provider
+│   │   └── cloudflare_workers_ai.py
+│   └── deps/
+│       └── auth.py             # JWT auth dependency
+│
+├── api/v1/
+│   ├── chat.py                 # Chat endpoint
+│   ├── auth.py                 # Login/logout
+│   ├── status.py               # Provider status
+│   ├── health.py               # Health checks
+│   └── web_search.py           # Web search
+│
+├── core/
+│   ├── config.py               # Settings (pydantic)
+│   ├── security.py             # JWT utilities
+│   ├── stability_engine.py     # Circuit breakers
+│   ├── model_provider.py       # Model routing
+│   ├── personality_config.py   # Personality loader
+│   └── astramind_ai_personality.py # Personality engine
+│
+├── services/
+│   ├── ai_router.py           # Multi-provider routing
+│   ├── models.py               # Model configurations
+│   └── stream.py              # SSE streaming
+│
+└── tests/
+    ├── conftest.py            # pytest fixtures
+    ├── test_stability.py      # Stability tests
+    ├── test_ai_router.py      # Router tests
+    ├── test_health_endpoints.py
+    └── test_security.py       # Security tests
+```
+
+---
+
+## 🆘 Troubleshooting
+
+### Quota Exceeded
+```bash
+Error: 429 "Daily quota exceeded"
+
+Solution:
+1. Check /api/v1/quota endpoint
+2. Quota resets at midnight UTC
+3. Admin can increase USER_DAILY_QUOTA in .env
+4. Admin users get 500 daily (ADMIN_DAILY_QUOTA)
+```
+
+### Provider Not Configured
+```bash
+Error: 503 "AI provider not configured"
+
+Solution:
+1. Check .env has at least one API key
+2. Verify API key is valid
+3. Check settings.LOGGED_CONFIG for configured providers
+4. Add more providers for redundancy
+```
+
+### Personality Not Loading
+```bash
+Warning: Personality config not found, using defaults
+
+Solution:
+1. Set PERSONALITY_CONFIG_PATH in .env
+2. Or set PERSONALITY_PROFILE=casual|professional|hype
+3. Check PERSONALITY_SKILLS.md for valid config format
+```
+
+---
+
+## 📊 Monitoring & Metrics
+
+### Key Metrics
+
+```
+Health Status:
+- Uptime percentage
+- Memory/CPU usage  
+- Error rate (errors/minute)
+- Recovery success rate
+
+Provider Status:
+- Per-provider uptime
+- Latency per provider
+- Key rotation status
+
+User Activity:
+- Daily active users
+- Quota usage distribution
+- Top users by usage
+```
+
+### Stability Engine Endpoints
+```bash
+GET /api/v1/stability
+# Returns: uptime, memory, cpu, error_rate, circuit_breakers
 ```
 
 ---
@@ -751,16 +584,6 @@ backend/
 - [ ] Support function calling/tools
 - [ ] Image generation integration
 - [ ] Voice input/output
-- [ ] Team collaboration features
-- [ ] Custom fine-tuned models
-
----
-
-## 📞 Support & Issues
-
-- GitHub Issues: https://github.com/yourusername/ASTRAMINDai/issues
-- Email: support@ASTRAMINDai.app
-- Docs: https://docs.ASTRAMINDai.app
 
 ---
 

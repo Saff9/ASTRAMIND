@@ -8,7 +8,7 @@ import random
 import logging
 from typing import AsyncIterator, List, Optional
 import httpx
-from core.system_prompt import SYSTEM_PROMPT
+from core.system_prompt import get_system_prompt
 from core.config import settings
 from app.providers.groq import GroqProvider
 from app.providers.openrouter import OpenRouterProvider
@@ -17,6 +17,7 @@ from app.providers.ollama import OllamaProvider
 from app.providers.openai_compatible import OpenAICompatibleProvider
 from app.providers.google_ai_studio import GoogleAIStudioProvider
 from app.providers.cloudflare_workers_ai import CloudflareWorkersAIProvider
+from app.providers.anthropic import AnthropicProvider
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,13 @@ class AIRouter:
         siliconflow_keys: Optional[List[str]] = None,
         google_keys: Optional[List[str]] = None,
         alibaba_bailian_keys: Optional[List[str]] = None,
+        deepseek_keys: Optional[List[str]] = None,
+        xai_keys: Optional[List[str]] = None,
+        anthropic_keys: Optional[List[str]] = None,
+        cohere_keys: Optional[List[str]] = None,
+        ai21_keys: Optional[List[str]] = None,
+        novita_keys: Optional[List[str]] = None,
+        sambanova_keys: Optional[List[str]] = None,
         hf_key: Optional[str] = None,
         openai_key: Optional[str] = None,
         http_client: httpx.AsyncClient | None = None,
@@ -57,6 +65,13 @@ class AIRouter:
         self.siliconflow_keys = [k for k in (siliconflow_keys or []) if k]
         self.google_keys = [k for k in (google_keys or []) if k]
         self.alibaba_bailian_keys = [k for k in (alibaba_bailian_keys or []) if k]
+        self.deepseek_keys = [k for k in (deepseek_keys or []) if k]
+        self.xai_keys = [k for k in (xai_keys or []) if k]
+        self.anthropic_keys = [k for k in (anthropic_keys or []) if k]
+        self.cohere_keys = [k for k in (cohere_keys or []) if k]
+        self.ai21_keys = [k for k in (ai21_keys or []) if k]
+        self.novita_keys = [k for k in (novita_keys or []) if k]
+        self.sambanova_keys = [k for k in (sambanova_keys or []) if k]
         self.hf_key = hf_key
         self.openai_key = openai_key
 
@@ -98,6 +113,37 @@ class AIRouter:
             base_url=settings.ALIBABA_BAILIAN_BASE_URL,
             http_client=http_client,
         )
+        self.deepseek_provider = OpenAICompatibleProvider(
+            name="deepseek",
+            base_url=settings.DEEPSEEK_BASE_URL,
+            http_client=http_client,
+        )
+        self.xai_provider = OpenAICompatibleProvider(
+            name="xai",
+            base_url=settings.XAI_BASE_URL,
+            http_client=http_client,
+        )
+        self.anthropic_provider = AnthropicProvider(http_client=http_client)
+        self.cohere_provider = OpenAICompatibleProvider(
+            name="cohere",
+            base_url=settings.COHERE_BASE_URL,
+            http_client=http_client,
+        )
+        self.ai21_provider = OpenAICompatibleProvider(
+            name="ai21",
+            base_url=settings.AI21_BASE_URL,
+            http_client=http_client,
+        )
+        self.novita_provider = OpenAICompatibleProvider(
+            name="novita",
+            base_url=settings.NOVITA_BASE_URL,
+            http_client=http_client,
+        )
+        self.sambanova_provider = OpenAICompatibleProvider(
+            name="sambanova",
+            base_url=settings.SAMBANOVA_BASE_URL,
+            http_client=http_client,
+        )
 
         self.cloudflare_provider = None
         if settings.CLOUDFLARE_ACCOUNT_ID and settings.CLOUDFLARE_API_TOKEN:
@@ -117,6 +163,13 @@ class AIRouter:
             f"SiliconFlow keys={len(self.siliconflow_keys)}, "
             f"Google keys={len(self.google_keys)}, "
             f"Alibaba Bailian keys={len(self.alibaba_bailian_keys)}, "
+            f"DeepSeek keys={len(self.deepseek_keys)}, "
+            f"xAI keys={len(self.xai_keys)}, "
+            f"Anthropic keys={len(self.anthropic_keys)}, "
+            f"Cohere keys={len(self.cohere_keys)}, "
+            f"AI21 keys={len(self.ai21_keys)}, "
+            f"Novita keys={len(self.novita_keys)}, "
+            f"SambaNova keys={len(self.sambanova_keys)}, "
             f"HF key={'yes' if self.hf_key else 'no'}, "
             f"OpenAI key={'yes' if self.openai_key else 'no'}, "
             f"Cloudflare={'configured' if self.cloudflare_provider else 'not configured'}, "
@@ -213,6 +266,60 @@ class AIRouter:
                 ):
                     yield chunk
 
+            elif provider == "deepseek":
+                if not self.deepseek_keys:
+                    raise ValueError("No DeepSeek API keys configured")
+                async for chunk in self._stream_openai_compatible(
+                    self.deepseek_provider, self.deepseek_keys, prompt, model
+                ):
+                    yield chunk
+
+            elif provider == "xai":
+                if not self.xai_keys:
+                    raise ValueError("No xAI API keys configured")
+                async for chunk in self._stream_openai_compatible(
+                    self.xai_provider, self.xai_keys, prompt, model
+                ):
+                    yield chunk
+
+            elif provider == "anthropic":
+                if not self.anthropic_keys:
+                    raise ValueError("No Anthropic API keys configured")
+                async for chunk in self._stream_anthropic(prompt, model):
+                    yield chunk
+
+            elif provider == "cohere":
+                if not self.cohere_keys:
+                    raise ValueError("No Cohere API keys configured")
+                async for chunk in self._stream_openai_compatible(
+                    self.cohere_provider, self.cohere_keys, prompt, model
+                ):
+                    yield chunk
+
+            elif provider == "ai21":
+                if not self.ai21_keys:
+                    raise ValueError("No AI21 API keys configured")
+                async for chunk in self._stream_openai_compatible(
+                    self.ai21_provider, self.ai21_keys, prompt, model
+                ):
+                    yield chunk
+
+            elif provider == "novita":
+                if not self.novita_keys:
+                    raise ValueError("No Novita AI API keys configured")
+                async for chunk in self._stream_openai_compatible(
+                    self.novita_provider, self.novita_keys, prompt, model
+                ):
+                    yield chunk
+
+            elif provider == "sambanova":
+                if not self.sambanova_keys:
+                    raise ValueError("No SambaNova API keys configured")
+                async for chunk in self._stream_openai_compatible(
+                    self.sambanova_provider, self.sambanova_keys, prompt, model
+                ):
+                    yield chunk
+
             elif provider == "huggingface":
                 if not self.hf_key:
                     raise ValueError("No HuggingFace API key configured")
@@ -228,7 +335,8 @@ class AIRouter:
                 raise ValueError(
                     f"Unknown provider: {provider}. "
                     f"Available providers: groq, openrouter, together, mistral, cerebras, siliconflow, "
-                    f"google_ai_studio, cloudflare, alibaba_bailian, openai, huggingface, local"
+                    f"google_ai_studio, cloudflare, alibaba_bailian, deepseek, xai, anthropic, cohere, ai21, "
+                    f"novita, sambanova, openai, huggingface, local"
                 )
         except ValueError:
             # Re-raise validation errors
@@ -354,3 +462,28 @@ class AIRouter:
                     continue
                 break
         raise RuntimeError(f"All Google AI Studio keys exhausted. Last error: {last_error}")
+
+    async def _stream_anthropic(self, prompt: str, model: str) -> AsyncIterator[str]:
+        """Stream response from Anthropic (Claude) with key rotation and error handling."""
+        if not self.anthropic_keys:
+            raise RuntimeError("No Anthropic keys available")
+
+        last_error = None
+        for idx, key in enumerate(self.anthropic_keys):
+            try:
+                logger.debug(f"Attempting Anthropic with key index {idx}/{len(self.anthropic_keys)}")
+                async for chunk in self.anthropic_provider.stream(
+                    prompt=prompt,
+                    model=model,
+                    api_key=key,
+                ):
+                    yield chunk
+                return
+            except Exception as e:
+                last_error = e
+                logger.warning(f"Anthropic key {idx} failed: {type(e).__name__}: {str(e)}")
+                if idx < len(self.anthropic_keys) - 1:
+                    continue
+                break
+
+        raise RuntimeError(f"All Anthropic keys exhausted. Last error: {last_error}")

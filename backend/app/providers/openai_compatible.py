@@ -54,9 +54,15 @@ class OpenAICompatibleProvider(AIProvider):
             **self._default_headers,
         }
 
+        # Get system prompt for AI identity
+        system_prompt = get_system_prompt()
+
         payload = {
             "model": model,
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt}
+            ],
             "stream": True,
         }
 

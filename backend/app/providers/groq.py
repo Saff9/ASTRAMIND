@@ -6,6 +6,7 @@ from typing import AsyncIterator
 
 from app.providers.base import AIProvider
 from core.errors import AppError
+from core.system_prompt import get_system_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +50,9 @@ class GroqProvider(AIProvider):
         if not model:
             raise AppError(400, "Model name is required")
 
+        # Get system prompt for AI identity
+        system_prompt = get_system_prompt()
+
         headers = {
             "Authorization": f"Bearer {api_key.strip()}",
             "Content-Type": "application/json",
@@ -56,7 +60,10 @@ class GroqProvider(AIProvider):
 
         payload = {
             "model": model,
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt}
+            ],
             "stream": True,
             "temperature": 0.7,
         }

@@ -27,6 +27,13 @@ class ModelProvider(Enum):
     CEREBRAS = "cerebras"
     SILICONFLOW = "siliconflow"
     ALIBABA_BAILIAN = "alibaba_bailian"
+    DEEPSEEK = "deepseek"
+    XAI = "xai"
+    ANTHROPIC = "anthropic"
+    COHERE = "cohere"
+    AI21 = "ai21"
+    NOVITA = "novita"
+    SAMBANOVA = "sambanova"
     OPENAI = "openai"    # Fallback premium models
 
 
@@ -73,6 +80,13 @@ class ModelRouter:
             ModelProvider.CEREBRAS,
             ModelProvider.SILICONFLOW,
             ModelProvider.ALIBABA_BAILIAN,
+            ModelProvider.DEEPSEEK,
+            ModelProvider.XAI,
+            ModelProvider.ANTHROPIC,
+            ModelProvider.COHERE,
+            ModelProvider.AI21,
+            ModelProvider.NOVITA,
+            ModelProvider.SAMBANOVA,
             ModelProvider.OPENAI,
         ]
 
@@ -133,6 +147,13 @@ class ModelRouter:
             ModelProvider.CEREBRAS,
             ModelProvider.SILICONFLOW,
             ModelProvider.ALIBABA_BAILIAN,
+            ModelProvider.DEEPSEEK,
+            ModelProvider.XAI,
+            ModelProvider.ANTHROPIC,
+            ModelProvider.COHERE,
+            ModelProvider.AI21,
+            ModelProvider.NOVITA,
+            ModelProvider.SAMBANOVA,
             ModelProvider.OPENAI,
         ]
         healthy = []
@@ -170,6 +191,20 @@ class ModelRouter:
                     await self._test_openai_compatible_health(session, settings.SILICONFLOW_BASE_URL, settings.siliconflow_api_keys)
                 elif provider == ModelProvider.ALIBABA_BAILIAN:
                     await self._test_openai_compatible_health(session, settings.ALIBABA_BAILIAN_BASE_URL, settings.alibaba_bailian_api_keys)
+                elif provider == ModelProvider.DEEPSEEK:
+                    await self._test_openai_compatible_health(session, settings.DEEPSEEK_BASE_URL, settings.deepseek_api_keys)
+                elif provider == ModelProvider.XAI:
+                    await self._test_openai_compatible_health(session, settings.XAI_BASE_URL, settings.xai_api_keys)
+                elif provider == ModelProvider.ANTHROPIC:
+                    await self._test_anthropic_health(session)
+                elif provider == ModelProvider.COHERE:
+                    await self._test_openai_compatible_health(session, settings.COHERE_BASE_URL, settings.cohere_api_keys)
+                elif provider == ModelProvider.AI21:
+                    await self._test_openai_compatible_health(session, settings.AI21_BASE_URL, settings.ai21_api_keys)
+                elif provider == ModelProvider.NOVITA:
+                    await self._test_openai_compatible_health(session, settings.NOVITA_BASE_URL, settings.novita_api_keys)
+                elif provider == ModelProvider.SAMBANOVA:
+                    await self._test_openai_compatible_health(session, settings.SAMBANOVA_BASE_URL, settings.sambanova_api_keys)
                 elif provider == ModelProvider.OPENAI:
                     await self._test_openai_health(session)
 
@@ -224,6 +259,19 @@ class ModelRouter:
         headers = {"Authorization": f"Bearer {keys[0]}"}
         url = f"{base_url.rstrip('/')}/models"
         async with session.get(url, headers=headers) as response:
+            response.raise_for_status()
+
+    async def _test_anthropic_health(self, session: aiohttp.ClientSession) -> None:
+        """Test Anthropic API health."""
+        if not settings.anthropic_api_keys:
+            raise ValueError("No Anthropic API keys")
+
+        headers = {
+            "x-api-key": settings.anthropic_api_keys[0],
+            "anthropic-version": "2023-06-01",
+        }
+        url = "https://api.anthropic.com/v1/messages"
+        async with session.post(url, headers=headers, json={"model": "claude-3-5-sonnet-20241022", "max_tokens": 1, "messages": [{"role": "user", "content": "hi"}]}) as response:
             response.raise_for_status()
 
     def _update_health(self, provider: ModelProvider, healthy: bool, latency: Optional[float] = None) -> None:
@@ -281,6 +329,41 @@ class ModelRouter:
             ModelProvider.ALIBABA_BAILIAN: {
                 "api_key": settings.alibaba_bailian_api_keys[0] if settings.alibaba_bailian_api_keys else None,
                 "base_url": settings.ALIBABA_BAILIAN_BASE_URL,
+                "type": "openai-compatible",
+            },
+            ModelProvider.DEEPSEEK: {
+                "api_key": settings.deepseek_api_keys[0] if settings.deepseek_api_keys else None,
+                "base_url": settings.DEEPSEEK_BASE_URL,
+                "type": "openai-compatible",
+            },
+            ModelProvider.XAI: {
+                "api_key": settings.xai_api_keys[0] if settings.xai_api_keys else None,
+                "base_url": settings.XAI_BASE_URL,
+                "type": "openai-compatible",
+            },
+            ModelProvider.ANTHROPIC: {
+                "api_key": settings.anthropic_api_keys[0] if settings.anthropic_api_keys else None,
+                "base_url": settings.ANTHROPIC_BASE_URL,
+                "type": "anthropic",
+            },
+            ModelProvider.COHERE: {
+                "api_key": settings.cohere_api_keys[0] if settings.cohere_api_keys else None,
+                "base_url": settings.COHERE_BASE_URL,
+                "type": "openai-compatible",
+            },
+            ModelProvider.AI21: {
+                "api_key": settings.ai21_api_keys[0] if settings.ai21_api_keys else None,
+                "base_url": settings.AI21_BASE_URL,
+                "type": "openai-compatible",
+            },
+            ModelProvider.NOVITA: {
+                "api_key": settings.novita_api_keys[0] if settings.novita_api_keys else None,
+                "base_url": settings.NOVITA_BASE_URL,
+                "type": "openai-compatible",
+            },
+            ModelProvider.SAMBANOVA: {
+                "api_key": settings.sambanova_api_keys[0] if settings.sambanova_api_keys else None,
+                "base_url": settings.SAMBANOVA_BASE_URL,
                 "type": "openai-compatible",
             },
             ModelProvider.OPENAI: {

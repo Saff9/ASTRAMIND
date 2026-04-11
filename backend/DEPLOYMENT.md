@@ -2,27 +2,25 @@
 
 This guide covers deploying the ASTRAMIND Backend to Render.com or similar cloud platforms.
 
+## Version 1.1.2 - What's New
+
+- **15+ AI Providers**: Groq, OpenRouter, Together, Mistral, Cerebras, SiliconFlow, Google AI Studio, DeepSeek, xAI, Anthropic, Cohere, AI21, Novita, SambaNova, HuggingFace
+- **Role-based Quotas**: USER_DAILY_QUOTA, ADMIN_DAILY_QUOTA, PREMIUM_DAILY_QUOTA
+- **Customizable Personality**: Configure AI behavior via PERSONALITY_SKILLS.md
+- **Stability Engine**: Circuit breakers with automatic recovery
+- **28 Tests Passing**: Comprehensive test coverage
+
 ## Pre-Deployment Checklist
 
-✅ **Dependencies Fixed:** 
-- Added `email-validator` package for Pydantic EmailStr validation
-- Updated Python version to 3.11.8 (stable LTS)
-- All required packages properly specified
+✅ **Dependencies:** All packages properly specified in requirements.txt
 
-✅ **Configuration:**
-- Production-ready settings with validation
-- Environment variable template (.env.example)
-- Security headers and CORS configured
+✅ **Configuration:** Production-ready settings with validation
 
-✅ **Database:**
-- Async PostgreSQL support with connection pooling
-- SQLite fallback for development
-- Proper connection timeout handling
+✅ **Database:** Async PostgreSQL support with connection pooling
 
-✅ **Security:**
-- JWT token generation working correctly
-- Rate limiting middleware
-- Input validation and sanitization
+✅ **Security:** JWT, rate limiting, input validation, CSP headers
+
+✅ **Personality:** Configurable AI behavior via YAML/MD files
 
 ## Environment Variables
 
@@ -34,16 +32,35 @@ ENV=production
 DATABASE_URL=postgresql://user:pass@host:port/db
 JWT_SECRET=your-32+char-secret-here
 
-# [REQUIRED] - At least one AI provider
+# [REQUIRED] - At least one AI provider (15+ supported)
 GROQ_API_KEYS=your_groq_key
 OPENROUTER_API_KEYS=your_openrouter_key
 
-# [OPTIONAL] - Additional providers
-HUGGINGFACE_API_KEY=hf_your_token
-OPENAI_API_KEY=your_openai_key
+# [OPTIONAL] - Additional providers (comma-separated for multiple keys)
+DEEPSEEK_API_KEYS=your_deepseek_key
+XAI_API_KEYS=your_xai_key
+ANTHROPIC_API_KEYS=your_anthropic_key
+TOGETHER_API_KEYS=your_together_key
+MISTRAL_API_KEYS=your_mistral_key
+CEREBRAS_API_KEYS=your_cerebras_key
+SILICONFLOW_API_KEYS=your_siliconflow_key
+COHERE_API_KEYS=your_cohere_key
+
+# [OPTIONAL] - Quota settings
+USER_DAILY_QUOTA=50
+ADMIN_DAILY_QUOTA=500
+PREMIUM_DAILY_QUOTA=200
+ENABLE_QUOTA_TIERS=true
+
+# [OPTIONAL] - Personality configuration
+# PERSONALITY_CONFIG_PATH=./custom_personality.yaml
+# PERSONALITY_PROFILE=professional
 
 # [REQUIRED] - CORS
 ALLOWED_ORIGINS=https://your-frontend.com
+
+# [OPTIONAL] - Admin users
+ADMIN_EMAILS=admin@example.com,owner@example.com
 ```
 
 ## Render.com Deployment
@@ -52,7 +69,7 @@ ALLOWED_ORIGINS=https://your-frontend.com
 
 - **Build Command:** `pip install -r requirements.txt`
 - **Start Command:** `python main.py`
-- **Python Version:** 3.11.8
+- **Python Version:** 3.11+
 
 ### 2. Environment Variables
 
@@ -204,6 +221,18 @@ For deployment issues:
 
 ---
 
+## Run Tests Before Deployment
+
+```bash
+cd backend
+
+# Run all tests
+python -m pytest tests/ -v
+
+# Expected: 28 passed
+```
+
+---
+
 **Deployment Status:** ✅ **PRODUCTION READY**
-**Last Updated:** $(date)
 **Version:** 1.1.2

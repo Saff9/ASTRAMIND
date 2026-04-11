@@ -357,9 +357,12 @@ async def verify_jwt(
     return payload
 
 
+_DEV_JWT_SECRET = "dev-" + secrets.token_hex(32)  # stable for process lifetime
+
+
 def _effective_jwt_secret() -> str:
     # Provide a stable dev secret if none configured; do not mutate settings
-    return settings.JWT_SECRET or ("dev-" + secrets.token_hex(32))
+    return settings.JWT_SECRET or _DEV_JWT_SECRET
 
 async def get_current_user(
     request: Request,

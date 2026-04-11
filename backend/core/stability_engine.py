@@ -398,14 +398,18 @@ class StabilityEngine:
         for error in self.error_records[-100:]:  # Last 100 errors
             error_types[error.error_type] = error_types.get(error.error_type, 0) + 1
 
+        # Calculate average recovery time safely
+        errors_with_recovery = [e for e in self.error_records if e.recovery_time is not None]
+        avg_recovery_time = (
+            sum(e.recovery_time for e in errors_with_recovery) / len(errors_with_recovery)
+            if errors_with_recovery else 0.0
+        )
+
         return {
             "total_errors": len(self.error_records),
             "error_types": error_types,
             "unresolved_errors": len([e for e in self.error_records if not e.resolved]),
-            "average_recovery_time": sum(
-                e.recovery_time for e in self.error_records
-                if e.recovery_time is not None
-            ) / len([e for e in self.error_records if e.recovery_time is not None]) if self.error_records else 0
+            "average_recovery_time": avg_recovery_time
         }
 
 # Global stability engine instance - background tasks will be started when app starts

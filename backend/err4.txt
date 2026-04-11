@@ -1,0 +1,14 @@
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.schemas
+INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.tables
+INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.types
+INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.constraints
+INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.defaults
+INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.comments
+INFO  [alembic.autogenerate.compare.tables] Detected added table 'discover_news'
+INFO  [alembic.autogenerate.compare.tables] Detected added table 'user_configs'
+INFO  [alembic.autogenerate.compare.constraints] Detected added index 'ix_user_configs_user_id' on '('user_id',)'
+INFO  [alembic.autogenerate.compare.tables] Detected added table 'users'
+INFO  [alembic.autogenerate.compare.constraints] Detected added index 'ix_users_email' on '('email',)'
+Generating C:\Users\HP\OneDrive\Desktop\ASTRAMIND\backend\migrations\versions\057843a1237f_config.py ...  done

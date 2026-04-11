@@ -39,14 +39,14 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # HSTS - Force HTTPS (1 year)
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
 
-        # Content Security Policy - Strict mode
+        # Content Security Policy - Strict mode but allow API docs CDNs
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
-            "style-src 'self' 'unsafe-inline'; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; "
             "img-src 'self' data: https:; "
-            "font-src 'self'; "
-            "connect-src 'self'; "
+            "font-src 'self' https://fonts.gstatic.com; "
+            "connect-src 'self' https://cdn.jsdelivr.net https://unpkg.com https://fonts.googleapis.com; "
             "frame-ancestors 'none'; "
             "form-action 'self'; "
             "base-uri 'self'"

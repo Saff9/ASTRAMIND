@@ -127,7 +127,10 @@ async def lifespan(app: FastAPI):
             logger.warning(f"[WARN] Failed to configure OpenTelemetry: {e}")
 
     except Exception as e:
-        logger.error(f"[WARN] Startup warning: {e}")
+        logger.critical(f"[CRITICAL] Fatal startup error: {e}", exc_info=e)
+        # Re-raise fatal errors so the process exits cleanly instead of
+        # serving traffic in a broken state (broken DB, missing secret, etc.)
+        raise
 
     yield
 
@@ -174,9 +177,10 @@ app = FastAPI(
     version=APP_VERSION,
     description="Multi-provider AI orchestration platform with enterprise-grade stability and security",
     lifespan=lifespan,
-    docs_url="/docs",
-    redoc_url="/redoc",
-    openapi_url="/openapi.json",
+    # Disable API schema endpoints in production to prevent schema exposure
+    docs_url=None if os.getenv("ENV", "development").lower() == "production" else "/docs",
+    redoc_url=None if os.getenv("ENV", "development").lower() == "production" else "/redoc",
+    openapi_url=None if os.getenv("ENV", "development").lower() == "production" else "/openapi.json",
 )
 
 # ===== MIDDLEWARE STACK =====
@@ -281,6 +285,9 @@ app.include_router(auth.router, prefix="/api/v1", tags=["auth"])
 app.include_router(admin.router, prefix="/api/v1", tags=["admin"])
 app.include_router(web_search.router, prefix="/api/v1", tags=["search"])
 
+from api.v1 import user, discover
+app.include_router(user.router, prefix="/api/v1/user", tags=["user"])
+app.include_router(discover.router, prefix="/api/v1/discover", tags=["discover"])
 
 # ===== HEALTH ENDPOINTS =====
 
@@ -361,6 +368,13 @@ async def ready_check():
             len(settings.siliconflow_api_keys) > 0 or
             len(settings.google_ai_studio_api_keys) > 0 or
             len(settings.alibaba_bailian_api_keys) > 0 or
+            len(settings.deepseek_api_keys) > 0 or
+            len(settings.xai_api_keys) > 0 or
+            len(settings.anthropic_api_keys) > 0 or
+            len(settings.cohere_api_keys) > 0 or
+            len(settings.ai21_api_keys) > 0 or
+            len(settings.novita_api_keys) > 0 or
+            len(settings.sambanova_api_keys) > 0 or
             (settings.CLOUDFLARE_ACCOUNT_ID is not None and settings.CLOUDFLARE_API_TOKEN is not None) or
             settings.HUGGINGFACE_API_KEY is not None or
             settings.OPENAI_API_KEY is not None

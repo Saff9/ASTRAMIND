@@ -89,14 +89,23 @@ async def login(
         user = result.scalar_one_or_none()
         
         if user is None:
-            # New user - create account
-            logger.info(f"✅ Creating new user: {email}")
+            # New user - create account with tier-based quota
+            is_admin = email in settings.admin_emails
+            
+            # Determine quota based on role
+            if is_admin:
+                quota = settings.ADMIN_DAILY_QUOTA
+                logger.info(f"✅ Creating admin user: {email} (quota: {quota})")
+            else:
+                quota = settings.USER_DAILY_QUOTA
+                logger.info(f"✅ Creating regular user: {email} (quota: {quota})")
+            
             user = User(
                 email=email,
-                daily_quota=settings.USER_DAILY_QUOTA,
+                daily_quota=quota,
                 daily_used=0,
                 last_reset=date.today(),
-                is_admin=email in settings.admin_emails,
+                is_admin=is_admin,
             )
             db.add(user)
             await db.flush()  # Get user.id
@@ -109,6 +118,14 @@ async def login(
             today = date.today()
             if user.last_reset != today:
                 logger.info(f"🔄 Resetting quota for {email}")
+                
+                # Update quota if user role changed or tiers enabled
+                if settings.ENABLE_QUOTA_TIERS:
+                    if user.is_admin and user.daily_quota != settings.ADMIN_DAILY_QUOTA:
+                        user.daily_quota = settings.ADMIN_DAILY_QUOTA
+                    elif not user.is_admin and user.daily_quota != settings.USER_DAILY_QUOTA:
+                        user.daily_quota = settings.USER_DAILY_QUOTA
+                
                 user.daily_used = 0
                 user.last_reset = today
                 await db.commit()

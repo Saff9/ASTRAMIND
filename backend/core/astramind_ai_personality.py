@@ -2,6 +2,7 @@
 """
 ASTRAMIND PERSONALITY ENGINE - v1.1.2
 AI-powered personality system that adapts to modern communication styles
+Supports loading configuration from PERSONALITY_SKILLS.md or YAML files
 """
 
 import random
@@ -12,6 +13,8 @@ import json
 import asyncio
 from dataclasses import dataclass, field
 import logging
+
+from core.personality_config import get_personality_config, PersonalityConfig
 
 logger = logging.getLogger(__name__)
 
@@ -40,17 +43,37 @@ class ConversationContext:
 class AstraMindPersonalityEngine:
     """
     Advanced AI personality system that learns and adapts to modern communication patterns.
+    Supports loading configuration from personality config files.
     """
 
-    def __init__(self):
-        self.personality = AstraMindPersonality()
+    def __init__(self, config: Optional[PersonalityConfig] = None):
+        self._config = config or get_personality_config()
+        
+        # Load personality traits from config or use defaults
+        personality_data = self._config.personality
+        self.personality = AstraMindPersonality(
+            energy_level=personality_data.get("energy_level", 0.8),
+            sarcasm_level=personality_data.get("sarcasm_level", 0.6),
+            meme_level=personality_data.get("meme_level", 0.7),
+            emoji_usage=personality_data.get("emoji_usage", 0.9),
+            slang_frequency=personality_data.get("slang_frequency", 0.8),
+            conversation_style=self._config.default_style,
+        )
+        
         self.conversation_contexts: Dict[str, ConversationContext] = {}
         self.slang_database = self._load_slang_database()
         self.meme_templates = self._load_meme_templates()
         self.emoji_mappings = self._load_emoji_mappings()
+        
+        logger.info(f"ASTRAMIND Personality Engine initialized with style: {self.personality.conversation_style}")
 
     def _load_slang_database(self) -> Dict[str, List[str]]:
-        """Load ASTRAMIND slang database."""
+        """Load ASTRAMIND slang database from config or use defaults."""
+        config_slang = self._config.slang
+        if config_slang:
+            return config_slang
+        
+        # Default slang database
         return {
             "greeting": ["yo", "hey", "sup", "what's good", "vibes", "skibidi"],
             "agreement": ["bet", "facts", "no cap", "real", "true", "vibes"],
@@ -65,6 +88,7 @@ class AstraMindPersonalityEngine:
 
     def _load_meme_templates(self) -> List[str]:
         """Load meme templates for humorous responses."""
+        # Could be loaded from config in future
         return [
             "This is fine. 🔥🐕",
             "Distracted boyfriend meme but it's me choosing this option 💀",
@@ -76,7 +100,11 @@ class AstraMindPersonalityEngine:
         ]
 
     def _load_emoji_mappings(self) -> Dict[str, List[str]]:
-        """Load context-aware emoji mappings."""
+        """Load context-aware emoji mappings from config or use defaults."""
+        config_emoji = self._config.emojis
+        if config_emoji:
+            return config_emoji
+        
         return {
             "happy": ["😊", "✨", "💫", "🌟", "🎉"],
             "excited": ["🤩", "🚀", "💥", "🔥", "⚡"],
@@ -225,9 +253,9 @@ class AstraMindPersonalityEngine:
             if any(keyword in message_lower for keyword in keywords):
                 context.topic_trends[topic] = context.topic_trends.get(topic, 0) + 1
 
-     def _adapt_personality_to_context(self, context: ConversationContext) -> AstraMindPersonality:
-         """Adapt personality based on conversation context."""
-         adapted = AstraMindPersonality()
+    def _adapt_personality_to_context(self, context: ConversationContext) -> AstraMindPersonality:
+        """Adapt personality based on conversation context."""
+        adapted = AstraMindPersonality()
 
         # Adjust based on user mood
         if context.user_mood == 'excited':
@@ -256,13 +284,13 @@ class AstraMindPersonalityEngine:
 
         return adapted
 
-     async def _generate_ASTRAMIND_response(
-         self,
-         base_response: str,
-         personality: AstraMindPersonality,
-         context: ConversationContext,
-         user_analysis: Dict[str, Any]
-     ) -> str:
+    async def _generate_ASTRAMIND_response(
+        self,
+        base_response: str,
+        personality: AstraMindPersonality,
+        context: ConversationContext,
+        user_analysis: Dict[str, Any]
+    ) -> str:
         """Generate ASTRAMIND-enhanced response."""
 
         enhanced_response = base_response
@@ -290,7 +318,7 @@ class AstraMindPersonalityEngine:
 
         return enhanced_response
 
-     def _inject_slang(self, response: str, personality: AstraMindPersonality) -> str:
+    def _inject_slang(self, response: str, personality: AstraMindPersonality) -> str:
         """Inject ASTRAMIND slang into the response."""
         slang_options = []
 
@@ -322,7 +350,7 @@ class AstraMindPersonalityEngine:
 
         return response
 
-    def _add_emojis(self, response: str, personality: ASTRAMINDPersonality, user_analysis: Dict) -> str:
+    def _add_emojis(self, response: str, personality: AstraMindPersonality, user_analysis: Dict) -> str:
         """Add context-aware emojis to response."""
         emoji_options = []
 
@@ -382,7 +410,7 @@ class AstraMindPersonalityEngine:
             ]
             return f"{response} {random.choice(meme_phrases)}"
 
-    def _adjust_energy_level(self, response: str, personality: ASTRAMINDPersonality) -> str:
+    def _adjust_energy_level(self, response: str, personality: AstraMindPersonality) -> str:
         """Adjust response energy through punctuation and formatting."""
         if personality.energy_level > 0.8:
             # High energy - add exclamation points and caps
@@ -402,7 +430,7 @@ class AstraMindPersonalityEngine:
     def _add_conversational_elements(
         self,
         response: str,
-        personality: ASTRAMINDPersonality,
+        personality: AstraMindPersonality,
         context: ConversationContext,
         user_analysis: Dict
     ) -> str:

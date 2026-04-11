@@ -13,6 +13,9 @@ if str(BACKEND_DIR) not in sys.path:
 # Keep tests fast/deterministic by disabling background loops.
 os.environ.setdefault("DISABLE_BACKGROUND_TASKS", "1")
 
+# Set test JWT secret for security tests
+os.environ.setdefault("JWT_SECRET", "test-secret-key-for-testing-purposes-only-32chars")
+
 
 @pytest.fixture
 def anyio_backend():

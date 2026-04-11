@@ -23,6 +23,12 @@ MODEL_CONFIGS = {
             ModelProvider.CEREBRAS,
             ModelProvider.SILICONFLOW,
             ModelProvider.ALIBABA_BAILIAN,
+            ModelProvider.DEEPSEEK,
+            ModelProvider.XAI,
+            ModelProvider.COHERE,
+            ModelProvider.AI21,
+            ModelProvider.NOVITA,
+            ModelProvider.SAMBANOVA,
         ],
         "models": {
             ModelProvider.GROQ: "llama-3.1-8b-instant",
@@ -32,6 +38,12 @@ MODEL_CONFIGS = {
             ModelProvider.CEREBRAS: "llama3.1-8b",
             ModelProvider.SILICONFLOW: "Qwen/Qwen2.5-7B-Instruct",
             ModelProvider.ALIBABA_BAILIAN: "qwen-plus",
+            ModelProvider.DEEPSEEK: "deepseek-chat",
+            ModelProvider.XAI: "grok-beta",
+            ModelProvider.COHERE: "command-r7b-12-2024",
+            ModelProvider.AI21: "j2-light",
+            ModelProvider.NOVITA: "Qwen/Qwen2.5-7B-Instruct",
+            ModelProvider.SAMBANOVA: "Meta-Llama-3.1-8B-Instruct",
             ModelProvider.LOCAL: "llama3.1:8b",  # Ollama format
         }
     },
@@ -44,6 +56,12 @@ MODEL_CONFIGS = {
             ModelProvider.CEREBRAS,
             ModelProvider.SILICONFLOW,
             ModelProvider.ALIBABA_BAILIAN,
+            ModelProvider.DEEPSEEK,
+            ModelProvider.XAI,
+            ModelProvider.COHERE,
+            ModelProvider.AI21,
+            ModelProvider.NOVITA,
+            ModelProvider.SAMBANOVA,
         ],
         "models": {
             ModelProvider.GROQ: "llama-3.1-70b-versatile",
@@ -53,6 +71,12 @@ MODEL_CONFIGS = {
             ModelProvider.CEREBRAS: "llama3.1-70b",
             ModelProvider.SILICONFLOW: "Qwen/Qwen2.5-72B-Instruct",
             ModelProvider.ALIBABA_BAILIAN: "qwen-max",
+            ModelProvider.DEEPSEEK: "deepseek-chat",
+            ModelProvider.XAI: "grok-beta",
+            ModelProvider.COHERE: "command-r7b-12-2024",
+            ModelProvider.AI21: "j2-mid",
+            ModelProvider.NOVITA: "Qwen/Qwen2.5-72B-Instruct",
+            ModelProvider.SAMBANOVA: "Meta-Llama-3.1-70B-Instruct",
             ModelProvider.LOCAL: "llama3.1:70b",  # Ollama format
         }
     },
@@ -66,6 +90,13 @@ MODEL_CONFIGS = {
             ModelProvider.CEREBRAS,
             ModelProvider.SILICONFLOW,
             ModelProvider.ALIBABA_BAILIAN,
+            ModelProvider.DEEPSEEK,
+            ModelProvider.XAI,
+            ModelProvider.ANTHROPIC,
+            ModelProvider.COHERE,
+            ModelProvider.AI21,
+            ModelProvider.NOVITA,
+            ModelProvider.SAMBANOVA,
         ],
         "models": {
             ModelProvider.OPENROUTER: "openai/gpt-4o-mini",
@@ -76,6 +107,13 @@ MODEL_CONFIGS = {
             ModelProvider.CEREBRAS: "llama3.1-70b",
             ModelProvider.SILICONFLOW: "deepseek-ai/DeepSeek-R1",
             ModelProvider.ALIBABA_BAILIAN: "qwen-max",
+            ModelProvider.DEEPSEEK: "deepseek-chat",
+            ModelProvider.XAI: "grok-2-1212",
+            ModelProvider.ANTHROPIC: "claude-3-5-sonnet-20241022",
+            ModelProvider.COHERE: "command-r7b-12-2024",
+            ModelProvider.AI21: "j2-ultra",
+            ModelProvider.NOVITA: "deepseek-ai/DeepSeek-R1",
+            ModelProvider.SAMBANOVA: "Meta-Llama-3.1-405B-Instruct",
             ModelProvider.LOCAL: "mistral",  # Ollama format
         }
     },
@@ -83,6 +121,7 @@ MODEL_CONFIGS = {
 
 
 async def resolve_model(alias: str) -> Tuple[str, str]:
+
     """
     Intelligently resolves model alias to best available provider and model.
     Uses auto-detection for local models, falls back to healthy remote providers.

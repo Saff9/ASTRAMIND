@@ -14,7 +14,7 @@ from core.enhanced_security import (
     validate_model_access,
     log_security_event
 )
-from core.ASTRAMIND_ai_personality import ASTRAMIND_personality_engine
+from core.astramind_ai_personality import AstraMindPersonalityEngine
 from app.db.session import get_db
 from services.ai_router import AIRouter
 from services.stream import stream_response
@@ -34,45 +34,66 @@ router = APIRouter(tags=["chat"])
 
 # ===== BACKGROUND TASKS =====
 
-async def update_user_quota(user_id: int):
-    """Background task to update user quota. Creates its own DB session to avoid blocking request path."""
-    from sqlalchemy import select
-    from app.db.session import get_db_session
+async def atomic_increment_quota(user_id: int, db: AsyncSession) -> bool:
+    """
+    Atomically increment user quota usage in a single DB round-trip.
 
-    async with get_db_session() as db:
-        try:
-            result = await db.execute(
-                select(User).where(User.id == user_id)
-            )
-            user = result.scalar_one_or_none()
+    Returns True if the quota was incremented successfully (user had remaining quota).
+    Returns False if the user has already exhausted their quota.
 
-            if user:
-                user.daily_used += 1
-                await db.commit()
-                logger.debug(f"User quota updated: {user.email} ({user.daily_used}/{user.daily_quota})")
-            else:
-                logger.error(f"User not found for quota update: {user_id}")
-        except Exception as e:
-            await db.rollback()
-            logger.error(f"Failed to update user quota for {user_id}: {e}")
+    This prevents the race condition (C-1) where multiple concurrent requests
+    all read the same stale daily_used value and all pass the quota check.
+    """
+    from sqlalchemy import text
+    result = await db.execute(text("""
+        UPDATE users
+        SET daily_used = daily_used + 1
+        WHERE id = :user_id
+          AND daily_used < daily_quota
+        RETURNING daily_used
+    """), {"user_id": user_id})
+    await db.commit()
+    row = result.fetchone()
+    return row is not None  # None means quota was already exhausted
 
 # ===== DEPENDENCIES =====
 
+_ai_router_cache: AIRouter | None = None
+
+
 def get_ai_router(request: Request) -> AIRouter:
-    """FastAPI dependency for an AI router instance using shared connection pools."""
-    return AIRouter(
-        groq_keys=settings.groq_api_keys,
-        openrouter_keys=settings.openrouter_api_keys,
-        together_keys=settings.together_api_keys,
-        mistral_keys=settings.mistral_api_keys,
-        cerebras_keys=settings.cerebras_api_keys,
-        siliconflow_keys=settings.siliconflow_api_keys,
-        google_keys=settings.google_ai_studio_api_keys,
-        alibaba_bailian_keys=settings.alibaba_bailian_api_keys,
-        hf_key=settings.HUGGINGFACE_API_KEY,
-        openai_key=settings.OPENAI_API_KEY,
-        http_client=getattr(request.app.state, "http_client", None),
-    )
+    """FastAPI dependency for an AI router instance using shared connection pools.
+
+    The router is a per-process singleton — provider objects are expensive and
+    should not be re-created on every request (H-1 fix).
+    """
+    global _ai_router_cache
+    if _ai_router_cache is None:
+        _ai_router_cache = AIRouter(
+            groq_keys=settings.groq_api_keys,
+            openrouter_keys=settings.openrouter_api_keys,
+            together_keys=settings.together_api_keys,
+            mistral_keys=settings.mistral_api_keys,
+            cerebras_keys=settings.cerebras_api_keys,
+            siliconflow_keys=settings.siliconflow_api_keys,
+            google_keys=settings.google_ai_studio_api_keys,
+            alibaba_bailian_keys=settings.alibaba_bailian_api_keys,
+            deepseek_keys=settings.deepseek_api_keys,
+            xai_keys=settings.xai_api_keys,
+            anthropic_keys=settings.anthropic_api_keys,
+            cohere_keys=settings.cohere_api_keys,
+            ai21_keys=settings.ai21_api_keys,
+            novita_keys=settings.novita_api_keys,
+            sambanova_keys=settings.sambanova_api_keys,
+            hf_key=settings.HUGGINGFACE_API_KEY,
+            openai_key=settings.OPENAI_API_KEY,
+            http_client=getattr(request.app.state, "http_client", None),
+        )
+    else:
+        # Keep http_client in sync with app state (updated after startup)
+        if hasattr(request.app.state, "http_client"):
+            _ai_router_cache.groq_provider.http_client = getattr(request.app.state, "http_client", None)
+    return _ai_router_cache
 
 
 # ===== REQUEST VALIDATION =====
@@ -200,22 +221,8 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
     # Use sanitized content if available
     safe_prompt = filter_result.sanitized_content or safe_prompt
 
-    # ===== RATE LIMITING CHECK =====
-    if user.daily_used >= user.daily_quota:
-        logger.warning(
-            f"Daily quota exceeded for user: {user.email} "
-            f"({user.daily_used}/{user.daily_quota}) "
-            f"[request_id: {request_id}]"
-        )
-        raise HTTPException(
-            status_code=429,
-            detail={
-                "error": "Daily quota exceeded",
-                "used": user.daily_used,
-                "limit": user.daily_quota,
-                "reset_date": user.last_reset.isoformat() if user.last_reset else None,
-            },
-        )
+    # NOTE: Quota is enforced atomically below (after model resolution) via atomic_increment_quota().
+    # A pre-check here would reintroduce the race condition (C-1) and is intentionally omitted.
 
     # ===== MODEL RESOLUTION =====
     try:
@@ -232,8 +239,23 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
             detail=f"Invalid model: {payload.model}",
         )
 
-    # ===== SCHEDULE USER QUOTA UPDATE (BACKGROUND) =====
-    background_tasks.add_task(update_user_quota, user.id)
+    # ===== ATOMIC QUOTA ENFORCEMENT (C-1 fix: no race condition) =====
+    # Do a single atomic UPDATE that checks AND increments in one DB round-trip.
+    # This prevents multiple concurrent requests from all passing the quota check.
+    quota_granted = await atomic_increment_quota(user.id, db)
+    if not quota_granted:
+        logger.warning(
+            f"Daily quota exceeded (atomic check) for user: {user.email} "
+            f"[request_id: {request_id}]"
+        )
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "error": "Daily quota exceeded",
+                "limit": user.daily_quota,
+                "reset_date": user.last_reset.isoformat() if user.last_reset else None,
+            },
+        )
 
     # ===== ROUTE TO AI PROVIDER =====
     try:

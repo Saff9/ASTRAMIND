@@ -5,6 +5,7 @@ from typing import AsyncIterator
 
 from app.providers.base import AIProvider
 from core.errors import AppError
+from core.system_prompt import get_system_prompt
 
 
 class OpenRouterProvider(AIProvider):
@@ -21,6 +22,9 @@ class OpenRouterProvider(AIProvider):
         api_key: str,
     ) -> AsyncIterator[str]:
 
+        # Get system prompt for AI identity
+        system_prompt = get_system_prompt()
+
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
@@ -28,7 +32,10 @@ class OpenRouterProvider(AIProvider):
 
         payload = {
             "model": model,
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt}
+            ],
             "stream": True,
         }
 

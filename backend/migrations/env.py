@@ -5,7 +5,10 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 from alembic import context
 import os
+import sys
 
+# Add backend directory to PYTHONPATH
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
@@ -16,10 +19,8 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Add your model's MetaData object here for 'autogenerate' support
-# from app.db import models
-# target_metadata = models.Base.metadata
-
-target_metadata = None
+from app.db.models import Base
+target_metadata = Base.metadata
 
 # Override sqlalchemy.url from environment (DATABASE_URL)
 db_url = os.getenv("DATABASE_URL")
@@ -28,7 +29,18 @@ if db_url:
         db_url = db_url.replace("postgres://", "postgresql+psycopg://", 1)
     elif db_url.startswith("postgresql://"):
         db_url = db_url.replace("postgresql://", "postgresql+psycopg://", 1)
+    
+    # Strip aiosqlite for Alembic's synchronous migrations
+    if db_url.startswith("sqlite+aiosqlite:///"):
+        db_url = db_url.replace("sqlite+aiosqlite:///", "sqlite:///", 1)
+        
     config.set_main_option("sqlalchemy.url", db_url)
+else:
+    # Fallback to config file URL, also stripping aiosqlite if present
+    db_url = config.get_main_option("sqlalchemy.url")
+    if db_url and db_url.startswith("sqlite+aiosqlite:///"):
+        db_url = db_url.replace("sqlite+aiosqlite:///", "sqlite:///", 1)
+        config.set_main_option("sqlalchemy.url", db_url)
 
 
 def run_migrations_offline():

@@ -64,6 +64,36 @@ class Settings(BaseSettings):
         description="Comma-separated Alibaba Bailian (阿里云百炼) API keys",
     )
 
+    # ===== ADDITIONAL FREE/PROVIDER API KEYS =====
+    DEEPSEEK_API_KEYS: str = Field(
+        default="",
+        description="Comma-separated DeepSeek API keys",
+    )
+    XAI_API_KEYS: str = Field(
+        default="",
+        description="Comma-separated xAI (Grok) API keys",
+    )
+    ANTHROPIC_API_KEYS: str = Field(
+        default="",
+        description="Comma-separated Anthropic (Claude) API keys",
+    )
+    COHERE_API_KEYS: str = Field(
+        default="",
+        description="Comma-separated Cohere API keys",
+    )
+    AI21_API_KEYS: str = Field(
+        default="",
+        description="Comma-separated AI21 API keys",
+    )
+    NOVITA_API_KEYS: str = Field(
+        default="",
+        description="Comma-separated Novita AI API keys",
+    )
+    SAMBANOVA_API_KEYS: str = Field(
+        default="",
+        description="Comma-separated SambaNova API keys",
+    )
+
     # Cloudflare Workers AI (token + account id)
     CLOUDFLARE_ACCOUNT_ID: Optional[str] = Field(
         default=None,
@@ -84,6 +114,16 @@ class Settings(BaseSettings):
     OPENAI_BASE_URL: str = Field(default="https://api.openai.com/v1")
     # Alibaba Bailian compatible-mode endpoint (often DashScope compatible mode)
     ALIBABA_BAILIAN_BASE_URL: str = Field(default="https://dashscope.aliyuncs.com/compatible-mode/v1")
+    
+    # ===== ADDITIONAL PROVIDER BASE URLs =====
+    DEEPSEEK_BASE_URL: str = Field(default="https://api.deepseek.com/v1")
+    XAI_BASE_URL: str = Field(default="https://api.x.ai/v1")
+    ANTHROPIC_BASE_URL: str = Field(default="https://api.anthropic.com/v1")
+    COHERE_BASE_URL: str = Field(default="https://api.cohere.ai/v1")
+    AI21_BASE_URL: str = Field(default="https://api.ai21.com/v1")
+    NOVITA_BASE_URL: str = Field(default="https://api.novita.ai/v1")
+    SAMBANOVA_BASE_URL: str = Field(default="https://api.sambanova.ai/v1")
+    
     HUGGINGFACE_API_KEY: Optional[str] = None
     OPENAI_API_KEY: Optional[str] = Field(
         default=None,
@@ -109,7 +149,22 @@ class Settings(BaseSettings):
     # ===== RATE LIMITING =====
     RATE_LIMIT_PER_MINUTE: int = Field(default=60)
     RATE_LIMIT_WINDOW_SECONDS: int = Field(default=60)
-    USER_DAILY_QUOTA: int = Field(default=50)
+    USER_DAILY_QUOTA: int = Field(
+        default=50,
+        description="Default daily request quota per user"
+    )
+    ADMIN_DAILY_QUOTA: int = Field(
+        default=500,
+        description="Daily request quota for admin users"
+    )
+    PREMIUM_DAILY_QUOTA: int = Field(
+        default=200,
+        description="Daily request quota for premium users"
+    )
+    ENABLE_QUOTA_TIERS: bool = Field(
+        default=True,
+        description="Enable quota tiers based on user role"
+    )
 
     # ===== DATABASE POOLING =====
     DATABASE_POOL_SIZE: int = Field(default=20)
@@ -187,31 +242,72 @@ class Settings(BaseSettings):
     @property
     def openrouter_api_keys(self) -> list[str]:
         """Parse OPENROUTER_API_KEYS into list, filtering placeholders."""
-        return self._parse_csv(self.OPENROUTER_API_KEYS, placeholder_prefixes=("OR_KEY",))
+        return self._parse_csv(self.OPENROUTER_API_KEYS, placeholder_prefixes=("OPENROUTER_KEY",))
 
     @property
     def together_api_keys(self) -> list[str]:
+        """Parse TOGETHER_API_KEYS into list."""
         return self._parse_csv(self.TOGETHER_API_KEYS, placeholder_prefixes=("TOGETHER_KEY",))
 
     @property
     def mistral_api_keys(self) -> list[str]:
+        """Parse MISTRAL_API_KEYS into list."""
         return self._parse_csv(self.MISTRAL_API_KEYS, placeholder_prefixes=("MISTRAL_KEY",))
 
     @property
     def cerebras_api_keys(self) -> list[str]:
+        """Parse CEREBRAS_API_KEYS into list."""
         return self._parse_csv(self.CEREBRAS_API_KEYS, placeholder_prefixes=("CEREBRAS_KEY",))
 
     @property
     def siliconflow_api_keys(self) -> list[str]:
+        """Parse SILICONFLOW_API_KEYS into list."""
         return self._parse_csv(self.SILICONFLOW_API_KEYS, placeholder_prefixes=("SILICONFLOW_KEY",))
 
     @property
     def google_ai_studio_api_keys(self) -> list[str]:
+        """Parse GOOGLE_AI_STUDIO_API_KEYS into list."""
         return self._parse_csv(self.GOOGLE_AI_STUDIO_API_KEYS, placeholder_prefixes=("GOOGLE_KEY", "GEMINI_KEY"))
 
     @property
     def alibaba_bailian_api_keys(self) -> list[str]:
+        """Parse ALIBABA_BAILIAN_API_KEYS into list."""
         return self._parse_csv(self.ALIBABA_BAILIAN_API_KEYS, placeholder_prefixes=("BAILIAN_KEY", "DASHSCOPE_KEY"))
+
+    @property
+    def deepseek_api_keys(self) -> list[str]:
+        """Parse DEEPSEEK_API_KEYS into list."""
+        return self._parse_csv(self.DEEPSEEK_API_KEYS, placeholder_prefixes=("DEEPSEEK_KEY",))
+
+    @property
+    def xai_api_keys(self) -> list[str]:
+        """Parse XAI_API_KEYS into list."""
+        return self._parse_csv(self.XAI_API_KEYS, placeholder_prefixes=("XAI_KEY",))
+
+    @property
+    def anthropic_api_keys(self) -> list[str]:
+        """Parse ANTHROPIC_API_KEYS into list."""
+        return self._parse_csv(self.ANTHROPIC_API_KEYS, placeholder_prefixes=("ANTHROPIC_KEY",))
+
+    @property
+    def cohere_api_keys(self) -> list[str]:
+        """Parse COHERE_API_KEYS into list."""
+        return self._parse_csv(self.COHERE_API_KEYS, placeholder_prefixes=("COHERE_KEY",))
+
+    @property
+    def ai21_api_keys(self) -> list[str]:
+        """Parse AI21_API_KEYS into list."""
+        return self._parse_csv(self.AI21_API_KEYS, placeholder_prefixes=("AI21_KEY",))
+
+    @property
+    def novita_api_keys(self) -> list[str]:
+        """Parse NOVITA_API_KEYS into list."""
+        return self._parse_csv(self.NOVITA_API_KEYS, placeholder_prefixes=("NOVITA_KEY",))
+
+    @property
+    def sambanova_api_keys(self) -> list[str]:
+        """Parse SAMBANOVA_API_KEYS into list."""
+        return self._parse_csv(self.SAMBANOVA_API_KEYS, placeholder_prefixes=("SAMBANOVA_KEY",))
 
     @property
     def admin_emails(self) -> list[str]:
@@ -248,6 +344,8 @@ class Settings(BaseSettings):
                 return url.replace("postgresql://", "postgresql+asyncpg://", 1)
             if url.startswith("postgres://"):
                 return url.replace("postgres://", "postgresql+asyncpg://", 1)
+            if url.startswith("libsql://"):
+                return url.replace("libsql://", "sqlite+libsql://", 1)
             return url
         else:
             # Fallback to local SQLite database for development/demo mode
@@ -294,25 +392,13 @@ def validate_startup():
         len(settings.siliconflow_api_keys) > 0 or
         len(settings.google_ai_studio_api_keys) > 0 or
         len(settings.alibaba_bailian_api_keys) > 0 or
-        (settings.CLOUDFLARE_ACCOUNT_ID is not None and settings.CLOUDFLARE_API_TOKEN is not None) or
-        settings.HUGGINGFACE_API_KEY or
-        settings.OPENAI_API_KEY
-    )
-
-    if settings.is_production() and not has_providers:
-        errors.append(
-            "No AI providers configured - configure at least one provider "
-            "(Groq, OpenRouter, Together, Mistral, Cerebras, SiliconFlow, Google AI Studio, "
-            "Cloudflare Workers AI, Alibaba Bailian, HuggingFace, or OpenAI)"
-        )
-    elif settings.is_production() and not has_providers:
-        warnings.append("No AI providers configured - application will run in limited mode")
-
-    # Email validation dependency check
-    try:
-        import email_validator
-    except ImportError:
-        errors.append("email-validator package not installed - required for EmailStr validation. Run 'pip install email-validator'")
+        len(settings.deepseek_api_keys) > 0 or
+        len(settings.xai_api_keys) > 0 or
+        len(settings.anthropic_api_keys) > 0 or
+        len(settings.cohere_api_keys) > 0 or
+        len(settings.ai21_api_keys) > 0 or
+        len(settings.novita_api_keys) > 0 or
+        len(settings.sambanova_api_keys) > 0 or
 
     # Security dependencies check
     try:
@@ -348,6 +434,20 @@ def validate_startup():
         providers.append("Cloudflare Workers AI")
     if settings.alibaba_bailian_api_keys:
         providers.append(f"Alibaba Bailian ({len(settings.alibaba_bailian_api_keys)} keys)")
+    if settings.deepseek_api_keys:
+        providers.append(f"DeepSeek ({len(settings.deepseek_api_keys)} keys)")
+    if settings.xai_api_keys:
+        providers.append(f"xAI ({len(settings.xai_api_keys)} keys)")
+    if settings.anthropic_api_keys:
+        providers.append(f"Anthropic ({len(settings.anthropic_api_keys)} keys)")
+    if settings.cohere_api_keys:
+        providers.append(f"Cohere ({len(settings.cohere_api_keys)} keys)")
+    if settings.ai21_api_keys:
+        providers.append(f"AI21 ({len(settings.ai21_api_keys)} keys)")
+    if settings.novita_api_keys:
+        providers.append(f"Novita ({len(settings.novita_api_keys)} keys)")
+    if settings.sambanova_api_keys:
+        providers.append(f"SambaNova ({len(settings.sambanova_api_keys)} keys)")
     if settings.HUGGINGFACE_API_KEY:
         providers.append("HuggingFace")
     if settings.OPENAI_API_KEY:

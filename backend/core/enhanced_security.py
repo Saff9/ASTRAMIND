@@ -8,8 +8,9 @@ from typing import Dict, Optional, Any, Tuple
 from fastapi import Request, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import logging
-from datetime import datetime, timedelta
-from jose import jwt, JWTError
+from datetime import datetime, timedelta, timezone
+import jwt
+from jwt.exceptions import InvalidTokenError, ExpiredSignatureError
 import re
 
 from core.config import settings
@@ -43,44 +44,59 @@ async def verify_jwt_comprehensive(
         logger.warning(f"Missing auth token from {request.client.host}")
         raise HTTPException(status_code=401, detail="Missing authorization token")
 
-    # 2. Verify JWT signature and claims
-    if not settings.JWT_SECRET:
-        logger.error("JWT_SECRET not configured")
-        raise HTTPException(status_code=500, detail="Server configuration error")
-
+    # 2. Verify JWT signature and claims using Clerk's JWKS
+    # Ensure CLERK_SECRET_KEY or publishable key is available or just verify using JWKS directly.
+    import httpx
     try:
+        # Note: in production, cache the JWKS for performance
+        jwks_url = "https://api.clerk.com/v1/jwks"
+        jwks_client = jwt.PyJWKClient(jwks_url)
+        signing_key = jwks_client.get_signing_key_from_jwt(credentials.credentials)
+        
         payload = jwt.decode(
             credentials.credentials,
-            settings.JWT_SECRET,
-            algorithms=[settings.JWT_ALGORITHM],
+            signing_key.key,
+            algorithms=["RS256"],
+            options={"verify_aud": False}
         )
-    except JWTError as e:
-        logger.warning(f"JWT verification failed: {e}")
+    except Exception as e:
+        logger.warning(f"Clerk JWT verification failed: {e}")
         raise HTTPException(status_code=401, detail="Invalid token")
 
     # 4. Validate required claims
     user_id = payload.get("sub")
-    email = payload.get("email")
+    email = payload.get("email", "")  # Or fetch from clerk API if not in token
     exp = payload.get("exp")
     iat = payload.get("iat")
 
-    if not user_id or not email:
-        logger.warning("JWT missing required claims")
+    if not user_id:
+        logger.warning("JWT missing sub claim")
         raise HTTPException(status_code=401, detail="Invalid token payload")
+
+    # Anti-Abuse: Disallow Disposable Emails
+    if email:
+        domain = email.split('@')[-1].lower()
+        DISPOSABLE_DOMAINS = {
+            '10minutemail.com', 'temp-mail.org', 'guerrillamail.com', 'mailinator.com', 
+            'yopmail.com', 'throwawaymail.com', 'tempail.com', 'fakemail.net', 'minuteinbox.com', 'proton.me', 'protonmail.com'
+        }
+        if domain in DISPOSABLE_DOMAINS:
+            logger.warning(f"Blocked registration attempt with temp mail: {email}")
+            raise HTTPException(status_code=403, detail="Temporary/disposable email addresses are not permitted.")
 
     # 5. Validate expiration
     if not exp:
         raise HTTPException(status_code=401, detail="Token missing expiration")
 
-    exp_dt = datetime.fromtimestamp(exp)
-    now_dt = datetime.now()
+    now_utc = datetime.now(tz=timezone.utc)
+    exp_dt = datetime.fromtimestamp(exp, tz=timezone.utc)
 
-    if exp_dt < now_dt:
-        logger.warning(f"Expired token for user: {email}")
+    if exp_dt < now_utc:
+        logger.warning(f"Expired token for user: {user_id}")
         raise HTTPException(status_code=401, detail="Token has expired")
 
     # 6. Validate issued-at time (prevent future tokens)
-    if iat and datetime.fromtimestamp(iat) > now_dt:
+    if iat and datetime.fromtimestamp(iat, tz=timezone.utc) > now_utc:
         raise HTTPException(status_code=401, detail="Token issued in future")
 
     # 7. Get user from database (ensure they still exist)
@@ -88,22 +104,31 @@ async def verify_jwt_comprehensive(
     from sqlalchemy import text
 
     async with get_db_session() as db:
-        user_result = await db.execute(text("""
-            SELECT id, email, is_active, banned_until
-            FROM profiles
-            WHERE id = :user_id
-        """), {"user_id": user_id})
+        from sqlalchemy import select
+        from app.db.models import User
 
-        user_row = user_result.first()
+        user_result = await db.execute(
+            select(User).where(User.clerk_id == user_id)
+        )
+        user_row = user_result.scalar_one_or_none()
+
         if not user_row:
-            logger.warning(f"User not found: {user_id}")
-            raise HTTPException(status_code=401, detail="User not found")
+            # If the user doesn't exist yet, we can optionally auto-create them using their Clerk Sub and Email (if present)
+            # Or log a warning and let an explicit sign-up route handle it.
+            logger.warning(f"Clerk User not mapped in local DB: {user_id}")
+            raise HTTPException(status_code=401, detail="User not configured in platform")
 
         user = {
-            'id': user_row[0],
-            'email': user_row[1],
-            'is_active': user_row[2],
-            'banned_until': user_row[3]
+            'id': user_row.id,
+            'clerk_id': user_row.clerk_id,
+            'email': user_row.email,
+            'is_active': True,   # users table has no is_active; default True
+            'banned_until': None,  # users table has no banned_until; no ban check
+            'is_admin': user_row.is_admin,
+            'daily_quota': user_row.daily_quota,
+            'daily_used': user_row.daily_used,
+            'last_reset': user_row.last_reset,
+            'orm_user': user_row,  # pass ORM object for quota enforcement
         }
 
         # 8. Check if user is active
@@ -112,7 +137,7 @@ async def verify_jwt_comprehensive(
             raise HTTPException(status_code=401, detail="User account inactive")
 
         # 9. Check if user is banned/suspended
-        if user['banned_until'] and user['banned_until'] > now_dt:
+        if user['banned_until'] and user['banned_until'] > now_utc:
             logger.warning(f"User banned until {user['banned_until']}: {user_id}")
             raise HTTPException(status_code=403, detail="Account suspended")
 
@@ -313,23 +338,35 @@ async def log_security_event(
         ip_address = request.client.host if request.client else None
         user_agent = request.headers.get("user-agent")
 
-    # Insert audit log
-    from app.db.session import get_db_session
-    from sqlalchemy import text
-    async with get_db_session() as db:
-        await db.execute(text("""
-            SELECT audit_log_event(
-                :user_id, :event_type, 'security', NULL, NULL,
-                NULL, :details, :ip_address, :user_agent, NULL
-            )
-        """), {
-            "user_id": user_id,
-            "event_type": event_type,
-            "details": sanitized_details,
-            "ip_address": ip_address,
-            "user_agent": user_agent[:500] if user_agent else None
-        })
-        await db.commit()
+    # Always emit to Python logger first (never crashes)
+    logger.warning(
+        f"SECURITY_EVENT type={event_type} user_id={user_id} "
+        f"ip={ip_address} ua={str(user_agent)[:100] if user_agent else None} "
+        f"details={sanitized_details}"
+    )
+
+    # Optional: persist to audit_logs table if it exists (fail gracefully)
+    try:
+        from app.db.session import get_db_session
+        from sqlalchemy import text
+        async with get_db_session() as db:
+            await db.execute(text("""
+                INSERT INTO audit_logs
+                    (user_id, event_type, category, details, ip_address, user_agent)
+                VALUES
+                    (:user_id, :event_type, 'security', :details::text, :ip_address, :user_agent)
+                ON CONFLICT DO NOTHING
+            """), {
+                "user_id": user_id,
+                "event_type": event_type,
+                "details": str(sanitized_details),
+                "ip_address": ip_address,
+                "user_agent": str(user_agent)[:500] if user_agent else None
+            })
+            await db.commit()
+    except Exception as db_err:
+        # Non-fatal: audit logging must never crash the application
+        logger.debug(f"Audit DB write skipped (table may not exist): {db_err}")
 
 # =========================================
 # DEPENDENCY INJECTION
