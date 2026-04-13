@@ -120,7 +120,7 @@ export default function HomePage() {
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             {!isSignedIn ? (
               <>
-                <button onClick={() => signIn()} style={{
+                <button onClick={() => signIn("credentials", { callbackUrl: "/chat" })} style={{
                   background: "transparent", border: "1px solid var(--border-default)",
                   color: "var(--text-secondary)", padding: "8px 18px", borderRadius: 10,
                   fontSize: 14, fontWeight: 500, cursor: "pointer",
@@ -130,7 +130,7 @@ export default function HomePage() {
                 onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--text-secondary)"; (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}>
                   Sign in
                 </button>
-                <button onClick={() => signIn()} style={{
+                <button onClick={() => signIn("credentials", { callbackUrl: "/chat" })} style={{
                   background: "linear-gradient(135deg,var(--brand),var(--brand-light))",
                   color: "var(--bg-primary)", padding: "8px 20px", borderRadius: 10,
                   fontSize: 14, fontWeight: 600, cursor: "pointer", border: "none",
@@ -145,7 +145,7 @@ export default function HomePage() {
               </>
             ) : (
               <>
-                <button onClick={() => signOut()} style={{
+                <button onClick={() => signOut({ callbackUrl: "/" })} style={{
                   background: "transparent", border: "1px solid var(--border-default)",
                   color: "var(--text-secondary)", padding: "6px 14px", borderRadius: 10,
                   fontSize: 13, fontWeight: 500, cursor: "pointer",

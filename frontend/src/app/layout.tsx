@@ -7,14 +7,14 @@ import Script from "next/script";
 import "./globals.css";
 import AppProviders from "@/components/AppProviders";
 
-const syne = Syne({ variable: "--font-syne", subsets: ["latin"], weight: ["400","500","600","700","800"], display: "swap" });
-const dmSans = DM_Sans({ variable: "--font-dm", subsets: ["latin"], weight: ["300","400","500","600"], display: "swap" });
-const jetbrainsMono = JetBrains_Mono({ variable: "--font-mono", subsets: ["latin"], weight: ["400","500"], display: "swap" });
-const firaCode = Fira_Code({ variable: "--font-fira", subsets: ["latin"], weight: ["400","500","600"], display: "swap" });
-const playfairDisplay = Playfair_Display({ variable: "--font-playfair", subsets: ["latin"], weight: ["400","500","600","700","800"], display: "swap" });
-const rajdhani = Rajdhani({ variable: "--font-rajdhani", subsets: ["latin"], weight: ["300","400","500","600","700"], display: "swap" });
-const pacifico = Pacifico({ variable: "--font-pacifico", subsets: ["latin"], weight: ["400"], display: "swap" });
-const spaceMono = Space_Mono({ variable: "--font-space-mono", subsets: ["latin"], weight: ["400","700"], display: "swap" });
+const syne = Syne({ variable: "--font-syne", subsets: ["latin"], weight: ["400","500","600","700","800"], display: "optional", preload: false });
+const dmSans = DM_Sans({ variable: "--font-dm", subsets: ["latin"], weight: ["300","400","500","600"], display: "optional", preload: false });
+const jetbrainsMono = JetBrains_Mono({ variable: "--font-mono", subsets: ["latin"], weight: ["400","500"], display: "optional", preload: false });
+const firaCode = Fira_Code({ variable: "--font-fira", subsets: ["latin"], weight: ["400","500","600"], display: "optional", preload: false });
+const playfairDisplay = Playfair_Display({ variable: "--font-playfair", subsets: ["latin"], weight: ["400","500","600","700","800"], display: "optional", preload: false });
+const rajdhani = Rajdhani({ variable: "--font-rajdhani", subsets: ["latin"], weight: ["300","400","500","600","700"], display: "optional", preload: false });
+const pacifico = Pacifico({ variable: "--font-pacifico", subsets: ["latin"], weight: ["400"], display: "optional", preload: false });
+const spaceMono = Space_Mono({ variable: "--font-space-mono", subsets: ["latin"], weight: ["400","700"], display: "optional", preload: false });
 
 export const metadata: Metadata = {
   title: "ASTRAMIND — AI, your way",

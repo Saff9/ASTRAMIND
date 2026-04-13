@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Plus, Settings, SidebarClose, SidebarOpen,
   ArrowLeft, Info, Shield, Wrench, SquarePen, Download
@@ -74,20 +75,26 @@ export default function ChatPage() {
 
   const selectedModel = MODEL_OPTIONS.find((m) => m.id === modelId) || MODEL_OPTIONS[0];
 
+  const router = useRouter();
+
   useEffect(() => {
+    if (session === null) {
+      // Not authenticated — redirect to sign-in
+      router.replace("/signin");
+      return;
+    }
     if (session?.user?.email) {
+      // Load persisted chat history for this user
       const stored = localStorage.getItem(`chat_history_${session.user.email}`);
       if (stored) {
-        try {
-          setMessages(JSON.parse(stored));
-        } catch (e) {
-          console.error("Failed to parse history", e);
-        }
+        try { setMessages(JSON.parse(stored)); } catch { /* ignore */ }
       }
+      // Sync user to Neon (fire-and-forget, non-blocking)
+      fetch("/api/users/sync", { method: "POST" }).catch(() => {/* silent */});
     } else {
       setMessages([]);
     }
-  }, [session]);
+  }, [session, router]);
 
   useEffect(() => {
     if (session?.user?.email && messages.length > 0) {
