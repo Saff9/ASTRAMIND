@@ -335,18 +335,24 @@ class Settings(BaseSettings):
     def effective_database_url(self) -> str:
         """Get the effective database URL, falling back to SQLite for local development.
 
-        asyncpg does NOT support `sslmode` as a query parameter in the URL.
-        SSL is handled via `connect_args={"ssl": True}` in the engine.
-        This method strips sslmode from the URL to prevent TypeError.
+        asyncpg does NOT support ANY query parameters in the connection URL
+        (sslmode, channel_binding, etc.). All params must be stripped and SSL
+        configured via connect_args={"ssl": True} in the engine instead.
+
+        Uses urllib.parse for correct URL component parsing — not regex.
         """
         if self.DATABASE_URL:
+            from urllib.parse import urlparse, urlunparse
+
             url = self.DATABASE_URL
 
-            # Strip sslmode query param — asyncpg rejects it as a kwarg
-            import re
-            url = re.sub(r'[?&]sslmode=[^&]*', '', url).rstrip('?').rstrip('&')
+            # Parse URL and strip ALL query params
+            # asyncpg rejects sslmode, channel_binding, and any other params
+            parsed = urlparse(url)
+            clean = parsed._replace(query="")
+            url = urlunparse(clean)
 
-            # Normalize to async drivers
+            # Normalize scheme to async drivers
             if url.startswith("postgresql://"):
                 return url.replace("postgresql://", "postgresql+asyncpg://", 1)
             if url.startswith("postgres://"):
@@ -359,8 +365,8 @@ class Settings(BaseSettings):
             import os
             db_dir = os.path.dirname(os.path.dirname(__file__))
             db_path = os.path.join(db_dir, "ASTRAMINDai_local.db")
-            # Use absolute path for SQLite
             return f"sqlite+aiosqlite:///{db_path.replace(os.sep, '/')}"
+
 
 
 # Singleton instance

@@ -179,7 +179,7 @@ export default function MessageBubble({ role, content, provider, model, timestam
                 <ThumbsDown style={{ width: 13, height: 13 }} />
               </button>
               <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-muted)" }}>
-                {timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                {new Date(timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
               </span>
             </div>
           </>
