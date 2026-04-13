@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 def get_engine_kwargs() -> dict:
     """
     Generate engine configuration based on environment.
-    CRITICAL: Compatible with Supabase connection pooler.
+    CRITICAL: asyncpg does NOT support sslmode in URL — use connect_args instead.
     """
     kwargs = {
         "echo": settings.is_development(),  # Log SQL in dev
@@ -30,16 +30,12 @@ def get_engine_kwargs() -> dict:
         "pool_size": settings.DATABASE_POOL_SIZE,
         "max_overflow": settings.DATABASE_POOL_MAX_OVERFLOW,
         "pool_recycle": settings.DATABASE_POOL_RECYCLE_SECONDS,
-        # Note: poolclass not specified for async engines
     }
 
-    # Supabase pooler doesn't support server_settings parameter
-    # So we DON'T add it here
-    # If you're using direct PostgreSQL, uncomment below:
-    # if settings.is_production():
-    #     kwargs["connect_args"] = {
-    #         "server_settings": {"application_name": "ASTRAMINDai_backend"}
-    #     }
+    # For PostgreSQL in production, pass SSL via connect_args
+    # asyncpg rejects sslmode as a URL param, so we enable SSL here instead
+    if settings.DATABASE_URL and settings.is_production():
+        kwargs["connect_args"] = {"ssl": True}
 
     return kwargs
 

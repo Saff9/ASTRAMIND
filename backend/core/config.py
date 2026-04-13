@@ -335,11 +335,18 @@ class Settings(BaseSettings):
     def effective_database_url(self) -> str:
         """Get the effective database URL, falling back to SQLite for local development.
 
-        This ensures proper async driver handling for PostgreSQL connections.
+        asyncpg does NOT support `sslmode` as a query parameter in the URL.
+        SSL is handled via `connect_args={"ssl": True}` in the engine.
+        This method strips sslmode from the URL to prevent TypeError.
         """
         if self.DATABASE_URL:
-            # Normalize to async drivers
             url = self.DATABASE_URL
+
+            # Strip sslmode query param — asyncpg rejects it as a kwarg
+            import re
+            url = re.sub(r'[?&]sslmode=[^&]*', '', url).rstrip('?').rstrip('&')
+
+            # Normalize to async drivers
             if url.startswith("postgresql://"):
                 return url.replace("postgresql://", "postgresql+asyncpg://", 1)
             if url.startswith("postgres://"):
