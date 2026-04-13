@@ -1,16 +1,15 @@
 /**
  * ASTRAMIND — Neon PostgreSQL User Store
- * API route: POST /api/users/sync
+ * POST /api/users/sync
  *
- * Syncs user sign-in events to Neon DB for analytics and history backup.
- * Set DATABASE_URL in Vercel env to your Neon connection string.
+ * Syncs authenticated users to Neon DB (if DATABASE_URL is set).
+ * Gracefully no-ops if no DB is configured — localStorage is primary.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
-// Neon serverless client — works in Vercel Edge & Node runtimes
-// DATABASE_URL format: postgresql://user:pass@host.neon.tech/dbname?sslmode=require
 let sql: ((strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>) | null = null;
 
 async function getSQL() {
@@ -26,20 +25,21 @@ async function getSQL() {
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
-    const session = await getServerSession();
+    // Must pass authOptions so NextAuth can read the session correctly
+    const session = await getServerSession(authOptions);
+
     if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      // Not logged in — not an error, just skip sync
+      return NextResponse.json({ ok: false, reason: "unauthenticated" }, { status: 200 });
     }
 
     const db = await getSQL();
     if (!db) {
-      // No DB configured — succeed silently (localStorage is the primary store)
       return NextResponse.json({ ok: true, backend: "localStorage-only" });
     }
 
-    // Ensure users table exists (idempotent)
     await db`
       CREATE TABLE IF NOT EXISTS astramind_users (
         id         TEXT PRIMARY KEY,
@@ -50,7 +50,6 @@ export async function POST(request: NextRequest) {
       )
     `;
 
-    // Upsert user — update last_seen on repeated logins
     await db`
       INSERT INTO astramind_users (id, email, name)
       VALUES (${session.user.email}, ${session.user.email}, ${session.user.name ?? null})
@@ -62,6 +61,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, backend: "neon" });
   } catch (err) {
     console.error("[Neon sync error]", err);
-    return NextResponse.json({ ok: false, error: String(err) }, { status: 500 });
+    // Never 500 — silently fail so it doesn't break chat
+    return NextResponse.json({ ok: false, error: String(err) });
   }
 }

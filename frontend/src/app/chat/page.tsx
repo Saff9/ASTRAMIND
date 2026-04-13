@@ -141,13 +141,15 @@ export default function ChatPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/chat/completions`, {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://astramind-reer.onrender.com";
+      const response = await fetch(`${apiBase}/api/v1/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [{ role: "user", content: text }],
-          model: selectedModel.model
-        })
+          prompt: text,
+          model: selectedModel.model || "fast",
+          stream: false,
+        }),
       });
 
       if (response.status === 429) {
@@ -156,9 +158,15 @@ export default function ChatPage() {
       if (!response.ok) {
         throw new Error(`API returned ${response.status} ${response.statusText}`);
       }
-      
+
       const data = await response.json();
-      const content = data.choices?.[0]?.message?.content || "No response generated.";
+      // Handle both streaming text and standard message formats
+      const content =
+        data.response ||
+        data.content ||
+        data.choices?.[0]?.message?.content ||
+        data.text ||
+        "No response generated.";
       
       const reply: Message = {
         id: loadId,

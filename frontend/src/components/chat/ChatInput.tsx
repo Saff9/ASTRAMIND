@@ -12,7 +12,9 @@ interface ChatInputProps {
 export default function ChatInput({ onSend, isLoading = false, model }: ChatInputProps) {
   const [input, setInput] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [focused, setFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
 
   useEffect(() => {
     const ta = textareaRef.current;
@@ -24,16 +26,9 @@ export default function ChatInput({ onSend, isLoading = false, model }: ChatInpu
 
   const handleSend = () => {
     const t = input.trim();
-    if (!t) {
-      setErrorMsg("Message cannot be empty.");
-      return;
-    }
-    if (t.length > 4000) {
-      setErrorMsg("Message is too long (max 4000 characters).");
-      return;
-    }
+    if (!t) { setErrorMsg("Message cannot be empty."); return; }
+    if (t.length > 4000) { setErrorMsg("Message is too long (max 4000 characters)."); return; }
     if (isLoading) return;
-
     onSend(t);
     setInput("");
     setErrorMsg(null);
@@ -47,14 +42,23 @@ export default function ChatInput({ onSend, isLoading = false, model }: ChatInpu
   const canSend = input.trim().length > 0 && input.length <= 4000 && !isLoading;
 
   return (
-    <div style={{
-      background: "var(--surface-2)",
-      border: `1.5px solid ${canSend ? "var(--brand)" : "var(--border-default)"}`,
-      borderRadius: 16,
-      transition: "border-color 0.25s ease, box-shadow 0.25s ease",
-      boxShadow: canSend ? "0 0 0 3px var(--brand-glow)" : "0 2px 12px rgba(0,0,0,0.25)",
-    }}>
-      {/* Textarea — tighter padding */}
+    <div
+      style={{
+        background: "var(--surface-2)",
+        border: `1.5px solid ${focused || canSend ? "var(--brand)" : "var(--border-default)"}`,
+        borderRadius: 16,
+        transition: "border-color 0.25s ease, box-shadow 0.25s ease",
+        boxShadow: focused || canSend ? "0 0 0 3px var(--brand-glow)" : "0 2px 12px rgba(0,0,0,0.25)",
+        cursor: isMobile && !focused ? "text" : "default",
+      }}
+      onClick={() => {
+        // On mobile, only focus the textarea when the container is explicitly clicked
+        if (!focused && textareaRef.current) {
+          textareaRef.current.focus();
+        }
+      }}
+    >
+      {/* Textarea */}
       <div className="mobile-tight" style={{ padding: "10px 14px 4px" }}>
         {errorMsg && (
           <div style={{ fontSize: 12, color: "#ff4a4a", marginBottom: 6, fontWeight: 500 }}>
@@ -66,10 +70,14 @@ export default function ChatInput({ onSend, isLoading = false, model }: ChatInpu
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKey}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           disabled={isLoading}
           placeholder="Ask anything…"
           maxLength={4000}
           rows={1}
+          // Prevent mobile keyboard from popping up before user taps
+          autoFocus={false}
           style={{
             width: "100%", resize: "none", background: "transparent", border: "none",
             outline: "none", fontSize: 15, lineHeight: 1.5, color: "var(--text-primary)",
