@@ -42,7 +42,7 @@ async def verify_jwt_comprehensive(
     Flexible auth dependency.
     - If a valid Bearer JWT is provided: decode and use it.
     - Otherwise: create a guest identity from the request IP.
-    No Clerk dependency. No database lookup required for auth.
+    No external auth provider dependency. No database lookup required.
     """
     user_id: str
     email: str
@@ -78,7 +78,7 @@ async def verify_jwt_comprehensive(
     # Synthesise a user dict that satisfies the chat endpoint contract
     guest_user = {
         "id":          user_id,
-        "clerk_id":    user_id,
+        "user_id":     user_id,
         "email":       email,
         "is_active":   True,
         "banned_until": None,

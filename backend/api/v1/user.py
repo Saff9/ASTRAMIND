@@ -22,13 +22,13 @@ async def get_user_config(
     auth_data: dict = Depends(get_current_user_secure),
     db: AsyncSession = Depends(get_db)
 ):
-    clerk_id = auth_data.get("sub", auth_data.get("user_id", "anonymous"))
-    
-    result = await db.execute(select(UserConfig).where(UserConfig.clerk_id == clerk_id))
+    user_id = auth_data.get("user_id", "anonymous")
+
+    result = await db.execute(select(UserConfig).where(UserConfig.user_id == user_id))
     config = result.scalar_one_or_none()
-    
+
     if not config:
-        config = UserConfig(clerk_id=clerk_id)
+        config = UserConfig(user_id=user_id)
         db.add(config)
         await db.commit()
         await db.refresh(config)
@@ -47,13 +47,13 @@ async def update_user_config(
     auth_data: dict = Depends(get_current_user_secure),
     db: AsyncSession = Depends(get_db)
 ):
-    clerk_id = auth_data.get("sub", auth_data.get("user_id", "anonymous"))
-    
-    result = await db.execute(select(UserConfig).where(UserConfig.clerk_id == clerk_id))
+    user_id = auth_data.get("user_id", "anonymous")
+
+    result = await db.execute(select(UserConfig).where(UserConfig.user_id == user_id))
     config = result.scalar_one_or_none()
-    
+
     if not config:
-        config = UserConfig(clerk_id=clerk_id)
+        config = UserConfig(user_id=user_id)
         db.add(config)
 
     if payload.last_used_model is not None:
@@ -62,7 +62,6 @@ async def update_user_config(
         config.preferred_theme = payload.preferred_theme
     if payload.preferred_font is not None:
         config.preferred_font = payload.preferred_font
-        
+
     await db.commit()
     return {"status": "success"}
-
