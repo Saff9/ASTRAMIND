@@ -35,22 +35,22 @@ interface Conversation {
 
 const MODEL_OPTIONS = [
   // Top 3 (Always shown initially)
-  { id: "gpt-4o",           label: "GPT-4o",              Icon: OpenAIIcon,   desc: "Flagship multi-modal",     provider: "OpenAI",    model: "gpt-4o",           speedMs: 1200 },
-  { id: "claude-sonnet",    label: "Claude 3.5 Sonnet",   Icon: ClaudeIcon,   desc: "Top coding & reasoning",   provider: "Anthropic", model: "claude-3-5-sonnet",speedMs: 1600 },
-  { id: "llama-3-70b",      label: "Llama 3.3 70B",       Icon: GroqLogoIcon, desc: "Lightning fast open weight",provider:"Groq",      model: "llama-3.3-70b",    speedMs: 400 },
+  { id: "gpt-4o",           label: "GPT-4o",              Icon: OpenAIIcon,   desc: "Flagship multi-modal",     provider: "OpenAI",    model: "gpt-4o",           tier: "smart",    speedMs: 1200 },
+  { id: "claude-sonnet",    label: "Claude 3.5 Sonnet",   Icon: ClaudeIcon,   desc: "Top coding & reasoning",   provider: "Anthropic", model: "claude-3-5-sonnet",tier: "smart",    speedMs: 1600 },
+  { id: "llama-3-70b",      label: "Llama 3.3 70B",       Icon: GroqLogoIcon, desc: "Lightning fast open weight",provider:"Groq",      model: "llama-3.3-70b",    tier: "balanced", speedMs: 400 },
   // The rest (Shown on 'Show more')
-  { id: "deepseek-r1",      label: "DeepSeek R1",         Icon: DeepSeekIcon, desc: "Advanced reasoning",       provider: "DeepSeek",  model: "deepseek-reasoner",speedMs: 2500 },
-  { id: "gpt-4o-mini",      label: "GPT-4o Mini",         Icon: OpenAIIcon,   desc: "Fast & affordable",        provider: "OpenAI",    model: "gpt-4o-mini",      speedMs: 600 },
-  { id: "claude-haiku",     label: "Claude 3.5 Haiku",    Icon: ClaudeIcon,   desc: "Fastest from Anthropic",   provider: "Anthropic", model: "claude-3-haiku",   speedMs: 700 },
-  { id: "gemini-2-flash",   label: "Gemini 2.0 Flash",    Icon: GeminiIcon,   desc: "Google's fastest",         provider: "Google",    model: "gemini-2.0-flash", speedMs: 500 },
-  { id: "gemini-pro",       label: "Gemini 1.5 Pro",      Icon: GeminiIcon,   desc: "Large context window",     provider: "Google",    model: "gemini-1.5-pro",   speedMs: 1800 },
-  { id: "mistral-large",    label: "Mistral Large",       Icon: MistralIcon,  desc: "European flagship",        provider: "Mistral",   model: "mistral-large",    speedMs: 1500 },
-  { id: "mistral-small",    label: "Mistral Small",       Icon: MistralIcon,  desc: "Efficient & fast",         provider: "Mistral",   model: "mistral-small",    speedMs: 600 },
-  { id: "llama-3-8b",       label: "Llama 3.1 8B",        Icon: GroqLogoIcon, desc: "Sub-100ms responses",      provider: "Groq",      model: "llama-3.1-8b",     speedMs: 200 },
-  { id: "deepseek-chat",    label: "DeepSeek V3",         Icon: DeepSeekIcon, desc: "Standard chat model",      provider: "DeepSeek",  model: "deepseek-chat",    speedMs: 1100 },
-  { id: "grok-2",           label: "Grok 2",              Icon: MetaIcon, /* Using placeholder Meta icon for grok */ desc: "Real-time knowledge",      provider: "xAI",       model: "grok-2",           speedMs: 1300 },
-  { id: "phi-3",            label: "Phi-3 Mini",          Icon: AstraIcon,    desc: "Microsoft's small model",  provider: "Azure",     model: "phi-3-mini",       speedMs: 400 },
-  { id: "qwen-max",         label: "Qwen Max",            Icon: AstraIcon,    desc: "Alibaba's top model",      provider: "Alibaba",   model: "qwen-max",         speedMs: 1400 },
+  { id: "deepseek-r1",      label: "DeepSeek R1",         Icon: DeepSeekIcon, desc: "Advanced reasoning",       provider: "DeepSeek",  model: "deepseek-reasoner",tier: "smart",    speedMs: 2500 },
+  { id: "gpt-4o-mini",      label: "GPT-4o Mini",         Icon: OpenAIIcon,   desc: "Fast & affordable",        provider: "OpenAI",    model: "gpt-4o-mini",      tier: "fast",     speedMs: 600 },
+  { id: "claude-haiku",     label: "Claude 3.5 Haiku",    Icon: ClaudeIcon,   desc: "Fastest from Anthropic",   provider: "Anthropic", model: "claude-3-haiku",   tier: "fast",     speedMs: 700 },
+  { id: "gemini-2-flash",   label: "Gemini 2.0 Flash",    Icon: GeminiIcon,   desc: "Google's fastest",         provider: "Google",    model: "gemini-2.0-flash", tier: "fast",     speedMs: 500 },
+  { id: "gemini-pro",       label: "Gemini 1.5 Pro",      Icon: GeminiIcon,   desc: "Large context window",     provider: "Google",    model: "gemini-1.5-pro",   tier: "smart",    speedMs: 1800 },
+  { id: "mistral-large",    label: "Mistral Large",       Icon: MistralIcon,  desc: "European flagship",        provider: "Mistral",   model: "mistral-large",    tier: "smart",    speedMs: 1500 },
+  { id: "mistral-small",    label: "Mistral Small",       Icon: MistralIcon,  desc: "Efficient & fast",         provider: "Mistral",   model: "mistral-small",    tier: "fast",     speedMs: 600 },
+  { id: "llama-3-8b",       label: "Llama 3.1 8B",        Icon: GroqLogoIcon, desc: "Sub-100ms responses",      provider: "Groq",      model: "llama-3.1-8b",     tier: "fast",     speedMs: 200 },
+  { id: "deepseek-chat",    label: "DeepSeek V3",         Icon: DeepSeekIcon, desc: "Standard chat model",      provider: "DeepSeek",  model: "deepseek-chat",    tier: "fast",     speedMs: 1100 },
+  { id: "grok-2",           label: "Grok 2",              Icon: MetaIcon, /* Using placeholder Meta icon for grok */ desc: "Real-time knowledge",      provider: "xAI",       model: "grok-2",           tier: "balanced", speedMs: 1300 },
+  { id: "phi-3",            label: "Phi-3 Mini",          Icon: AstraIcon,    desc: "Microsoft's small model",  provider: "Azure",     model: "phi-3-mini",       tier: "fast",     speedMs: 400 },
+  { id: "qwen-max",         label: "Qwen Max",            Icon: AstraIcon,    desc: "Alibaba's top model",      provider: "Alibaba",   model: "qwen-max",         tier: "smart",    speedMs: 1400 },
 ];
 
 const EMPTY_SUGGESTIONS = [
@@ -147,7 +147,7 @@ export default function ChatPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt: text,
-          model: selectedModel.model || "fast",
+          model: selectedModel.tier || "fast",
           stream: false,
         }),
       });

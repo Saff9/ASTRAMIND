@@ -102,6 +102,7 @@ async def login(
             
             user = User(
                 email=email,
+                auth_id=email,  # NextAuth uses email as unique ID
                 daily_quota=quota,
                 daily_used=0,
                 last_reset=date.today(),

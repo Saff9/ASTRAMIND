@@ -107,9 +107,9 @@ class ChatRequest(BaseModel):
         max_length=8000,
         description="User prompt (max 8000 chars)",
     )
-    model: Literal["fast", "balanced", "smart"] = Field(
+    model: str = Field(
         default="fast",
-        description="AI model to use",
+        description="AI model or tier to use",
     )
     stream: bool = Field(
         default=True,

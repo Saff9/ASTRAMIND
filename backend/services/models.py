@@ -120,6 +120,42 @@ MODEL_CONFIGS = {
 }
 
 
+# Mapping for specific model names to their performance tiers
+MODEL_MAPPING = {
+    # Smart Tier (High-end reasoning/coding models)
+    "gpt-4o": "smart",
+    "gpt-4": "smart",
+    "claude-3-5-sonnet": "smart",
+    "claude-sonnet": "smart",
+    "deepseek-reasoner": "smart",
+    "deepseek-r1": "smart",
+    "mistral-large": "smart",
+    "gemini-1.5-pro": "smart",
+    "gemini-pro": "smart",
+    "qwen-max": "smart",
+
+    # Balanced Tier (Mid-range / General purpose)
+    "llama-3.3-70b": "balanced",
+    "llama-3-70b": "balanced",
+    "llama-3.1-70b": "balanced",
+    "mistral-medium": "balanced",
+    "grok-2": "balanced",
+    "command-r": "balanced",
+
+    # Fast Tier (Efficient / Low latency)
+    "gpt-4o-mini": "fast",
+    "claude-3-5-haiku": "fast",
+    "claude-haiku": "fast",
+    "llama-3.1-8b": "fast",
+    "llama-3-8b": "fast",
+    "mistral-small": "fast",
+    "gemini-2.0-flash": "fast",
+    "gemini-flash": "fast",
+    "deepseek-chat": "fast",
+    "phi-3-mini": "fast",
+}
+
+
 async def resolve_model(alias: str) -> Tuple[str, str]:
 
     """
@@ -127,20 +163,26 @@ async def resolve_model(alias: str) -> Tuple[str, str]:
     Uses auto-detection for local models, falls back to healthy remote providers.
 
     Args:
-        alias: Model alias (fast, balanced, smart)
+        alias: Model alias (fast, balanced, smart) or a specific model name.
 
     Returns:
         Tuple of (provider_name, model_name)
-
-    Raises:
-        KeyError: If alias is invalid
     """
-    config = MODEL_CONFIGS.get(alias)
+    # If it's a specific model name, map it to a tier first
+    tier = alias.lower()
+    if tier not in MODEL_CONFIGS and tier in MODEL_MAPPING:
+        logger.info(f"Mapping specific model '{alias}' to tier '{MODEL_MAPPING[tier]}'")
+        tier = MODEL_MAPPING[tier]
+
+    config = MODEL_CONFIGS.get(tier)
     if not config:
-        raise KeyError(f"Invalid model selection: {alias}. Available: fast, balanced, smart")
+        # If still not found, default to 'fast' instead of crashing
+        logger.warning(f"Unknown model selection '{alias}', defaulting to 'fast'")
+        tier = "fast"
+        config = MODEL_CONFIGS[tier]
 
     # Get the best available provider for this model class
-    best_provider = await model_router.get_best_provider(alias)
+    best_provider = await model_router.get_best_provider(tier)
 
     # Get the model name for this provider
     model_name = config["models"].get(best_provider)

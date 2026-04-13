@@ -17,22 +17,18 @@ class Base(DeclarativeBase):
 
 class User(Base):
     """
-    User model with quota tracking.
-    clerk_id field is kept for DB schema compatibility —
-    it now stores the NextAuth user identity (email).
-    """
+    User model with quota tracking.    """
     __tablename__ = "users"
 
-    # Primary Key
     id: Mapped[int] = mapped_column(primary_key=True)
 
     # User identity — stores email/user_id from NextAuth
-    clerk_id: Mapped[str] = mapped_column(
+    auth_id: Mapped[str] = mapped_column(
         String(255),
         unique=True,
         index=True,
         nullable=False,
-        comment="User identity (email from NextAuth, kept for schema compatibility)",
+        comment="User identity (email from NextAuth)",
     )
 
     # Email
@@ -96,15 +92,16 @@ class User(Base):
 class UserConfig(Base):
     """
     User configuration for UI settings and behaviour tracking.
-    clerk_id field kept for schema compatibility — stores NextAuth user identity.
+    auth_id field stores the user's primary identity (email from NextAuth)
     """
     __tablename__ = "user_configs"
 
     id: Mapped[int] = mapped_column(primary_key=True)
 
     # User identity (email from NextAuth)
-    clerk_id: Mapped[str] = mapped_column(
+    auth_id: Mapped[str] = mapped_column(
         String(255),
+        unique=True,
         index=True,
         nullable=False,
         comment="User identity (email from NextAuth)",
@@ -123,7 +120,7 @@ class UserConfig(Base):
     )
 
     def __repr__(self) -> str:
-        return f"<UserConfig(clerk_id={self.clerk_id}, model={self.last_used_model})>"
+        return f"<UserConfig(auth_id={self.auth_id}, model={self.last_used_model})>"
 
 
 class DiscoverNews(Base):
