@@ -6,7 +6,6 @@ All security decisions moved to backend only.
 
 from typing import Dict, Optional, Any, Tuple
 from fastapi import Request, HTTPException, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import logging
 from datetime import datetime, timedelta, timezone
 import jwt
@@ -24,33 +23,32 @@ class ForbiddenError(Exception):
 
 logger = logging.getLogger(__name__)
 
-security_scheme = HTTPBearer(auto_error=False)
 
 # =========================================
 # AUTH — JWT-optional guest mode
-# NextAuth on the frontend controls who can
-# reach /chat. The backend trusts that gate
-# and assigns a guest identity for quota
-# tracking when no valid JWT is present.
+# Reads Authorization header directly from
+# the Request object so this works both as
+# a FastAPI Depends() and when called directly.
 # =========================================
 
-async def verify_jwt_comprehensive(
-    request: Request,
-    credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
-) -> Dict[str, Any]:
+async def verify_jwt_comprehensive(request: Request) -> Dict[str, Any]:
     """
-    Flexible auth dependency.
-    - If a valid Bearer JWT is provided: decode and use it.
-    - Otherwise: create a guest identity from the request IP.
-    No external auth provider dependency. No database lookup required.
+    Flexible auth — reads Bearer token from Authorization header directly.
+    - Valid JWT  → decode and use claims.
+    - No token / bad token → guest identity from client IP.
+    No external auth provider required.
     """
     user_id: str
     email: str
 
-    if credentials and credentials.credentials:
-        token = credentials.credentials
+    # Extract token straight from the header — no Depends() involved
+    auth_header = request.headers.get("Authorization", "")
+    token: str | None = None
+    if auth_header.startswith("Bearer "):
+        token = auth_header[len("Bearer "):]
+
+    if token:
         try:
-            # Try decoding with our own JWT_SECRET (NextAuth tokens or custom)
             payload = jwt.decode(
                 token,
                 settings.JWT_SECRET or "fallback",
@@ -60,9 +58,9 @@ async def verify_jwt_comprehensive(
             user_id = payload.get("sub") or payload.get("id") or "guest"
             email   = payload.get("email") or f"{user_id}@astramind.local"
         except Exception:
-            # Unrecognised token — fall through to guest
             logger.debug("JWT decode failed, using guest mode")
-            user_id = f"guest_{request.client.host.replace('.', '_')}"
+            client_ip = getattr(request.client, "host", "unknown")
+            user_id = f"guest_{client_ip.replace('.', '_')}"
             email   = f"{user_id}@astramind.local"
     else:
         # No token — guest mode
@@ -72,21 +70,20 @@ async def verify_jwt_comprehensive(
 
     now_utc = datetime.now(tz=timezone.utc)
 
-    request.state.user_id    = user_id
-    request.state.user_email  = email
+    request.state.user_id   = user_id
+    request.state.user_email = email
 
-    # Synthesise a user dict that satisfies the chat endpoint contract
     guest_user = {
-        "id":          user_id,
-        "user_id":     user_id,
-        "email":       email,
-        "is_active":   True,
+        "id":           user_id,
+        "user_id":      user_id,
+        "email":        email,
+        "is_active":    True,
         "banned_until": None,
-        "is_admin":    False,
-        "daily_quota": 100,
-        "daily_used":  0,
-        "last_reset":  now_utc,
-        "orm_user":    None,
+        "is_admin":     False,
+        "daily_quota":  100,
+        "daily_used":   0,
+        "last_reset":   now_utc,
+        "orm_user":     None,
     }
 
     return {
