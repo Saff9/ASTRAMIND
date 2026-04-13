@@ -142,7 +142,7 @@ class Settings(BaseSettings):
 
     # ===== CORS =====
     ALLOWED_ORIGINS: str = Field(
-        default="http://localhost:3000",
+        default="https://astramind-lake.vercel.app,http://localhost:3000,http://localhost:3001",
         description="Comma-separated allowed origins",
     )
 

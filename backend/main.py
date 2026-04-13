@@ -78,8 +78,22 @@ async def lifespan(app: FastAPI):
             logger.warning("[WARN] Database unavailable at startup")
 
         # Initialize local database if using SQLite
-        from app.db.session import initialize_local_database
+        from app.db.session import initialize_local_database, engine
         await initialize_local_database()
+
+        # Auto-create all tables (CREATE IF NOT EXISTS) so migrations are not needed
+        # This covers: users, user_configs, discover_news, provider_status, etc.
+        if db_available and engine is not None:
+            try:
+                from app.db.models import Base as AppBase
+                from app.db.base import Base as ModelBase
+                from app.models.provider_status import ProviderStatus  # ensure model is registered
+                async with engine.begin() as conn:
+                    await conn.run_sync(AppBase.metadata.create_all)
+                    await conn.run_sync(ModelBase.metadata.create_all)
+                logger.info("[OK] Database tables verified/created")
+            except Exception as e:
+                logger.warning(f"[WARN] Table auto-create skipped: {e}")
 
         # Shared outbound HTTP client (connection pooling) for external calls
         # Individual calls may override timeouts as needed.
