@@ -24,23 +24,26 @@ def get_engine_kwargs() -> dict:
     Generate engine configuration based on environment.
     CRITICAL: asyncpg does NOT support sslmode in URL — use connect_args instead.
     """
-    kwargs = {
-        "echo": settings.is_development(),  # Log SQL in dev
-        "pool_pre_ping": True,  # Test connection before use
-        "pool_size": settings.DATABASE_POOL_SIZE,
-        "max_overflow": settings.DATABASE_POOL_MAX_OVERFLOW,
-        "pool_recycle": settings.DATABASE_POOL_RECYCLE_SECONDS,
+    is_pg = bool(settings.DATABASE_URL)
+    kwargs: dict = {
+        "echo": settings.is_development(),
+        "pool_pre_ping": True,
     }
 
-    # For PostgreSQL in production, pass SSL via connect_args
-    # asyncpg rejects sslmode as a URL param, so we enable SSL here instead
-    if settings.DATABASE_URL and settings.is_production():
-        kwargs["connect_args"] = {"ssl": True}
+    # Pool settings only valid for PostgreSQL (not SQLite/aiosqlite)
+    if is_pg:
+        kwargs["pool_size"] = settings.DATABASE_POOL_SIZE
+        kwargs["max_overflow"] = settings.DATABASE_POOL_MAX_OVERFLOW
+        kwargs["pool_recycle"] = settings.DATABASE_POOL_RECYCLE_SECONDS
+        # SSL must be passed via connect_args for asyncpg — never in URL
+        if settings.is_production():
+            kwargs["connect_args"] = {"ssl": True}
 
     return kwargs
 
 
-# Create async engine
+# Create async engine — non-fatal so server starts even if DB is unavailable
+engine = None
 try:
     engine = create_async_engine(
         settings.effective_database_url,
@@ -49,29 +52,28 @@ try:
     db_type = "PostgreSQL" if settings.DATABASE_URL else "SQLite"
     logger.info(f"Database engine created successfully ({db_type})")
 except Exception as e:
-    logger.error(f"❌ Failed to create database engine: {e}")
-    raise RuntimeError("Database configuration failed")
+    logger.warning(f"⚠ Database engine creation failed: {e} — DB features disabled")
 
 
-# Session factory
+# Session factory — only created if engine is available
 async_session_maker = async_sessionmaker(
     engine,
     class_=AsyncSession,
     expire_on_commit=False,
     autocommit=False,
     autoflush=False,
-)
+) if engine is not None else None
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
     FastAPI dependency for database session.
-    Properly handles async context.
-
-    Usage in endpoints:
-        async def my_endpoint(db: AsyncSession = Depends(get_db)):
-            ...
+    Yields None if DB is unavailable — endpoints must handle this.
     """
+    if async_session_maker is None:
+        logger.warning("DB unavailable — yielding None session")
+        yield None  # type: ignore
+        return
     async with async_session_maker() as session:
         try:
             yield session
@@ -87,8 +89,12 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 async def get_db_session():
     """
     Context manager for background tasks that need DB access.
-    Creates and properly closes its own session.
+    No-ops gracefully if DB engine is unavailable.
     """
+    if async_session_maker is None:
+        logger.warning("DB unavailable — skipping background DB session")
+        yield None
+        return
     async with async_session_maker() as session:
         try:
             yield session
