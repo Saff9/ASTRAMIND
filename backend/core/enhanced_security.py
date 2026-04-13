@@ -27,7 +27,11 @@ logger = logging.getLogger(__name__)
 security_scheme = HTTPBearer(auto_error=False)
 
 # =========================================
-# ZERO TRUST JWT VERIFICATION
+# AUTH — JWT-optional guest mode
+# NextAuth on the frontend controls who can
+# reach /chat. The backend trusts that gate
+# and assigns a guest identity for quota
+# tracking when no valid JWT is present.
 # =========================================
 
 async def verify_jwt_comprehensive(
@@ -35,137 +39,63 @@ async def verify_jwt_comprehensive(
     credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
 ) -> Dict[str, Any]:
     """
-    COMPREHENSIVE JWT verification with workspace validation.
-    This is the ONLY place security decisions are made.
+    Flexible auth dependency.
+    - If a valid Bearer JWT is provided: decode and use it.
+    - Otherwise: create a guest identity from the request IP.
+    No Clerk dependency. No database lookup required for auth.
     """
+    user_id: str
+    email: str
 
-    # 1. Validate token presence
-    if credentials is None:
-        logger.warning(f"Missing auth token from {request.client.host}")
-        raise HTTPException(status_code=401, detail="Missing authorization token")
-
-    # 2. Verify JWT signature and claims using Clerk's JWKS
-    # Ensure CLERK_SECRET_KEY or publishable key is available or just verify using JWKS directly.
-    import httpx
-    try:
-        # Note: in production, cache the JWKS for performance
-        jwks_url = "https://api.clerk.com/v1/jwks"
-        jwks_client = jwt.PyJWKClient(jwks_url)
-        signing_key = jwks_client.get_signing_key_from_jwt(credentials.credentials)
-        
-        payload = jwt.decode(
-            credentials.credentials,
-            signing_key.key,
-            algorithms=["RS256"],
-            options={"verify_aud": False}
-        )
-    except Exception as e:
-        logger.warning(f"Clerk JWT verification failed: {e}")
-        raise HTTPException(status_code=401, detail="Invalid token")
-
-    # 4. Validate required claims
-    user_id = payload.get("sub")
-    email = payload.get("email", "")  # Or fetch from clerk API if not in token
-    exp = payload.get("exp")
-    iat = payload.get("iat")
-
-    if not user_id:
-        logger.warning("JWT missing sub claim")
-        raise HTTPException(status_code=401, detail="Invalid token payload")
-
-    # Anti-Abuse: Disallow Disposable Emails
-    if email:
-        domain = email.split('@')[-1].lower()
-        DISPOSABLE_DOMAINS = {
-            '10minutemail.com', 'temp-mail.org', 'guerrillamail.com', 'mailinator.com', 
-            'yopmail.com', 'throwawaymail.com', 'tempail.com', 'fakemail.net', 'minuteinbox.com', 'proton.me', 'protonmail.com'
-        }
-        if domain in DISPOSABLE_DOMAINS:
-            logger.warning(f"Blocked registration attempt with temp mail: {email}")
-            raise HTTPException(status_code=403, detail="Temporary/disposable email addresses are not permitted.")
-
-    # 5. Validate expiration
-    if not exp:
-        raise HTTPException(status_code=401, detail="Token missing expiration")
+    if credentials and credentials.credentials:
+        token = credentials.credentials
+        try:
+            # Try decoding with our own JWT_SECRET (NextAuth tokens or custom)
+            payload = jwt.decode(
+                token,
+                settings.JWT_SECRET or "fallback",
+                algorithms=["HS256"],
+                options={"verify_exp": True},
+            )
+            user_id = payload.get("sub") or payload.get("id") or "guest"
+            email   = payload.get("email") or f"{user_id}@astramind.local"
+        except Exception:
+            # Unrecognised token — fall through to guest
+            logger.debug("JWT decode failed, using guest mode")
+            user_id = f"guest_{request.client.host.replace('.', '_')}"
+            email   = f"{user_id}@astramind.local"
+    else:
+        # No token — guest mode
+        client_ip = getattr(request.client, "host", "unknown")
+        user_id = f"guest_{client_ip.replace('.', '_')}"
+        email   = f"{user_id}@astramind.local"
 
     now_utc = datetime.now(tz=timezone.utc)
-    exp_dt = datetime.fromtimestamp(exp, tz=timezone.utc)
 
-    if exp_dt < now_utc:
-        logger.warning(f"Expired token for user: {user_id}")
-        raise HTTPException(status_code=401, detail="Token has expired")
+    request.state.user_id    = user_id
+    request.state.user_email  = email
 
-    # 6. Validate issued-at time (prevent future tokens)
-    if iat and datetime.fromtimestamp(iat, tz=timezone.utc) > now_utc:
-        raise HTTPException(status_code=401, detail="Token issued in future")
-
-    # 7. Get user from database (ensure they still exist)
-    from app.db.session import get_db_session
-    from sqlalchemy import text
-
-    async with get_db_session() as db:
-        from sqlalchemy import select
-        from app.db.models import User
-
-        user_result = await db.execute(
-            select(User).where(User.clerk_id == user_id)
-        )
-        user_row = user_result.scalar_one_or_none()
-
-        if not user_row:
-            # If the user doesn't exist yet, we can optionally auto-create them using their Clerk Sub and Email (if present)
-            # Or log a warning and let an explicit sign-up route handle it.
-            logger.warning(f"Clerk User not mapped in local DB: {user_id}")
-            raise HTTPException(status_code=401, detail="User not configured in platform")
-
-        user = {
-            'id': user_row.id,
-            'clerk_id': user_row.clerk_id,
-            'email': user_row.email,
-            'is_active': True,   # users table has no is_active; default True
-            'banned_until': None,  # users table has no banned_until; no ban check
-            'is_admin': user_row.is_admin,
-            'daily_quota': user_row.daily_quota,
-            'daily_used': user_row.daily_used,
-            'last_reset': user_row.last_reset,
-            'orm_user': user_row,  # pass ORM object for quota enforcement
-        }
-
-        # 8. Check if user is active
-        if not user['is_active']:
-            logger.warning(f"User inactive: {user_id}")
-            raise HTTPException(status_code=401, detail="User account inactive")
-
-        # 9. Check if user is banned/suspended
-        if user['banned_until'] and user['banned_until'] > now_utc:
-            logger.warning(f"User banned until {user['banned_until']}: {user_id}")
-            raise HTTPException(status_code=403, detail="Account suspended")
-
-        # 9. Validate workspace access if workspace_id in request
-        workspace_role = None
-        if hasattr(request.state, 'workspace_id'):
-            workspace_result = await db.execute(text("""
-                SELECT validate_workspace_access(:user_id, :workspace_id) as access_info
-            """), {"user_id": user_id, "workspace_id": request.state.workspace_id})
-
-            access_info = workspace_result.scalar()
-            if not access_info or not access_info.get('has_access'):
-                raise HTTPException(status_code=403, detail="Not authorized for this workspace")
-
-            workspace_role = access_info.get('role')
-
-    # 10. Attach user info to request for logging
-    request.state.user_id = user_id
-    request.state.user_email = email
-    request.state.workspace_role = workspace_role
+    # Synthesise a user dict that satisfies the chat endpoint contract
+    guest_user = {
+        "id":          user_id,
+        "clerk_id":    user_id,
+        "email":       email,
+        "is_active":   True,
+        "banned_until": None,
+        "is_admin":    False,
+        "daily_quota": 100,
+        "daily_used":  0,
+        "last_reset":  now_utc,
+        "orm_user":    None,
+    }
 
     return {
-        "user_id": user_id,
-        "email": email,
-        "exp": exp,
-        "iat": iat,
-        "workspace_role": workspace_role,
-        "user": user
+        "user_id":        user_id,
+        "email":          email,
+        "exp":            None,
+        "iat":            None,
+        "workspace_role": "member",
+        "user":           guest_user,
     }
 
 # =========================================

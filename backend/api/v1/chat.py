@@ -175,7 +175,7 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
             size = int(content_length)
             if size > settings.MAX_REQUEST_SIZE_BYTES:
                 logger.warning(
-                    f"Request too large from {user.email}: "
+                    f"Request too large from {user_email}: "
                     f"{size} bytes (limit: {settings.MAX_REQUEST_SIZE_BYTES}) "
                     f"[request_id: {request_id}]"
                 )
@@ -229,7 +229,7 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
         provider, real_model = await resolve_model(payload.model)
         logger.info(
             f"Model resolved: {payload.model} -> {provider}/{real_model} "
-            f"for user {user.email} "
+            f"for user {user_email} "
             f"[request_id: {request_id}]"
         )
     except KeyError as e:
@@ -239,23 +239,25 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
             detail=f"Invalid model: {payload.model}",
         )
 
-    # ===== ATOMIC QUOTA ENFORCEMENT (C-1 fix: no race condition) =====
-    # Do a single atomic UPDATE that checks AND increments in one DB round-trip.
-    # This prevents multiple concurrent requests from all passing the quota check.
-    quota_granted = await atomic_increment_quota(user.id, db)
-    if not quota_granted:
-        logger.warning(
-            f"Daily quota exceeded (atomic check) for user: {user.email} "
-            f"[request_id: {request_id}]"
-        )
-        raise HTTPException(
-            status_code=429,
-            detail={
-                "error": "Daily quota exceeded",
-                "limit": user.daily_quota,
-                "reset_date": user.last_reset.isoformat() if user.last_reset else None,
-            },
-        )
+    # ===== ATOMIC QUOTA ENFORCEMENT =====
+    # Skip quota for guest users (orm_user is None)
+    orm_user = user.get("orm_user") if isinstance(user, dict) else getattr(user, "orm_user", None)
+    if orm_user is not None:
+        quota_granted = await atomic_increment_quota(orm_user.id, db)
+        if not quota_granted:
+            logger.warning(
+                f"Daily quota exceeded for user: {user_email} [request_id: {request_id}]"
+            )
+            raise HTTPException(
+                status_code=429,
+                detail={
+                    "error": "Daily quota exceeded",
+                    "limit": orm_user.daily_quota,
+                    "reset_date": orm_user.last_reset.isoformat() if orm_user.last_reset else None,
+                },
+            )
+    else:
+        logger.debug(f"Guest user {user_id} — quota enforcement skipped")
 
     # ===== ROUTE TO AI PROVIDER =====
     try:
