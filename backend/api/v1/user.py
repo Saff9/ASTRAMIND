@@ -1,7 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from typing import Dict, Any
 
 from app.db.session import get_db
 from app.db.models import UserConfig
@@ -22,13 +21,17 @@ async def get_user_config(
     auth_data: dict = Depends(get_current_user_secure),
     db: AsyncSession = Depends(get_db)
 ):
+    # clerk_id column stores the NextAuth user identity (email)
     user_id = auth_data.get("user_id", "anonymous")
 
-    result = await db.execute(select(UserConfig).where(UserConfig.user_id == user_id))
+    if db is None:
+        return {"last_used_model": "fast", "preferred_theme": "system", "preferred_font": "var(--font-fira)", "total_messages_sent": 0}
+
+    result = await db.execute(select(UserConfig).where(UserConfig.clerk_id == user_id))
     config = result.scalar_one_or_none()
 
     if not config:
-        config = UserConfig(user_id=user_id)
+        config = UserConfig(clerk_id=user_id)
         db.add(config)
         await db.commit()
         await db.refresh(config)
@@ -49,11 +52,14 @@ async def update_user_config(
 ):
     user_id = auth_data.get("user_id", "anonymous")
 
-    result = await db.execute(select(UserConfig).where(UserConfig.user_id == user_id))
+    if db is None:
+        return {"status": "ok", "note": "DB unavailable, config not persisted"}
+
+    result = await db.execute(select(UserConfig).where(UserConfig.clerk_id == user_id))
     config = result.scalar_one_or_none()
 
     if not config:
-        config = UserConfig(user_id=user_id)
+        config = UserConfig(clerk_id=user_id)
         db.add(config)
 
     if payload.last_used_model is not None:
