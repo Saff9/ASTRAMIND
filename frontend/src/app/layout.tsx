@@ -1,22 +1,54 @@
-import './globals.css';
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import type { Metadata } from "next";
+import {
+  Syne, DM_Sans, JetBrains_Mono,
+  Fira_Code, Playfair_Display, Rajdhani, Pacifico, Space_Mono
+} from "next/font/google";
+import Script from "next/script";
+import "./globals.css";
+import AppProviders from "@/components/AppProviders";
 
-const inter = Inter({ subsets: ['latin'] });
+const syne = Syne({ variable: "--font-syne", subsets: ["latin"], weight: ["400","500","600","700","800"], display: "swap" });
+const dmSans = DM_Sans({ variable: "--font-dm", subsets: ["latin"], weight: ["300","400","500","600"], display: "swap" });
+const jetbrainsMono = JetBrains_Mono({ variable: "--font-mono", subsets: ["latin"], weight: ["400","500"], display: "swap" });
+const firaCode = Fira_Code({ variable: "--font-fira", subsets: ["latin"], weight: ["400","500","600"], display: "swap" });
+const playfairDisplay = Playfair_Display({ variable: "--font-playfair", subsets: ["latin"], weight: ["400","500","600","700","800"], display: "swap" });
+const rajdhani = Rajdhani({ variable: "--font-rajdhani", subsets: ["latin"], weight: ["300","400","500","600","700"], display: "swap" });
+const pacifico = Pacifico({ variable: "--font-pacifico", subsets: ["latin"], weight: ["400"], display: "swap" });
+const spaceMono = Space_Mono({ variable: "--font-space-mono", subsets: ["latin"], weight: ["400","700"], display: "swap" });
 
 export const metadata: Metadata = {
-  title: 'AI Chat Application',
-  description: 'A modern AI chat application with streaming, multi-modal support, and advanced features.',
+  title: "ASTRAMIND — AI, your way",
+  description: "Route your prompts to 10+ AI providers. Fast, smart, always on.",
+  manifest: "/manifest.json",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const fontClasses = [
+    syne.variable, dmSans.variable, jetbrainsMono.variable,
+    firaCode.variable, playfairDisplay.variable, rajdhani.variable,
+    pacifico.variable, spaceMono.variable,
+  ].join(" ");
+
   return (
-    <html lang="en" className={inter.className}>
-      <body className="min-h-screen bg-slate-950 text-slate-100 antialiased">{children}</body>
-    </html>
+    <html lang="en" style={{ height: "100%" }} suppressHydrationWarning>
+        <body
+          className={fontClasses}
+          style={{ minHeight: "100%", WebkitFontSmoothing: "antialiased", MozOsxFontSmoothing: "grayscale" }}
+          suppressHydrationWarning
+        >
+          <Script id="register-sw" strategy="afterInteractive">
+            {`
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js');
+                });
+              }
+            `}
+          </Script>
+          <AppProviders>
+            {children}
+          </AppProviders>
+        </body>
+      </html>
   );
 }

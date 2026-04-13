@@ -398,7 +398,11 @@ def validate_startup():
         len(settings.cohere_api_keys) > 0 or
         len(settings.ai21_api_keys) > 0 or
         len(settings.novita_api_keys) > 0 or
-        len(settings.sambanova_api_keys) > 0 or
+        len(settings.sambanova_api_keys) > 0
+    )
+
+    if not has_providers:
+        errors.append("No AI provider API keys configured. At least one provider (Groq, OpenRouter, Anthropic, etc.) is required.")
 
     # Security dependencies check
     try:

@@ -1,11 +1,328 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+/* ===== ASTRAMIND DESIGN SYSTEM v2 — Sharp Dark + Syne ===== */
+
+:root {
+  /* ── Cooler dark palette (no more warm brown) ── */
+  --bg-primary:   #0c0c0e;
+  --bg-secondary: #111116;
+  --bg-tertiary:  #17171e;
+  --bg-elevated:  #1c1c25;
+  --bg-hover:     #22222d;
+
+  --surface-1: #141419;
+  --surface-2: #1a1a22;
+  --surface-3: #21212c;
+
+  --border-subtle:  rgba(160,160,255,0.05);
+  --border-default: rgba(160,160,255,0.10);
+  --border-strong:  rgba(160,160,255,0.18);
+
+  /* ── Brand: rich amber-gold ── */
+  --brand:         #e8a030;
+  --brand-light:   #f5b842;
+  --brand-glow:    rgba(232,160,48,0.18);
+  --brand-glow-lg: rgba(232,160,48,0.08);
+
+  /* ── Accent ── */
+  --accent:       #7c6af5;
+  --accent-light: #9d8fff;
+  --accent-glow:  rgba(124,106,245,0.15);
+
+  /* ── Text ── */
+  --text-primary:   #eeeef2;
+  --text-secondary: #9898b0;
+  --text-muted:     #5a5a72;
+  --text-disabled:  #35354a;
+
+  /* ── Semantic ── */
+  --success: #3dd68c;
+  --warning: #e8a030;
+  --error:   #f5645a;
+  --info:    #60a5fa;
+
+  /* ── Radii ── */
+  --radius-sm:  6px;
+  --radius-md:  10px;
+  --radius-lg:  16px;
+  --radius-xl:  24px;
+
+  /* ── Shadows ── */
+  --shadow-sm:  0 1px 4px rgba(0,0,0,0.6);
+  --shadow-md:  0 4px 16px rgba(0,0,0,0.7);
+  --shadow-lg:  0 12px 40px rgba(0,0,0,0.8);
+  --shadow-brand: 0 0 24px var(--brand-glow);
+}
+
+/* ═══════════════════ LIGHT THEME ═══════════════════ */
+.theme-light {
+  --bg-primary:   #f5f4f0;
+  --bg-secondary: #eceae4;
+  --bg-tertiary:  #e2e0d9;
+  --bg-elevated:  #d8d6ce;
+  --bg-hover:     #cfcdc5;
+
+  --surface-1: #fffefb;
+  --surface-2: #f0eeea;
+  --surface-3: #e6e4de;
+
+  --border-subtle:  rgba(60,50,20,0.07);
+  --border-default: rgba(60,50,20,0.13);
+  --border-strong:  rgba(60,50,20,0.22);
+
+  --brand:         #c4780a;
+  --brand-light:   #d98c10;
+  --brand-glow:    rgba(196,120,10,0.14);
+  --brand-glow-lg: rgba(196,120,10,0.06);
+
+  --accent:       #5b4de0;
+  --accent-light: #7868f5;
+  --accent-glow:  rgba(91,77,224,0.12);
+
+  --text-primary:   #1a1814;
+  --text-secondary: #4a4840;
+  --text-muted:     #8a8880;
+  --text-disabled:  #b8b6ae;
+
+  --success: #1e9e60;
+  --warning: #c4780a;
+  --error:   #d93828;
+  --info:    #2563eb;
+
+  --shadow-sm:  0 1px 4px rgba(0,0,0,0.08);
+  --shadow-md:  0 4px 16px rgba(0,0,0,0.10);
+  --shadow-lg:  0 12px 40px rgba(0,0,0,0.14);
+  --shadow-brand: 0 0 24px var(--brand-glow);
+}
+
+/* ─────────────────────────────── BASE ─────────────────────────────── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
 
 body {
-  color: #e2e8f0;
-  background:
-    radial-gradient(1200px circle at 10% -10%, rgba(34, 211, 238, 0.18), transparent 60%),
-    radial-gradient(900px circle at 90% 0%, rgba(99, 102, 241, 0.14), transparent 55%),
-    #050816;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--ui-font, var(--font-dm, "DM Sans")), system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
+  overflow-x: hidden;
+  min-height: 100vh;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* Headings always in Syne */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-syne, "Syne"), system-ui, sans-serif;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+}
+
+code, pre {
+  font-family: var(--font-mono, "JetBrains Mono"), "Fira Code", monospace;
+  font-size: 0.875em;
+}
+
+pre {
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  overflow-x: auto;
+  line-height: 1.7;
+}
+
+code:not(pre code) {
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.85em;
+  color: var(--brand-light);
+}
+
+::selection {
+  background: rgba(232,160,48,0.2);
+  color: var(--text-primary);
+}
+
+/* ───────────────────────── SCROLLBAR ───────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 100px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* ─────────────────────── KEYFRAMES ─────────────────────── */
+@keyframes fadeIn   { from { opacity: 0; }                  to { opacity: 1; } }
+@keyframes slideUp  { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes scaleIn  { from { opacity: 0; transform: scale(0.95); }      to { opacity: 1; transform: scale(1); } }
+
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+@keyframes thinking {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50%       { opacity: 1;   transform: scale(1.1); }
+}
+
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position:  200% 0; }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-10px); }
+}
+
+/* ─────────────────────── TYPOGRAPHY ─────────────────────── */
+.font-display {
+  font-family: var(--font-syne, "Syne"), sans-serif;
+}
+
+.text-gradient-brand {
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-light) 60%, #ffd080 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-cool {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─────────────────────── TOP ACCENT BAR ─────────────────────── */
+.top-highlight {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--brand), var(--accent), transparent);
+  opacity: 0.7;
+}
+
+/* ─────────────────────── CARD ─────────────────────── */
+.card {
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+}
+.card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-md);
+}
+.card-interactive:hover {
+  transform: translateY(-4px);
+  border-color: rgba(232,160,48,0.4);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px var(--brand-glow);
+}
+
+/* ─────────────────────── CHAT COMPOSER ─────────────────────── */
+.chat-composer {
+  background: var(--surface-2);
+  border: 1.5px solid var(--border-default);
+  border-radius: 18px;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.chat-composer:focus-within {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-glow), var(--shadow-lg);
+}
+
+/* ─────────────────────── THINKING DOTS ─────────────────────── */
+.thinking-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--brand);
+  animation: thinking 1.4s ease-in-out infinite;
+}
+.thinking-dot:nth-child(2) { animation-delay: 0.18s; }
+.thinking-dot:nth-child(3) { animation-delay: 0.36s; }
+
+/* ─────────────────────── BADGE ─────────────────────── */
+.badge-brand {
+  background: var(--brand-glow);
+  color: var(--brand-light);
+  border: 1px solid rgba(232,160,48,0.25);
+  border-radius: 100px;
+  font-family: var(--font-dm, "DM Sans"), sans-serif;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 4px 14px;
+}
+
+/* ─────────────────────── FOCUS ─────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/* ─────────────────────── PLACEHOLDER ─────────────────────── */
+textarea::placeholder, input::placeholder {
+  color: var(--text-muted);
+}
+
+/* ─────────────────────── MOBILE UTILITIES ─────────────────────── */
+@media (max-width: 768px) {
+  .mobile-col {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .mobile-fullscreen-modal {
+    width: 100vw !important;
+    height: 100dvh !important;
+    min-height: -webkit-fill-available !important;
+    border-radius: 0 !important;
+    transform: none !important;
+    top: 0 !important;
+    left: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+  .mobile-grid-1 {
+    grid-template-columns: 1fr !important;
+  }
+  .mobile-hidden {
+    display: none !important;
+  }
+  .mobile-p-sm {
+    padding: 10px 14px !important;
+  }
+  .mobile-tight {
+    padding: 6px 12px !important;
+  }
+  .mobile-tight-toolbar {
+    padding: 2px 4px 4px !important;
+  }
+  .mobile-gap-sm {
+    gap: 8px !important;
+  }
+  .mobile-text-center {
+    text-align: center !important;
+    justify-content: center !important;
+  }
+  .settings-body {
+    flex-direction: column !important;
+  }
+  .settings-nav {
+    width: 100% !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border-subtle) !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    padding-bottom: 8px !important;
+  }
 }

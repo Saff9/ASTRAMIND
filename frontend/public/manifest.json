@@ -1,0 +1,21 @@
+{
+  "name": "ASTRAMIND",
+  "short_name": "ASTRAMIND",
+  "description": "Route your prompts to 10+ AI providers. Fast, smart, always on.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0c0c0e",
+  "theme_color": "#e8a030",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
