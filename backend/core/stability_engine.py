@@ -118,23 +118,44 @@ class StabilityEngine:
     ) -> Any:
         """
         Execute operation with stability guarantees.
+        Implements circuit breaker pattern, error recovery, and graceful degradation.
         """
 
         # Check circuit breaker
         if not self._check_circuit_breaker(service_name):
             if fallback:
                 logger.warning(f"Circuit breaker open for {service_name}, using fallback")
-                return await fallback()
+                try:
+                    return await fallback()
+                except Exception as fallback_error:
+                    logger.error(f"Fallback also failed for {service_name}: {fallback_error}")
+                    # Return a safe default response
+                    return self._get_safe_default_response(service_name, operation_name)
             raise RuntimeError(f"Service {service_name} is currently unavailable")
 
         try:
-            # Execute operation
-            result = await operation()
+            # Execute operation with timeout protection
+            result = await asyncio.wait_for(operation(), timeout=settings.REQUEST_TIMEOUT_SECONDS or 60)
 
             # Reset circuit breaker on success
             self._reset_circuit_breaker(service_name)
 
             return result
+
+        except asyncio.TimeoutError:
+            logger.error(f"Operation timeout for {service_name}.{operation_name}")
+            await self._record_error(
+                error_type="TimeoutError",
+                error_message=f"Operation timed out after {settings.REQUEST_TIMEOUT_SECONDS or 60}s",
+                context={"service": service_name, "operation": operation_name}
+            )
+            self._record_circuit_failure(service_name)
+            
+            if fallback:
+                logger.warning(f"Using fallback after timeout for {service_name}.{operation_name}")
+                return await fallback()
+            
+            return self._get_safe_default_response(service_name, operation_name)
 
         except Exception as e:
             # Record failure (no stack trace in production for security)
@@ -159,7 +180,7 @@ class StabilityEngine:
             if await self._attempt_recovery(service_name, e):
                 # Retry operation after recovery
                 try:
-                    result = await operation()
+                    result = await asyncio.wait_for(operation(), timeout=settings.REQUEST_TIMEOUT_SECONDS or 60)
                     logger.info(f"Recovery successful for {service_name}.{operation_name}")
                     return result
                 except Exception as retry_error:
@@ -168,10 +189,26 @@ class StabilityEngine:
             # Use fallback if available
             if fallback:
                 logger.warning(f"Using fallback for {service_name}.{operation_name}")
-                return await fallback()
+                try:
+                    return await fallback()
+                except Exception as fallback_error:
+                    logger.error(f"Fallback also failed for {service_name}: {fallback_error}")
 
-            # Re-raise original error
-            raise e
+            # Return safe default response instead of raising
+            logger.error(f"All recovery attempts failed for {service_name}.{operation_name}")
+            return self._get_safe_default_response(service_name, operation_name)
+
+    def _get_safe_default_response(self, service_name: str, operation_name: str) -> Any:
+        """Return a safe default response when all else fails."""
+        
+        if service_name == "ai_router" and operation_name == "chat_stream":
+            # For chat streaming, return a helpful error message as a stream
+            async def error_stream():
+                yield "We're experiencing high traffic. Please try again in a moment! ✨"
+            return error_stream()
+        
+        # Generic fallback for other operations
+        return {"status": "degraded", "message": "Service temporarily unavailable"}
 
     async def _record_error(
         self,

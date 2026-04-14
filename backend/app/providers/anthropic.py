@@ -83,6 +83,10 @@ async def _raise_for_status(response: httpx.Response) -> None:
 
 
 async def _iterate_anthropic_sse(response: httpx.Response) -> AsyncIterator[str]:
+    """
+    Iterate over Anthropic SSE events with robust error handling.
+    Handles malformed JSON, incomplete chunks, and network issues gracefully.
+    """
     async for line in response.aiter_lines():
         if not line:
             continue
@@ -109,5 +113,12 @@ async def _iterate_anthropic_sse(response: httpx.Response) -> AsyncIterator[str]
                     },
                     ensure_ascii=False,
                 )
-        except Exception:
-            pass
+        except json.JSONDecodeError as e:
+            # Log and skip malformed JSON
+            logger = logging.getLogger(__name__)
+            logger.debug(f"Skipping malformed JSON from Anthropic: {data[:100]}... Error: {e}")
+            continue
+        except Exception as e:
+            # Catch any other errors and continue streaming
+            logging.getLogger(__name__).debug(f"Error processing Anthropic SSE event: {e}")
+            continue
