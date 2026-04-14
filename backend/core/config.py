@@ -373,7 +373,13 @@ class Settings(BaseSettings):
 settings = Settings()
 
 def validate_startup():
-    """Called in app startup to verify all critical settings."""
+    """Called in app startup to verify all critical settings.
+    
+    CRITICAL FIX: Only validate truly required settings (JWT, CORS, DB).
+    AI provider keys are OPTIONAL - the app should start without them
+    and return appropriate errors when chat endpoints are called.
+    This prevents 500 errors on Render and allows graceful degradation.
+    """
     errors = []
     warnings = []
 
@@ -395,7 +401,8 @@ def validate_startup():
     elif settings.is_production() and settings.DATABASE_URL and settings.DATABASE_URL.startswith("sqlite"):
         warnings.append("Using SQLite in production - not recommended for high traffic")
 
-    # AI providers validation
+    # AI providers validation - NOW A WARNING, NOT AN ERROR
+    # The app should start even without API keys configured
     has_providers = (
         len(settings.groq_api_keys) > 0 or
         len(settings.openrouter_api_keys) > 0 or
@@ -411,11 +418,16 @@ def validate_startup():
         len(settings.cohere_api_keys) > 0 or
         len(settings.ai21_api_keys) > 0 or
         len(settings.novita_api_keys) > 0 or
-        len(settings.sambanova_api_keys) > 0
+        len(settings.sambanova_api_keys) > 0 or
+        (settings.CLOUDFLARE_ACCOUNT_ID is not None and settings.CLOUDFLARE_API_TOKEN is not None) or
+        settings.HUGGINGFACE_API_KEY is not None or
+        settings.OPENAI_API_KEY is not None
     )
 
     if not has_providers:
-        errors.append("No AI provider API keys configured. At least one provider (Groq, OpenRouter, Anthropic, etc.) is required.")
+        # CRITICAL FIX: This is now a warning, not an error
+        # App will start but chat endpoints will return 503 until keys are configured
+        warnings.append("No AI provider API keys configured. Chat endpoints will return 503 until at least one provider is configured.")
 
     # Security dependencies check
     try:
