@@ -306,20 +306,31 @@ class AIRouter:
             preferred_provider: Optional preferred provider
             
         Yields:
-            Response chunks from first successful provider
+            Response chunks from first successful provider (RAW JSON strings from providers)
         """
         # Validate inputs
         if not prompt or not isinstance(prompt, str):
             logger.error("Invalid prompt")
-            yield '{"error": "Invalid prompt", "type": "error"}'
+            yield json.dumps({"error": "Invalid prompt", "type": "error"})
             return
         if not model:
             logger.error("Model not specified")
-            yield '{"error": "Model not specified", "type": "error"}'
+            yield json.dumps({"error": "Model not specified", "type": "error"})
             return
         
-        # Build fallback chain based on model tier
-        fallback_chain = self._build_fallback_chain(model, preferred_provider)
+        # IMPORTANT: Resolve model alias to actual provider/model BEFORE building fallback chain
+        # This prevents sending "smart", "fast", etc. as model names to APIs
+        resolved_provider, resolved_model = await self._resolve_model_for_streaming(model, preferred_provider)
+        
+        if not resolved_model:
+            logger.error(f"Could not resolve model: {model}")
+            yield json.dumps({"error": f"Model '{model}' not found", "type": "error"})
+            return
+        
+        logger.info(f"Resolved model '{model}' -> provider='{resolved_provider}', model='{resolved_model}'")
+        
+        # Build fallback chain based on RESOLVED provider
+        fallback_chain = self._build_fallback_chain(resolved_model, resolved_provider)
         
         last_error = None
         tried_providers = []
@@ -339,10 +350,10 @@ class AIRouter:
                 continue
             
             try:
-                logger.info(f"Attempting provider: {provider}")
+                logger.info(f"Attempting provider: {provider} with model: {model}")
                 start_time = time.time()
                 
-                # Stream from provider
+                # Stream from provider - pass the RESOLVED model name
                 async for chunk in self._stream_from_provider(provider, prompt, model):
                     yield chunk
                     stats.circuit_breaker.record_success()
@@ -372,10 +383,11 @@ class AIRouter:
                     f"Provider {provider} failed after {elapsed:.2f}s: {type(e).__name__}: {e}"
                 )
                 # Continue to next provider in fallback chain
+                continue
         
         # All providers failed - return graceful fallback message
         logger.error(f"All providers failed. Tried: {tried_providers}. Last error: {last_error}")
-        yield '{"content": "Service temporarily unavailable. Please try again in a moment.", "type": "fallback"}'
+        yield json.dumps({"content": "Service temporarily unavailable. Please try again in a moment.", "type": "fallback"})
     
     def _build_fallback_chain(self, model: str, preferred: Optional[str] = None) -> List[str]:
         """Build intelligent fallback chain based on model tier and provider health."""
@@ -446,6 +458,78 @@ class AIRouter:
             "local": True,  # Ollama doesn't need keys
         }
         return key_checks.get(provider, False)
+    
+    async def _resolve_model_for_streaming(self, model: str, preferred_provider: Optional[str] = None) -> tuple[str, str]:
+        """
+        Resolve model alias (fast, balanced, smart) to actual provider and model name.
+        
+        This is CRITICAL to prevent sending model aliases like "smart" to provider APIs.
+        Instead, we resolve them to actual model names like "mixtral-8x7b-32768".
+        
+        Args:
+            model: Model alias or specific model name
+            preferred_provider: Optional preferred provider
+            
+        Returns:
+            Tuple of (provider_name, model_name)
+        """
+        try:
+            from services.models import resolve_model
+            provider, resolved_model = await resolve_model(model)
+            return provider, resolved_model
+        except Exception as e:
+            logger.error(f"Failed to resolve model '{model}': {e}")
+            # Fallback: if model looks like a specific model name, use it directly
+            if "/" in model or "-" in model:
+                # Likely a specific model name, use preferred provider or default
+                return preferred_provider or "groq", model
+            # Otherwise return None to trigger error
+            return None, None
+    
+    def _build_fallback_chain(self, model: str, preferred: Optional[str] = None) -> List[str]:
+        """Build intelligent fallback chain based on model tier and provider health."""
+        # Default fallback chains by model tier
+        fast_chain = ["groq", "cerebras", "together", "siliconflow", "ollama", "openrouter"]
+        balanced_chain = ["groq", "mistral", "together", "openrouter", "deepseek", "ollama"]
+        smart_chain = ["anthropic", "openai", "google_ai_studio", "groq", "openrouter"]
+        
+        # Select base chain
+        model_lower = model.lower()
+        if "fast" in model_lower or "llama-3" in model_lower:
+            base_chain = fast_chain
+        elif "smart" in model_lower or "claude" in model_lower:
+            base_chain = smart_chain
+        else:
+            base_chain = balanced_chain
+        
+        # Add all remaining providers as ultimate fallback
+        all_providers = [
+            "groq", "openrouter", "together", "mistral", "cerebras", 
+            "siliconflow", "openai", "google_ai_studio", "cloudflare",
+            "alibaba_bailian", "deepseek", "xai", "anthropic", "cohere",
+            "ai21", "novita", "sambanova", "huggingface", "local"
+        ]
+        
+        # Build final chain: preferred -> healthy providers -> all others
+        final_chain = []
+        
+        # Add preferred provider first if specified
+        if preferred and preferred in all_providers:
+            final_chain.append(preferred)
+        
+        # Add healthy providers from base chain
+        for provider in base_chain:
+            if provider not in final_chain:
+                stats = self._get_provider_stats(provider)
+                if stats.is_healthy or stats.circuit_breaker.state == CircuitState.HALF_OPEN:
+                    final_chain.append(provider)
+        
+        # Add remaining providers as last resort
+        for provider in all_providers:
+            if provider not in final_chain:
+                final_chain.append(provider)
+        
+        return final_chain
     
     async def _stream_from_provider(
         self, 
