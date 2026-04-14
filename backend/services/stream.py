@@ -39,24 +39,44 @@ def stream_response(generator: AsyncIterator[str]) -> StreamingResponse:
                 if not chunk.strip():
                     continue
                     
-                # CRITICAL: Wrap chunk content in proper JSON structure
-                # This prevents "Unexpected token 'd'" errors when client parses SSE
+                # CRITICAL: ALL chunks must be wrapped in a JSON object for consistent client parsing
+                # This prevents "Unexpected token 'd'" errors - client expects: data: {"content":"...", "type":"..."}
+                # Even if chunk is already JSON from provider, we wrap it to ensure consistent format
+                
                 try:
-                    # Check if chunk is already JSON
-                    if chunk.startswith('{') or chunk.startswith('['):
-                        # Validate it's proper JSON
-                        json.loads(chunk)
-                        # Already valid JSON, send as-is in SSE format
-                        yield f"data: {chunk}\n\n"
+                    # Try to parse chunk as JSON (provider may return JSON like {"choices":[...]})
+                    parsed_json = json.loads(chunk)
+                    # Chunk is valid JSON - extract content if possible, otherwise use whole chunk
+                    if isinstance(parsed_json, dict):
+                        # Extract content from various provider formats
+                        content = None
+                        # OpenAI/Groq format: {"choices":[{"delta":{"content":"..."}}]}
+                        if "choices" in parsed_json and parsed_json["choices"]:
+                            delta = parsed_json["choices"][0].get("delta", {})
+                            content = delta.get("content")
+                            # Also check for finish_reason to handle stream end
+                            if delta.get("finish_reason") == "stop":
+                                continue  # Skip end-of-stream markers
+                        # Anthropic format: {"delta":{"text":"..."}}
+                        elif "delta" in parsed_json and isinstance(parsed_json["delta"], dict):
+                            content = parsed_json["delta"].get("text")
+                        # Direct content field
+                        elif "content" in parsed_json:
+                            content = parsed_json["content"]
+                        
+                        if content:
+                            safe_chunk = {"content": content, "type": "text"}
+                        else:
+                            # No extractable content, skip this chunk
+                            continue
                     else:
-                        # Plain text chunk - wrap in JSON object
-                        safe_chunk = {
-                            "content": chunk,
-                            "type": "text"
-                        }
-                        yield f"data: {json.dumps(safe_chunk)}\n\n"
-                except (json.JSONDecodeError, ValueError):
-                    # Chunk is not valid JSON, wrap it safely
+                        # JSON but not an object (array, string, etc.), treat as content
+                        safe_chunk = {"content": str(parsed_json), "type": "text"}
+                    
+                    yield f"data: {json.dumps(safe_chunk)}\n\n"
+                    
+                except (json.JSONDecodeError, ValueError, TypeError, KeyError):
+                    # Chunk is not valid JSON or extraction failed - treat as plain text
                     safe_chunk = {
                         "content": chunk,
                         "type": "text"
