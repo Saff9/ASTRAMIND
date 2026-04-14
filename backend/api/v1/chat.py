@@ -273,6 +273,11 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
             f"[request_id: {request_id}]"
         )
 
+        # Validate provider is available before streaming
+        if not provider:
+            logger.error(f"No provider available for model: {payload.model}")
+            raise RuntimeError("No AI provider available")
+
         # Stream response from provider
         base_stream_generator = ai_router.stream(
             prompt=safe_prompt,
@@ -318,11 +323,11 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
                 status_code=503,
                 detail="AI provider authentication failed",
             )
-        elif "unavailable" in error_str:
+        elif "unavailable" in error_str or "no provider" in error_str or "no ai provider" in error_str:
             logger.warning(f"Provider unavailable: {e}")
             raise HTTPException(
                 status_code=503,
-                detail="AI provider temporarily unavailable",
+                detail="AI provider temporarily unavailable. Please try again shortly.",
             )
         else:
             logger.error(f"Provider error: {e}")
@@ -332,9 +337,14 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
             )
     except Exception as e:
         logger.error(f"Unexpected error in chat endpoint: {e}", exc_info=True)
+        # Return a user-friendly error message instead of 500
         raise HTTPException(
-            status_code=500,
-            detail="Internal server error",
+            status_code=503,
+            detail={
+                "error": "Service temporarily unavailable",
+                "message": "We're experiencing technical difficulties. Please try again in a moment.",
+                "request_id": request_id,
+            },
         )
 
 

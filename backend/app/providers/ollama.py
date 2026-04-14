@@ -92,7 +92,11 @@ class OllamaProvider:
                                 if "response" in data:
                                     yield data["response"]
 
-                        except json.JSONDecodeError:
+                        except json.JSONDecodeError as e:
+                            logger.debug(f"Skipping malformed JSON from Ollama: {line[:100]}... Error: {e}")
+                            continue
+                        except Exception as e:
+                            logger.debug(f"Error processing Ollama response chunk: {e}")
                             continue
 
         except aiohttp.ClientError as e:

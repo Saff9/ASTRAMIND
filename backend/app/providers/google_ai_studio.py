@@ -105,13 +105,21 @@ async def _iterate_google_stream_text(response: httpx.Response) -> AsyncIterator
     """
     Google streamGenerateContent returns a stream of JSON objects (one per line).
     We extract the newly generated text from candidates[].content.parts[].text.
+    Enhanced with robust error handling for malformed JSON and network issues.
     """
     async for line in response.aiter_lines():
         if not line:
             continue
         try:
             obj = json.loads(line)
-        except Exception:
+        except json.JSONDecodeError as e:
+            # Log and skip malformed JSON lines
+            logger = logging.getLogger(__name__)
+            logger.debug(f"Skipping malformed JSON from Google AI: {line[:100]}... Error: {e}")
+            continue
+        except Exception as e:
+            # Catch any other parsing errors
+            logging.getLogger(__name__).debug(f"Error parsing Google AI response line: {e}")
             continue
 
         candidates = obj.get("candidates") or []
