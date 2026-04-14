@@ -261,8 +261,14 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
 
     # ===== ROUTE TO AI PROVIDER =====
     try:
+        # CRITICAL FIX: user can be dict or object, handle both cases safely
+        if isinstance(user, dict):
+            user_email_for_log = user.get("email", user_email)
+        else:
+            user_email_for_log = getattr(user, "email", user_email)
+        
         logger.info(
-            f"Chat request from {user.email}: "
+            f"Chat request from {user_email_for_log}: "
             f"provider={provider}, model={payload.model}, prompt_len={len(payload.prompt)} "
             f"[request_id: {request_id}]"
         )
