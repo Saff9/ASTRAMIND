@@ -8,6 +8,7 @@ PRODUCTION READY: Circuit breaker, multi-layer fallback, intelligent provider se
 import random
 import logging
 import time
+import json
 from typing import AsyncIterator, List, Optional, Dict, Any
 from dataclasses import dataclass, field
 from enum import Enum
@@ -350,11 +351,11 @@ class AIRouter:
                 continue
             
             try:
-                logger.info(f"Attempting provider: {provider} with model: {model}")
+                logger.info(f"Attempting provider: {provider} with model: {resolved_model}")
                 start_time = time.time()
                 
-                # Stream from provider - pass the RESOLVED model name
-                async for chunk in self._stream_from_provider(provider, prompt, model):
+                # Stream from provider - pass the RESOLVED model name (NOT the alias)
+                async for chunk in self._stream_from_provider(provider, prompt, resolved_model):
                     yield chunk
                     stats.circuit_breaker.record_success()
                 
