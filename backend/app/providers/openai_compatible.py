@@ -1,10 +1,12 @@
 import json
+import logging
 from typing import AsyncIterator, Optional
 
 import httpx
 
 from app.providers.base import AIProvider
 from core.errors import AppError
+from core.system_prompt import get_system_prompt
 
 
 class OpenAICompatibleProvider(AIProvider):
