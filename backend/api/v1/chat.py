@@ -278,15 +278,14 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
             logger.error(f"No provider available for model: {payload.model}")
             raise RuntimeError("No AI provider available")
 
-        # Stream response from provider
-        base_stream_generator = ai_router.stream(
-            prompt=safe_prompt,
-            model=real_model,
-            provider=provider,
-        )
-
-        # Execute with stability protection
+        # Stream response from provider with automatic fallback
         async def execute_ai_stream():
+            # Use the new stream_with_fallback for intelligent provider routing
+            base_stream_generator = ai_router.stream_with_fallback(
+                prompt=safe_prompt,
+                model=payload.model,
+                preferred_provider=provider if provider else None,
+            )
             return stream_response(base_stream_generator)
 
         async def fallback_response():
