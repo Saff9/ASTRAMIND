@@ -100,7 +100,7 @@ MODEL_CONFIGS = {
         ],
         "models": {
             ModelProvider.OPENROUTER: "openai/gpt-4o-mini",
-            ModelProvider.GROQ: "mixtral-8x7b-32768",
+            ModelProvider.GROQ: "llama-3.3-70b-versatile",  # Updated from decommissioned mixtral-8x7b-32768
             ModelProvider.OPENAI: "gpt-4o-mini",
             ModelProvider.TOGETHER: "Qwen/Qwen2.5-72B-Instruct-Turbo",
             ModelProvider.MISTRAL: "mistral-large-latest",
