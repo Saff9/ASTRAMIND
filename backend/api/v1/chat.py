@@ -147,7 +147,7 @@ def get_ai_router(request: Request) -> AIRouter:
 class ChatMessage(BaseModel):
     """A single message in a conversation."""
     role: str = Field(..., description="'user' or 'assistant'")
-    content: str = Field(..., min_length=0, max_length=8000)
+    content: str = Field(..., min_length=0, max_length=32768)
 
 
 class ChatRequest(BaseModel):
@@ -156,8 +156,8 @@ class ChatRequest(BaseModel):
     prompt: str = Field(
         ...,
         min_length=1,
-        max_length=8000,
-        description="Current user prompt (max 8000 chars)",
+        max_length=32768,
+        description="Current user prompt (max 32k chars)",
     )
     model: str = Field(
         default="fast",
@@ -170,7 +170,7 @@ class ChatRequest(BaseModel):
     messages: Optional[List[ChatMessage]] = Field(
         default=None,
         description="Conversation history (last N turns, optional)",
-        max_length=100,
+        max_length=120,
     )
 
     @field_validator("prompt")

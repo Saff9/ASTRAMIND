@@ -162,10 +162,15 @@ export default function ChatPage() {
       
       if (rawToken) headers["Authorization"] = `Bearer ${rawToken}`;
 
-      // Build conversation history from current messages (exclude the just-added loading msg)
+      // Build conversation history from current messages (exclude loading and error messages)
       const history = messages
-        .filter((m) => !m.loading && (m.role === "user" || m.role === "assistant") && m.content)
-        .slice(-50)  // last 50 messages for context
+        .filter((m) => 
+          !m.loading && 
+          (m.role === "user" || m.role === "assistant") && 
+          m.content && 
+          !m.content.startsWith("**Error:**")
+        )
+        .slice(-100)  // Increase historical context depth
         .map((m) => ({ role: m.role, content: m.content }));
 
       const response = await fetch(`${apiBase}/api/v1/chat`, {
