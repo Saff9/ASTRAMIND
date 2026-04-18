@@ -46,6 +46,8 @@ from core.monitoring import MonitoringMiddleware, stop_monitoring
 import logging
 import os
 import httpx
+import functools
+import asyncio
 try:
     from opentelemetry import trace
     from opentelemetry.sdk.resources import Resource
@@ -74,26 +76,43 @@ async def lifespan(app: FastAPI):
         db_available = await check_database_connection()
         if db_available:
             logger.info("[OK] Database connection verified")
+            
+            # Programmatically run migrations on startup
+            try:
+                from alembic.config import Config
+                from alembic import command
+                
+                # Get the path to alembic.ini relative to this file
+                base_dir = os.path.dirname(os.path.abspath(__file__))
+                ini_path = os.path.join(base_dir, "alembic.ini")
+                
+                if os.path.exists(ini_path):
+                    logger.info(f"Running database migrations from {ini_path}...")
+                    alembic_cfg = Config(ini_path)
+                    
+                    # Ensure the database URL in alembic matches our settings
+                    # SQLAlchemy URL in alembic.ini needs to be synchronous for alembic's core
+                    db_url = settings.DATABASE_URL
+                    if db_url:
+                        sync_url = db_url.replace("postgresql+asyncpg://", "postgresql://")
+                        alembic_cfg.set_main_option("sqlalchemy.url", sync_url)
+                    
+                    # Run the migration in a thread pool
+                    import asyncio
+                    import functools
+                    loop = asyncio.get_running_loop()
+                    await loop.run_in_executor(None, functools.partial(command.upgrade, alembic_cfg, "head"))
+                    logger.info("[OK] Database migrations applied successfully")
+                else:
+                    logger.warning(f"[WARN] alembic.ini not found at {ini_path}, skipping migrations")
+            except Exception as e:
+                logger.error(f"[ERROR] Failed to apply migrations: {e}")
         else:
-            logger.warning("[WARN] Database unavailable at startup")
+            logger.warning("[WARN] Database unavailable at startup - migrations skipped")
 
         # Initialize local database if using SQLite
-        from app.db.session import initialize_local_database, engine
+        from app.db.session import initialize_local_database
         await initialize_local_database()
-
-        # Auto-create all tables (CREATE IF NOT EXISTS) so migrations are not needed
-        # This covers: users, user_configs, discover_news, provider_status, etc.
-        if db_available and engine is not None:
-            try:
-                from app.db.models import Base as AppBase
-                from app.db.base import Base as ModelBase
-                from app.models.provider_status import ProviderStatus  # ensure model is registered
-                async with engine.begin() as conn:
-                    await conn.run_sync(AppBase.metadata.create_all)
-                    await conn.run_sync(ModelBase.metadata.create_all)
-                logger.info("[OK] Database tables verified/created")
-            except Exception as e:
-                logger.warning(f"[WARN] Table auto-create skipped: {e}")
 
         # Shared outbound HTTP client (connection pooling) for external calls
         # Individual calls may override timeouts as needed.
