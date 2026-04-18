@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { signIn, useSession, getProviders } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { neonAuthClient } from "@/lib/auth-client";
 import { AstraIcon } from "@/components/common/ProviderIcons";
@@ -20,7 +19,7 @@ function GoogleIcon({ size = 18 }: { size?: number }) {
 }
 
 export default function SignInPage() {
-  const { status } = useSession();
+  const [status, setStatus] = useState<"loading" | "authenticated" | "unauthenticated">("loading");
   const router = useRouter();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [name, setName] = useState("");
@@ -32,12 +31,19 @@ export default function SignInPage() {
   const [error, setError] = useState("");
   const [hasGoogle, setHasGoogle] = useState(false);
 
-  // Check if Google provider is available
+  // Google state
   useEffect(() => {
-    getProviders().then((providers) => {
-      setHasGoogle(!!providers?.google);
-    });
-  }, []);
+    async function checkSession() {
+      const { data } = await neonAuthClient.getSession();
+      if (data) {
+        setStatus("authenticated");
+        router.replace("/chat");
+      } else {
+        setStatus("unauthenticated");
+      }
+    }
+    checkSession();
+  }, [router]);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -70,17 +76,14 @@ export default function SignInPage() {
 
     setLoading(true);
     try {
-      const res = await signIn("credentials", {
-        redirect: false,
-        username: mode === "signup" ? name.trim() : email.split("@")[0],
+      const { data, error } = await neonAuthClient.signIn.email({
         email: email.trim(),
         password,
-        callbackUrl: "/chat",
       });
 
-      if (res?.error) {
-        setError("Invalid credentials. Please check your details.");
-      } else if (res?.ok) {
+      if (error) {
+        setError(error.message || "Invalid credentials.");
+      } else if (data) {
         router.replace("/chat");
       }
     } catch {
@@ -155,35 +158,33 @@ export default function SignInPage() {
         </div>
 
         {/* Google Sign In */}
-        {hasGoogle && (
-          <>
-            <button
-              onClick={handleGoogleSignIn}
-              disabled={googleLoading}
-              style={{
-                width: "100%", padding: "12px 16px", borderRadius: 12,
-                border: "1px solid var(--border-default)",
-                background: "var(--surface-2)", color: "var(--text-primary)",
-                fontSize: 14, fontWeight: 600, cursor: googleLoading ? "not-allowed" : "pointer",
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-                transition: "all 0.2s ease",
-                opacity: googleLoading ? 0.7 : 1,
-              }}
-              onMouseEnter={(e) => { if (!googleLoading) { (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-3)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--brand)"; }}}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-2)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border-default)"; }}
-            >
-              {googleLoading ? <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} /> : <GoogleIcon size={18} />}
-              Continue with Google
-            </button>
+        <div style={{ display: "flex", flexDirection: "column", gap: 20, marginBottom: 20 }}>
+          <button
+            onClick={handleGoogleSignIn}
+            disabled={googleLoading}
+            style={{
+              width: "100%", padding: "12px 16px", borderRadius: 12,
+              border: "1px solid var(--border-default)",
+              background: "var(--surface-2)", color: "var(--text-primary)",
+              fontSize: 14, fontWeight: 600, cursor: googleLoading ? "not-allowed" : "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+              transition: "all 0.2s ease",
+              opacity: googleLoading ? 0.7 : 1,
+            }}
+            onMouseEnter={(e) => { if (!googleLoading) { (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-3)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--brand)"; }}}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-2)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border-default)"; }}
+          >
+            {googleLoading ? <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} /> : <GoogleIcon size={18} />}
+            Continue with Google
+          </button>
 
-            {/* Divider */}
-            <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "20px 0" }}>
-              <div style={{ flex: 1, height: 1, background: "var(--border-default)" }} />
-              <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>or</span>
-              <div style={{ flex: 1, height: 1, background: "var(--border-default)" }} />
-            </div>
-          </>
-        )}
+          {/* Divider */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ flex: 1, height: 1, background: "var(--border-default)" }} />
+            <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>or</span>
+            <div style={{ flex: 1, height: 1, background: "var(--border-default)" }} />
+          </div>
+        </div>
 
         {/* Mode toggle */}
         <div style={{ display: "flex", background: "var(--surface-2)", borderRadius: 12, padding: 4, marginBottom: 20, gap: 4 }}>

@@ -7,8 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { neonAuth } from "@/lib/neon-auth";
 
 let sql: ((strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>) | null = null;
 
@@ -28,9 +27,14 @@ async function getSQL() {
 export async function POST(_request: NextRequest) {
   try {
     // Must pass authOptions so NextAuth can read the session correctly
-    const session = await getServerSession(authOptions);
+    const session = await neonAuth.getSession({
+      fetchOptions: {
+        headers: _request.headers
+      }
+    });
+    const user = session?.data?.user;
 
-    if (!session?.user?.email) {
+    if (!user?.email) {
       // Not logged in — not an error, just skip sync
       return NextResponse.json({ ok: false, reason: "unauthenticated" }, { status: 200 });
     }
@@ -52,7 +56,7 @@ export async function POST(_request: NextRequest) {
 
     await db`
       INSERT INTO astramind_users (id, email, name)
-      VALUES (${session.user.email}, ${session.user.email}, ${session.user.name ?? null})
+      VALUES (${user.email}, ${user.email}, ${user.name ?? null})
       ON CONFLICT (email) DO UPDATE SET
         last_seen = NOW(),
         name = EXCLUDED.name

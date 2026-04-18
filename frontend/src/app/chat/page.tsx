@@ -14,7 +14,6 @@ import {
   GroqLogoIcon, ClaudeIcon, DeepSeekIcon, AstraIcon,
   OpenAIIcon, GeminiIcon, MistralIcon, MetaIcon 
 } from "@/components/common/ProviderIcons";
-import { useSession, signOut, signIn } from "next-auth/react";
 import { neonAuthClient } from "@/lib/auth-client";
 
 interface Message {
@@ -55,7 +54,7 @@ const EMPTY_SUGGESTIONS = [
 ];
 
 export default function ChatPage() {
-  const { data: session } = useSession();
+  const [session, setSession] = useState<{ user?: { email?: string; name?: string; image?: string }; accessToken?: string } | null>(undefined as any);
   const [messages, setMessages]   = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [modelId, setModelId]     = useState("gpt-4o");
@@ -73,23 +72,34 @@ export default function ChatPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (session === null) {
-      // Not authenticated — redirect to sign-in
-      router.replace("/signin");
-      return;
-    }
-    if (session?.user?.email) {
-      // Load persisted chat history for this user
-      const stored = localStorage.getItem(`chat_history_${session.user.email}`);
-      if (stored) {
-        try { setMessages(JSON.parse(stored)); } catch { /* ignore */ }
+    async function checkSession() {
+      const { data } = await neonAuthClient.getSession();
+      if (!data) {
+        setSession(null);
+        router.replace("/signin");
+      } else {
+        const mappedSession = {
+          user: {
+            email: data.user.email,
+            name: data.user.name || undefined,
+            image: data.user.image || undefined,
+          },
+          accessToken: data.session.id
+        };
+        setSession(mappedSession);
+        
+        // Sync user to Neon (fire-and-forget, non-blocking)
+        fetch("/api/users/sync", { method: "POST" }).catch(() => {/* silent */});
+        
+        // Load persisted chat history
+        const stored = localStorage.getItem(`chat_history_${data.user.email}`);
+        if (stored) {
+          try { setMessages(JSON.parse(stored)); } catch { /* ignore */ }
+        }
       }
-      // Sync user to Neon (fire-and-forget, non-blocking)
-      fetch("/api/users/sync", { method: "POST" }).catch(() => {/* silent */});
-    } else {
-      setMessages([]);
     }
-  }, [session, router]);
+    checkSession();
+  }, [router]);
 
   useEffect(() => {
     if (session?.user?.email && messages.length > 0) {
@@ -560,7 +570,7 @@ export default function ChatPage() {
           {/* Right actions — NO sign out here, that's in Settings */}
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {!session && (
-              <button onClick={() => signIn()} style={{ padding: "6px 14px", borderRadius: 8, background: "var(--text-primary)", color: "var(--bg-primary)", fontSize: 13, fontWeight: 600, border: "none", cursor: "pointer" }}>
+              <button onClick={() => router.push("/signin")} style={{ padding: "6px 14px", borderRadius: 8, background: "var(--text-primary)", color: "var(--bg-primary)", fontSize: 13, fontWeight: 600, border: "none", cursor: "pointer" }}>
                 Sign In
               </button>
             )}

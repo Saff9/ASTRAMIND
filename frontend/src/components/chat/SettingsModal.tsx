@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { useSettings, FONT_CSS_VAR } from "@/lib/SettingsContext";
 import type { Theme, FontId } from "@/lib/SettingsContext";
-import { useSession, signOut } from "next-auth/react";
+import { neonAuthClient } from "@/lib/auth-client";
 import { usePWA } from "@/lib/PWAContext";
 
 interface SettingsModalProps {
@@ -63,9 +63,19 @@ const SHORTCUTS = [
 export default function SettingsModal({ open, onClose }: SettingsModalProps) {
   // Real context — reads and writes persist to localStorage + DOM
   const { theme, font, setTheme, setFont } = useSettings();
-  const { data: session } = useSession();
+  // Local session state
+  const [session, setSession] = useState<{ user?: { email?: string; name?: string } } | null>(undefined as any);
   const user = session?.user;
   const isSignedIn = !!user;
+
+  // Fetch session on mount
+  useState(() => {
+    async function fetchSession() {
+      const { data } = await neonAuthClient.getSession();
+      setSession(data ? { user: { email: data.user.email, name: data.user.name || undefined } } : null);
+    }
+    fetchSession();
+  });
   const { isInstallable, triggerInstall } = usePWA();
 
   // Local-only UI state (not persisted globally)
@@ -441,7 +451,11 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
           </Row>
           <div style={{ marginTop: 24 }}>
             <button 
-              onClick={() => { signOut(); onClose(); }}
+              onClick={async () => { 
+                await neonAuthClient.signOut();
+                onClose();
+                window.location.href = "/"; // Force refresh to clear state
+              }}
               style={{
               width: "100%", padding: "12px", borderRadius: 12,
               border: "1px solid rgba(245,100,90,0.3)",

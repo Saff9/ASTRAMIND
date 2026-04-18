@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { GroqLogoIcon, OpenAIIcon, ClaudeIcon, GeminiIcon, DeepSeekIcon, MistralIcon } from "@/components/common/ProviderIcons";
 import { AstraIcon } from "@/components/common/ProviderIcons";
-import { useSession, signIn, signOut } from "next-auth/react";
+import { neonAuthClient } from "@/lib/auth-client";
 
 const PROMPTS = [
   "Explain quantum entanglement simply",
@@ -46,8 +46,9 @@ const PAGE_FONT = "var(--font-dm, 'DM Sans'), system-ui, sans-serif";
 const DISPLAY_FONT = "var(--font-syne, 'Syne'), system-ui, sans-serif";
 
 export default function HomePage() {
-  const { data: session, status } = useSession();
-  const isSignedIn = status === "authenticated";
+  const [session, setSession] = useState<{ user?: { email?: string } } | null>(undefined as any);
+  const isSignedIn = !!session?.user;
+  const status = session === undefined ? "loading" : session === null ? "unauthenticated" : "authenticated";
   const [mounted, setMounted] = useState(false);
   const [promptIdx, setPromptIdx] = useState(0);
   const [displayText, setDisplayText] = useState("");
@@ -56,10 +57,15 @@ export default function HomePage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (isSignedIn) {
-      router.push("/chat");
+    async function check() {
+      const { data } = await neonAuthClient.getSession();
+      setSession(data ? { user: { email: data.user.email } } : null);
+      if (data) {
+        router.push("/chat");
+      }
     }
-  }, [isSignedIn, router]);
+    check();
+  }, [router]);
 
   useEffect(() => {
     setMounted(true);
@@ -120,7 +126,7 @@ export default function HomePage() {
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             {!isSignedIn ? (
               <>
-                <button onClick={() => signIn("credentials", { callbackUrl: "/chat" })} style={{
+                <button onClick={() => router.push("/signin")} style={{
                   background: "transparent", border: "1px solid var(--border-default)",
                   color: "var(--text-secondary)", padding: "8px 18px", borderRadius: 10,
                   fontSize: 14, fontWeight: 500, cursor: "pointer",
@@ -130,7 +136,7 @@ export default function HomePage() {
                 onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--text-secondary)"; (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}>
                   Sign in
                 </button>
-                <button onClick={() => signIn("credentials", { callbackUrl: "/chat" })} style={{
+                <button onClick={() => router.push("/signin")} style={{
                   background: "linear-gradient(135deg,var(--brand),var(--brand-light))",
                   color: "var(--bg-primary)", padding: "8px 20px", borderRadius: 10,
                   fontSize: 14, fontWeight: 600, cursor: "pointer", border: "none",
@@ -145,7 +151,7 @@ export default function HomePage() {
               </>
             ) : (
               <>
-                <button onClick={() => signOut({ callbackUrl: "/" })} style={{
+                <button onClick={async () => { await neonAuthClient.signOut(); setSession(null); }} style={{
                   background: "transparent", border: "1px solid var(--border-default)",
                   color: "var(--text-secondary)", padding: "6px 14px", borderRadius: 10,
                   fontSize: 13, fontWeight: 500, cursor: "pointer",
