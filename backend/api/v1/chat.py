@@ -169,7 +169,7 @@ class ChatRequest(BaseModel):
     messages: Optional[List[ChatMessage]] = Field(
         default=None,
         description="Conversation history (last N turns, optional)",
-        max_length=30,
+        max_length=100,
     )
 
     @field_validator("prompt")

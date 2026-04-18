@@ -173,7 +173,7 @@ class Settings(BaseSettings):
     DATABASE_POOL_RECYCLE_SECONDS: int = Field(default=3600)
 
     # ===== REQUEST LIMITS =====
-    MAX_REQUEST_SIZE_BYTES: int = Field(default=50_000)
+    MAX_REQUEST_SIZE_BYTES: int = Field(default=500_000, description="Max request size in bytes")
     REQUEST_TIMEOUT_SECONDS: int = Field(default=30)
 
     # ===== OUTBOUND HTTP (provider calls) =====
