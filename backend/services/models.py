@@ -64,7 +64,7 @@ MODEL_CONFIGS = {
             ModelProvider.SAMBANOVA,
         ],
         "models": {
-            ModelProvider.GROQ: "llama-3.1-70b-versatile",
+            ModelProvider.GROQ: "llama-3.3-70b-versatile",
             ModelProvider.OPENROUTER: "anthropic/claude-3-haiku",
             ModelProvider.TOGETHER: "meta-llama/Llama-3.1-70B-Instruct-Turbo",
             ModelProvider.MISTRAL: "mistral-medium-latest",

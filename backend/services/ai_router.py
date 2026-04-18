@@ -291,6 +291,7 @@ class AIRouter:
         prompt: str,
         model: str,
         preferred_provider: Optional[str] = None,
+        messages: Optional[List[Dict[str, str]]] = None,
     ) -> AsyncIterator[str]:
         """
         Stream AI response with intelligent fallback chain.
@@ -355,7 +356,7 @@ class AIRouter:
                 start_time = time.time()
                 
                 # Stream from provider - pass the RESOLVED model name (NOT the alias)
-                async for chunk in self._stream_from_provider(provider, prompt, resolved_model):
+                async for chunk in self._stream_from_provider(provider, prompt, resolved_model, messages):
                     yield chunk
                     stats.circuit_breaker.record_success()
                 

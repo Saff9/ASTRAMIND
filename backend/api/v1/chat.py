@@ -348,10 +348,10 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
 
             async def execute_ai_json():
                 chunks: List[str] = []
-                async for chunk in ai_router.stream(
+                async for chunk in ai_router.stream_with_fallback(
                     prompt=safe_prompt,
-                    model=real_model,
-                    provider=provider,
+                    model=payload.model,  # The tier string (e.g. 'balanced')
+                    preferred_provider=provider,
                     messages=history or None,
                 ):
                     try:
@@ -394,10 +394,19 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
             )
 
         # ── STREAMING PATH (stream=true, SSE) ─────────────────────────────────
-        base_stream_generator = ai_router.stream(
+        # Note: Frontend history array logic has not been requested for SSE yet, 
+        # but passing it here for consistency if frontend sends it.
+        history_sse = [
+            {"role": m.role, "content": m.content}
+            for m in (payload.messages or [])[-20:]
+            if m.role in ("user", "assistant") and m.content
+        ]
+        
+        base_stream_generator = ai_router.stream_with_fallback(
             prompt=safe_prompt,
-            model=real_model,
-            provider=provider,
+            model=payload.model,
+            preferred_provider=provider,
+            messages=history_sse or None,
         )
 
         async def execute_ai_stream():
