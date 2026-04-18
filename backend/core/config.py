@@ -494,7 +494,7 @@ def validate_startup():
     print(f"   Log Level: {settings.LOG_LEVEL}")
 
     if warnings:
-        print(f"\n⚠️  Warnings:")
+        print(f"\n  Warnings:")
         for warning in warnings:
             print(f"   • {warning}")
 

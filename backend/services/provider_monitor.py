@@ -81,10 +81,15 @@ async def check_providers_loop(stop_event: asyncio.Event):
     Background task loop that checks provider health every 60 seconds.
     Updates database with status.
     """
-    logger.info("🔍 Provider monitor starting")
+    logger.info("Provider monitor starting")
 
     while not stop_event.is_set():
         try:
+            if async_session_maker is None:
+                logger.warning("async_session_maker is None (Database failed to load). Provider monitor sleeping.")
+                await asyncio.sleep(CHECK_INTERVAL)
+                continue
+                
             # Create async session
             async with async_session_maker() as db:
                 try:
@@ -98,12 +103,12 @@ async def check_providers_loop(stop_event: asyncio.Event):
                             # Check provider health
                             await provider.health_check()
                             status = "up"
-                            logger.debug(f"✅ {name} is healthy")
+                            logger.debug(f"OK: {name} is healthy")
 
                         except Exception as e:
                             status = "down"
                             error_msg = str(e)[:100]  # Truncate error message
-                            logger.warning(f"⚠️ {name} health check failed: {e}")
+                            logger.warning(f"WARN: {name} health check failed: {e}")
 
                         # Look up or create provider status record
                         from sqlalchemy import select
@@ -122,7 +127,7 @@ async def check_providers_loop(stop_event: asyncio.Event):
                                 uptime=100.0 if status == "up" else 0.0,
                                 last_checked=datetime.utcnow(),
                             )
-                            logger.info(f"📝 Created status record for {name}")
+                            logger.info(f"Created status record for {name}")
                         else:
                             # Update existing record
                             record.status = status
@@ -138,14 +143,14 @@ async def check_providers_loop(stop_event: asyncio.Event):
 
                     # Commit all changes
                     await db.commit()
-                    logger.debug("✅ Provider status updated in database")
+                    logger.debug("Provider status updated in database")
 
                 except Exception as e:
                     await db.rollback()
-                    logger.error(f"❌ Error updating provider status: {e}", exc_info=True)
+                    logger.error(f"Error updating provider status: {e}", exc_info=True)
 
         except Exception as e:
-            logger.error(f"❌ Provider monitor loop error: {e}", exc_info=True)
+            logger.error(f"Provider monitor loop error: {e}", exc_info=True)
 
         # Wait before next check (interruptible)
         with suppress(asyncio.TimeoutError):
@@ -166,7 +171,7 @@ def start_provider_monitor(app):
     task = asyncio.create_task(check_providers_loop(stop_event))
     setattr(app.state, _STOP_ATTR, stop_event)
     setattr(app.state, _TASK_ATTR, task)
-    logger.info("🚀 Provider monitor task created")
+    logger.info("Provider monitor task created")
 
 
 async def stop_provider_monitor(app) -> None:
