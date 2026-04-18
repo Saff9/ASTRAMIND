@@ -154,7 +154,8 @@ async def login(
     
     except Exception as e:
         logger.error(f"❌ Login error for {email}: {e}", exc_info=True)
-        await db.rollback()
+        if db is not None:
+            await db.rollback()
         raise HTTPException(
             status_code=500,
             detail="Authentication failed. Please try again."

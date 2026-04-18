@@ -42,7 +42,7 @@ class User(Base):
     # Daily Quota Tracking
     daily_quota: Mapped[int] = mapped_column(
         Integer,
-        default=50,
+        default=70,
         nullable=False,
         comment="Maximum API calls allowed per day",
     )

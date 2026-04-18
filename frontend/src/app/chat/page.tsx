@@ -15,6 +15,7 @@ import {
   OpenAIIcon, GeminiIcon, MistralIcon, MetaIcon 
 } from "@/components/common/ProviderIcons";
 import { useSession, signOut, signIn } from "next-auth/react";
+import { neonAuthClient } from "@/lib/auth-client";
 
 interface Message {
   id: string;
@@ -151,7 +152,14 @@ export default function ChatPage() {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://astramind-reer.onrender.com";
 
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      const rawToken = (session as { accessToken?: string } | null)?.accessToken;
+      
+      // Try NextAuth token first, then fallback to Neon session ID
+      let rawToken = (session as { accessToken?: string } | null)?.accessToken;
+      if (!rawToken) {
+        const neonSession = await neonAuthClient.getSession();
+        rawToken = neonSession?.data?.session?.id;
+      }
+      
       if (rawToken) headers["Authorization"] = `Bearer ${rawToken}`;
 
       // Build conversation history from current messages (exclude the just-added loading msg)
@@ -167,32 +175,50 @@ export default function ChatPage() {
         body: JSON.stringify({
           prompt: text,
           model: selectedModel.tier || "fast",
-          stream: false,
+          stream: true,
           messages: history.length > 0 ? history : undefined,
         }),
       });
 
-      if (response.status === 429) {
-        let detail = "Daily limit reached. Please try again tomorrow.";
-        try { const d = await response.json(); if (d?.detail) detail = typeof d.detail === "string" ? d.detail : JSON.stringify(d.detail); } catch { /**/ }
-        throw new Error(detail);
-      }
       if (!response.ok) {
         let detail = `Request failed (${response.status})`;
         try { const d = await response.json(); if (d?.detail) detail = typeof d.detail === "string" ? d.detail : JSON.stringify(d.detail); } catch { /**/ }
         throw new Error(detail);
       }
 
-      const data = await response.json();
-      const content = data.response || data.content || data.choices?.[0]?.message?.content || data.text || "No response generated.";
+      // ── STREAMING READER LOOP ────────────────────────────────────
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("No response stream available.");
+      
+      const decoder = new TextDecoder();
+      let streamedContent = "";
 
-      const reply: Message = {
-        id: loadId, role: "assistant", content,
-        provider: data.provider || selectedModel.provider,
-        model: data.model || selectedModel.model,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => prev.map((m) => (m.id === loadId ? reply : m)));
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        // Handle SSE data format (data: { ... })
+        const lines = chunk.split("\n");
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const str = line.slice(6).trim();
+              if (str === "[DONE]") continue;
+              const json = JSON.parse(str);
+              const delta = json.choices?.[0]?.delta?.content || json.content || "";
+              if (delta) {
+                streamedContent += delta;
+                setMessages((prev) => prev.map((m) => 
+                  m.id === loadId ? { ...m, content: streamedContent } : m
+                ));
+              }
+            } catch (e) {
+              // Ignore partial JSON or metadata lines
+            }
+          }
+        }
+      }
     } catch (err: unknown) {
       const error = err as Error;
       // Aborted = user clicked stop, don't show error

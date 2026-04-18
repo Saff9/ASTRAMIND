@@ -80,11 +80,12 @@ def _get_client_ip(request: Request) -> str:
 
 # ===== BACKGROUND TASKS =====
 
-async def atomic_increment_quota(user_id: int, db: AsyncSession) -> bool:
+async def atomic_increment_quota(auth_id: str, db: AsyncSession) -> bool:
     """
-    Atomically increment user quota usage safely using SQLAlchemy ORM.
+    Atomically increment user quota usage based on their auth_id (string).
+    Works for both logged-in users and guest IPs.
     """
-    if not isinstance(user_id, int) or user_id <= 0:
+    if not auth_id:
         return False
         
     from sqlalchemy import update
@@ -92,7 +93,7 @@ async def atomic_increment_quota(user_id: int, db: AsyncSession) -> bool:
     
     result = await db.execute(
         update(User)
-        .where(User.id == user_id)
+        .where(User.auth_id == auth_id)
         .where(User.daily_used < User.daily_quota)
         .values(daily_used=User.daily_used + 1)
         .returning(User.daily_used)

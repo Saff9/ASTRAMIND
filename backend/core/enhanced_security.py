@@ -21,15 +21,60 @@ class ForbiddenError(Exception):
 
 # Database models will be imported as needed
 
+from app.db.session import async_session_maker
+from sqlalchemy import text
+
 logger = logging.getLogger(__name__)
 
 
 # =========================================
-# AUTH — JWT-optional guest mode
-# Reads Authorization header directly from
-# the Request object so this works both as
-# a FastAPI Depends() and when called directly.
+# AUTH — JWT-optional guest mode & Neon Auth
 # =========================================
+
+async def verify_neon_session(token: str) -> Optional[Dict[str, Any]]:
+    """
+    Verify a session token against Neon Auth's managed database schema.
+    Returns user data if session is valid, else None.
+    """
+    if not async_session_maker:
+        return None
+        
+    try:
+        async with async_session_maker() as db:
+            # Query Neon Auth session directly from the database
+            # Neon Auth stores sessions in neon_auth.session
+            query = text("""
+                SELECT s.user_id, u.email, u.name
+                FROM neon_auth.session s
+                JOIN neon_auth.user u ON s.user_id = u.id
+                WHERE s.id = :token AND s.expires_at > NOW()
+                LIMIT 1
+            """)
+            result = await db.execute(query, {"token": token})
+            row = result.fetchone()
+            
+            if row:
+                user_ctx = {
+                    "user_id": row.user_id,
+                    "email": row.email,
+                    "name": row.name
+                }
+                
+                # --- AUTO-SYNC TO USERS TABLE ---
+                # Ensuring metadata/quota exists for this Neon identity
+                sync_query = text("""
+                    INSERT INTO users (user_id, email, daily_quota, daily_used, last_reset, is_active)
+                    VALUES (:uid, :email, 100, 0, NOW(), true)
+                    ON CONFLICT (email) DO NOTHING
+                """)
+                await db.execute(sync_query, {"uid": row.user_id, "email": row.email})
+                await db.commit()
+                
+                return user_ctx
+    except Exception as e:
+        logger.debug(f"Neon session verification failed: {e}")
+        
+    return None
 
 async def verify_jwt_comprehensive(request: Request) -> Dict[str, Any]:
     """
@@ -61,20 +106,37 @@ async def verify_jwt_comprehensive(request: Request) -> Dict[str, Any]:
             user_id = payload.get("sub") or payload.get("id") or "guest"
             email   = payload.get("email") or f"{user_id}@astramind.local"
         except Exception as e:
-            logger.debug(f"JWT decode failed: {e}. Falling back if guest mode allowed.")
-            if getattr(settings, "REQUIRE_AUTH", False):
-                raise HTTPException(status_code=401, detail="Authentication strictly required. Invalid token.")
-            client_ip = getattr(request.client, "host", "unknown")
-            user_id = f"guest_{client_ip.replace('.', '_')}"
-            email   = f"{user_id}@astramind.local"
+            # Fallback to Neon Session check before giving up
+            neon_user = await verify_neon_session(token)
+            if neon_user:
+                user_id = neon_user["user_id"]
+                email = neon_user["email"]
+            else:
+                logger.debug(f"Auth failed (JWT & Neon): {e}. Falling back to guest.")
+                if getattr(settings, "REQUIRE_AUTH", False):
+                    raise HTTPException(status_code=401, detail="Authentication required.")
+                client_ip = getattr(request.client, "host", "unknown")
+                user_id = f"guest_{client_ip.replace('.', '_')}"
+                email   = f"{user_id}@astramind.local"
     else:
-        # No token — check if Auth is strictly required
-        if getattr(settings, "REQUIRE_AUTH", False):
-            raise HTTPException(status_code=401, detail="Authentication strictly required. Token missing.")
         # Otherwise, allow guest mode
         client_ip = getattr(request.client, "host", "unknown")
         user_id = f"guest_{client_ip.replace('.', '_')}"
         email   = f"{user_id}@astramind.local"
+        
+    # --- AUTO-SYNC IDENTITIES (User OR Guest) ---
+    if async_session_maker:
+        try:
+            async with async_session_maker() as db:
+                sync_query = text("""
+                    INSERT INTO users (auth_id, email, daily_quota, daily_used, last_reset, is_active)
+                    VALUES (:aid, :email, 50, 0, NOW(), true)
+                    ON CONFLICT (auth_id) DO NOTHING
+                """)
+                await db.execute(sync_query, {"aid": user_id, "email": email})
+                await db.commit()
+        except Exception as e:
+            logger.debug(f"Identity auto-sync failed: {e}")
 
     now_utc = datetime.now(tz=timezone.utc)
 

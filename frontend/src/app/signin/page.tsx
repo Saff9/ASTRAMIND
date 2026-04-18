@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { signIn, useSession, getProviders } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { neonAuthClient } from "@/lib/auth-client";
 import { AstraIcon } from "@/components/common/ProviderIcons";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
@@ -48,7 +49,15 @@ export default function SignInPage() {
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     setError("");
-    await signIn("google", { callbackUrl: "/chat" });
+    try {
+      await neonAuthClient.signIn.social({ 
+        provider: "google", 
+        callbackURL: "/chat" 
+      });
+    } catch (err: any) {
+      setError(err.message || "Google sign-in failed.");
+      setGoogleLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
