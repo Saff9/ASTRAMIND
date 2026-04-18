@@ -26,6 +26,7 @@ from core.config import settings
 from core.content_filter import content_filter
 from core.stability_engine import stability_engine
 from app.db.models import User
+import json
 import logging
 import time
 from core.version import APP_VERSION
@@ -281,7 +282,19 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
                     model=real_model,
                     provider=provider,
                 ):
-                    chunks.append(chunk)
+                    try:
+                        parsed = json.loads(chunk)
+                        # OpenAI-compatible delta format: extract text content
+                        choices = parsed.get("choices", [])
+                        content = ""
+                        if choices:
+                            content = choices[0].get("delta", {}).get("content", "") or ""
+                        if content:  # skip empty-string deltas (first/last chunks)
+                            chunks.append(content)
+                    except (json.JSONDecodeError, IndexError, AttributeError, TypeError):
+                        # Not JSON — plain text from fallback generators, use as-is
+                        if chunk and chunk.strip():
+                            chunks.append(chunk)
                 full_text = "".join(chunks)
                 return JSONResponse(content={
                     "response": full_text,
