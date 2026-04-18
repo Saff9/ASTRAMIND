@@ -2,11 +2,16 @@
 """
 Central AI Provider Router
 Handles routing requests to multiple AI providers with fallback support.
+PRODUCTION READY: Circuit breaker, multi-layer fallback, intelligent provider selection
 """
 
 import random
 import logging
-from typing import AsyncIterator, List, Optional
+import time
+import json
+from typing import AsyncIterator, List, Optional, Dict, Any
+from dataclasses import dataclass, field
+from enum import Enum
 import httpx
 from core.system_prompt import get_system_prompt
 from core.config import settings
@@ -20,6 +25,90 @@ from app.providers.cloudflare_workers_ai import CloudflareWorkersAIProvider
 from app.providers.anthropic import AnthropicProvider
 
 logger = logging.getLogger(__name__)
+
+
+class CircuitState(Enum):
+    """Circuit breaker states."""
+    CLOSED = "closed"      # Normal operation
+    OPEN = "open"          # Failing, reject requests
+    HALF_OPEN = "half_open"  # Testing if recovered
+
+
+@dataclass
+class CircuitBreaker:
+    """Circuit breaker for provider health tracking."""
+    failure_count: int = 0
+    success_count: int = 0
+    last_failure_time: float = 0
+    state: CircuitState = CircuitState.CLOSED
+    failure_threshold: int = 5
+    recovery_timeout: float = 30.0  # seconds
+    half_open_max_calls: int = 3
+    
+    def record_success(self):
+        """Record successful call."""
+        self.success_count += 1
+        if self.state == CircuitState.HALF_OPEN:
+            if self.success_count >= self.half_open_max_calls:
+                self.state = CircuitState.CLOSED
+                self.failure_count = 0
+                self.success_count = 0
+                logger.info("Circuit breaker CLOSED (recovered)")
+        elif self.state == CircuitState.CLOSED:
+            # Reset failure count on success
+            self.failure_count = max(0, self.failure_count - 1)
+    
+    def record_failure(self):
+        """Record failed call."""
+        self.failure_count += 1
+        self.last_failure_time = time.time()
+        if self.state == CircuitState.HALF_OPEN:
+            self.state = CircuitState.OPEN
+            logger.warning("Circuit breaker OPEN (failed in half-open)")
+        elif self.state == CircuitState.CLOSED:
+            if self.failure_count >= self.failure_threshold:
+                self.state = CircuitState.OPEN
+                logger.warning(f"Circuit breaker OPEN ({self.failure_count} failures)")
+    
+    def can_execute(self) -> bool:
+        """Check if request can be executed."""
+        if self.state == CircuitState.CLOSED:
+            return True
+        if self.state == CircuitState.OPEN:
+            # Check if recovery timeout has passed
+            if time.time() - self.last_failure_time > self.recovery_timeout:
+                self.state = CircuitState.HALF_OPEN
+                self.success_count = 0
+                logger.info("Circuit breaker HALF_OPEN (testing recovery)")
+                return True
+            return False
+        # HALF_OPEN - allow limited calls
+        return self.success_count < self.half_open_max_calls
+
+
+@dataclass
+class ProviderStats:
+    """Statistics for each provider."""
+    total_requests: int = 0
+    successful_requests: int = 0
+    failed_requests: int = 0
+    avg_response_time: float = 0.0
+    last_error: str = ""
+    last_success_time: float = 0
+    circuit_breaker: CircuitBreaker = field(default_factory=CircuitBreaker)
+    
+    @property
+    def success_rate(self) -> float:
+        if self.total_requests == 0:
+            return 1.0
+        return self.successful_requests / self.total_requests
+    
+    @property
+    def is_healthy(self) -> bool:
+        return (
+            self.circuit_breaker.state != CircuitState.OPEN and
+            self.success_rate > 0.5
+        )
 
 
 class AIRouter:
@@ -153,6 +242,10 @@ class AIRouter:
                 http_client=http_client,
             )
 
+        # Initialize provider statistics and circuit breakers
+        self.provider_stats: Dict[str, ProviderStats] = {}
+        self._init_provider_stats()
+        
         logger.info(
             f"AIRouter initialized: "
             f"Groq keys={len(self.groq_keys)}, "
@@ -175,6 +268,336 @@ class AIRouter:
             f"Cloudflare={'configured' if self.cloudflare_provider else 'not configured'}, "
             f"Ollama={'configured' if settings.OLLAMA_URL else 'not configured'}"
         )
+    
+    def _init_provider_stats(self):
+        """Initialize statistics tracking for all providers."""
+        provider_names = [
+            "groq", "openrouter", "together", "mistral", "cerebras", 
+            "siliconflow", "openai", "google_ai_studio", "cloudflare",
+            "alibaba_bailian", "deepseek", "xai", "anthropic", "cohere",
+            "ai21", "novita", "sambanova", "huggingface", "local"
+        ]
+        for name in provider_names:
+            self.provider_stats[name] = ProviderStats()
+    
+    def _get_provider_stats(self, provider_name: str) -> ProviderStats:
+        """Get or create stats for a provider."""
+        if provider_name not in self.provider_stats:
+            self.provider_stats[provider_name] = ProviderStats()
+        return self.provider_stats[provider_name]
+    
+    async def stream_with_fallback(
+        self,
+        prompt: str,
+        model: str,
+        preferred_provider: Optional[str] = None,
+    ) -> AsyncIterator[str]:
+        """
+        Stream AI response with intelligent fallback chain.
+        
+        CRITICAL FEATURES:
+        1. Circuit breaker prevents calling failing providers
+        2. Automatic fallback to next available provider
+        3. Tracks success/failure rates for smart routing
+        4. Never throws unhandled exceptions - always returns content
+        
+        Args:
+            prompt: User prompt
+            model: Model tier (fast, balanced, smart) or specific model
+            preferred_provider: Optional preferred provider
+            
+        Yields:
+            Response chunks from first successful provider (RAW JSON strings from providers)
+        """
+        # Validate inputs
+        if not prompt or not isinstance(prompt, str):
+            logger.error("Invalid prompt")
+            yield json.dumps({"error": "Invalid prompt", "type": "error"})
+            return
+        if not model:
+            logger.error("Model not specified")
+            yield json.dumps({"error": "Model not specified", "type": "error"})
+            return
+        
+        # IMPORTANT: Resolve model alias to actual provider/model BEFORE building fallback chain
+        # This prevents sending "smart", "fast", etc. as model names to APIs
+        resolved_provider, resolved_model = await self._resolve_model_for_streaming(model, preferred_provider)
+        
+        if not resolved_model:
+            logger.error(f"Could not resolve model: {model}")
+            yield json.dumps({"error": f"Model '{model}' not found", "type": "error"})
+            return
+        
+        logger.info(f"Resolved model '{model}' -> provider='{resolved_provider}', model='{resolved_model}'")
+        
+        # Build fallback chain based on RESOLVED provider
+        fallback_chain = self._build_fallback_chain(resolved_model, resolved_provider)
+        
+        last_error = None
+        tried_providers = []
+        
+        for provider in fallback_chain:
+            tried_providers.append(provider)
+            stats = self._get_provider_stats(provider)
+            
+            # Check circuit breaker
+            if not stats.circuit_breaker.can_execute():
+                logger.debug(f"Skipping {provider} - circuit breaker OPEN")
+                continue
+            
+            # Check if provider has keys configured
+            if not self._has_provider_keys(provider):
+                logger.debug(f"Skipping {provider} - no keys configured")
+                continue
+            
+            try:
+                logger.info(f"Attempting provider: {provider} with model: {resolved_model}")
+                start_time = time.time()
+                
+                # Stream from provider - pass the RESOLVED model name (NOT the alias)
+                async for chunk in self._stream_from_provider(provider, prompt, resolved_model):
+                    yield chunk
+                    stats.circuit_breaker.record_success()
+                
+                # Success!
+                elapsed = time.time() - start_time
+                stats.total_requests += 1
+                stats.successful_requests += 1
+                stats.avg_response_time = (
+                    (stats.avg_response_time * (stats.successful_requests - 1) + elapsed) 
+                    / stats.successful_requests
+                )
+                stats.last_success_time = time.time()
+                
+                logger.info(f"Provider {provider} succeeded in {elapsed:.2f}s")
+                return
+                
+            except Exception as e:
+                elapsed = time.time() - start_time
+                stats.total_requests += 1
+                stats.failed_requests += 1
+                stats.last_error = str(e)
+                stats.circuit_breaker.record_failure()
+                last_error = e
+                
+                logger.warning(
+                    f"Provider {provider} failed after {elapsed:.2f}s: {type(e).__name__}: {e}"
+                )
+                # Continue to next provider in fallback chain
+                continue
+        
+        # All providers failed - return graceful fallback message
+        logger.error(f"All providers failed. Tried: {tried_providers}. Last error: {last_error}")
+        yield json.dumps({"content": "Service temporarily unavailable. Please try again in a moment.", "type": "fallback"})
+    
+    def _build_fallback_chain(self, model: str, preferred: Optional[str] = None) -> List[str]:
+        """Build intelligent fallback chain based on model tier and provider health."""
+        # Default fallback chains by model tier
+        fast_chain = ["groq", "cerebras", "together", "siliconflow", "ollama", "openrouter"]
+        balanced_chain = ["groq", "mistral", "together", "openrouter", "deepseek", "ollama"]
+        smart_chain = ["anthropic", "openai", "google_ai_studio", "groq", "openrouter"]
+        
+        # Select base chain
+        model_lower = model.lower()
+        if "fast" in model_lower or "llama-3" in model_lower:
+            base_chain = fast_chain
+        elif "smart" in model_lower or "claude" in model_lower:
+            base_chain = smart_chain
+        else:
+            base_chain = balanced_chain
+        
+        # Add all remaining providers as ultimate fallback
+        all_providers = [
+            "groq", "openrouter", "together", "mistral", "cerebras", 
+            "siliconflow", "openai", "google_ai_studio", "cloudflare",
+            "alibaba_bailian", "deepseek", "xai", "anthropic", "cohere",
+            "ai21", "novita", "sambanova", "huggingface", "local"
+        ]
+        
+        # Build final chain: preferred -> healthy providers -> all others
+        final_chain = []
+        
+        # Add preferred provider first if specified
+        if preferred and preferred in all_providers:
+            final_chain.append(preferred)
+        
+        # Add healthy providers from base chain
+        for provider in base_chain:
+            if provider not in final_chain:
+                stats = self._get_provider_stats(provider)
+                if stats.is_healthy or stats.circuit_breaker.state == CircuitState.HALF_OPEN:
+                    final_chain.append(provider)
+        
+        # Add remaining providers as last resort
+        for provider in all_providers:
+            if provider not in final_chain:
+                final_chain.append(provider)
+        
+        return final_chain
+    
+    def _has_provider_keys(self, provider: str) -> bool:
+        """Check if provider has API keys configured."""
+        key_checks = {
+            "groq": len(self.groq_keys) > 0,
+            "openrouter": len(self.openrouter_keys) > 0,
+            "together": len(self.together_keys) > 0,
+            "mistral": len(self.mistral_keys) > 0,
+            "cerebras": len(self.cerebras_keys) > 0,
+            "siliconflow": len(self.siliconflow_keys) > 0,
+            "openai": self.openai_key is not None,
+            "google_ai_studio": len(self.google_keys) > 0,
+            "cloudflare": self.cloudflare_provider is not None,
+            "alibaba_bailian": len(self.alibaba_bailian_keys) > 0,
+            "deepseek": len(self.deepseek_keys) > 0,
+            "xai": len(self.xai_keys) > 0,
+            "anthropic": len(self.anthropic_keys) > 0,
+            "cohere": len(self.cohere_keys) > 0,
+            "ai21": len(self.ai21_keys) > 0,
+            "novita": len(self.novita_keys) > 0,
+            "sambanova": len(self.sambanova_keys) > 0,
+            "huggingface": self.hf_key is not None,
+            "local": True,  # Ollama doesn't need keys
+        }
+        return key_checks.get(provider, False)
+    
+    async def _resolve_model_for_streaming(self, model: str, preferred_provider: Optional[str] = None) -> tuple[str, str]:
+        """
+        Resolve model alias (fast, balanced, smart) to actual provider and model name.
+        
+        This is CRITICAL to prevent sending model aliases like "smart" to provider APIs.
+        Instead, we resolve them to actual model names like "mixtral-8x7b-32768".
+        
+        Args:
+            model: Model alias or specific model name
+            preferred_provider: Optional preferred provider
+            
+        Returns:
+            Tuple of (provider_name, model_name)
+        """
+        try:
+            from services.models import resolve_model
+            provider, resolved_model = await resolve_model(model)
+            return provider, resolved_model
+        except Exception as e:
+            logger.error(f"Failed to resolve model '{model}': {e}")
+            # Fallback: if model looks like a specific model name, use it directly
+            if "/" in model or "-" in model:
+                # Likely a specific model name, use preferred provider or default
+                return preferred_provider or "groq", model
+            # Otherwise return None to trigger error
+            return None, None
+    
+    def _build_fallback_chain(self, model: str, preferred: Optional[str] = None) -> List[str]:
+        """Build intelligent fallback chain based on model tier and provider health."""
+        # Default fallback chains by model tier
+        fast_chain = ["groq", "cerebras", "together", "siliconflow", "ollama", "openrouter"]
+        balanced_chain = ["groq", "mistral", "together", "openrouter", "deepseek", "ollama"]
+        smart_chain = ["anthropic", "openai", "google_ai_studio", "groq", "openrouter"]
+        
+        # Select base chain
+        model_lower = model.lower()
+        if "fast" in model_lower or "llama-3" in model_lower:
+            base_chain = fast_chain
+        elif "smart" in model_lower or "claude" in model_lower:
+            base_chain = smart_chain
+        else:
+            base_chain = balanced_chain
+        
+        # Add all remaining providers as ultimate fallback
+        all_providers = [
+            "groq", "openrouter", "together", "mistral", "cerebras", 
+            "siliconflow", "openai", "google_ai_studio", "cloudflare",
+            "alibaba_bailian", "deepseek", "xai", "anthropic", "cohere",
+            "ai21", "novita", "sambanova", "huggingface", "local"
+        ]
+        
+        # Build final chain: preferred -> healthy providers -> all others
+        final_chain = []
+        
+        # Add preferred provider first if specified
+        if preferred and preferred in all_providers:
+            final_chain.append(preferred)
+        
+        # Add healthy providers from base chain
+        for provider in base_chain:
+            if provider not in final_chain:
+                stats = self._get_provider_stats(provider)
+                if stats.is_healthy or stats.circuit_breaker.state == CircuitState.HALF_OPEN:
+                    final_chain.append(provider)
+        
+        # Add remaining providers as last resort
+        for provider in all_providers:
+            if provider not in final_chain:
+                final_chain.append(provider)
+        
+        return final_chain
+    
+    async def _stream_from_provider(
+        self, 
+        provider: str, 
+        prompt: str, 
+        model: str
+    ) -> AsyncIterator[str]:
+        """Route to specific provider streaming method."""
+        if provider == "groq":
+            async for chunk in self._stream_groq(prompt, model):
+                yield chunk
+        elif provider == "openrouter":
+            async for chunk in self._stream_openrouter(prompt, model):
+                yield chunk
+        elif provider == "together":
+            async for chunk in self._stream_openai_compatible(self.together_provider, self.together_keys, prompt, model):
+                yield chunk
+        elif provider == "mistral":
+            async for chunk in self._stream_openai_compatible(self.mistral_provider, self.mistral_keys, prompt, model):
+                yield chunk
+        elif provider == "cerebras":
+            async for chunk in self._stream_openai_compatible(self.cerebras_provider, self.cerebras_keys, prompt, model):
+                yield chunk
+        elif provider == "siliconflow":
+            async for chunk in self._stream_openai_compatible(self.siliconflow_provider, self.siliconflow_keys, prompt, model):
+                yield chunk
+        elif provider == "openai":
+            async for chunk in self.openai_provider.stream(prompt=prompt, model=model, api_key=self.openai_key):
+                yield chunk
+        elif provider == "google_ai_studio":
+            async for chunk in self._stream_google(prompt, model):
+                yield chunk
+        elif provider == "cloudflare":
+            async for chunk in self.cloudflare_provider.stream(prompt=prompt, model=model, api_key=""):
+                yield chunk
+        elif provider == "alibaba_bailian":
+            async for chunk in self._stream_openai_compatible(self.alibaba_bailian_provider, self.alibaba_bailian_keys, prompt, model):
+                yield chunk
+        elif provider == "deepseek":
+            async for chunk in self._stream_openai_compatible(self.deepseek_provider, self.deepseek_keys, prompt, model):
+                yield chunk
+        elif provider == "xai":
+            async for chunk in self._stream_openai_compatible(self.xai_provider, self.xai_keys, prompt, model):
+                yield chunk
+        elif provider == "anthropic":
+            async for chunk in self._stream_anthropic(prompt, model):
+                yield chunk
+        elif provider == "cohere":
+            async for chunk in self._stream_openai_compatible(self.cohere_provider, self.cohere_keys, prompt, model):
+                yield chunk
+        elif provider == "ai21":
+            async for chunk in self._stream_openai_compatible(self.ai21_provider, self.ai21_keys, prompt, model):
+                yield chunk
+        elif provider == "novita":
+            async for chunk in self._stream_openai_compatible(self.novita_provider, self.novita_keys, prompt, model):
+                yield chunk
+        elif provider == "sambanova":
+            async for chunk in self._stream_openai_compatible(self.sambanova_provider, self.sambanova_keys, prompt, model):
+                yield chunk
+        elif provider == "huggingface":
+            async for chunk in self._stream_huggingface(prompt, model):
+                yield chunk
+        elif provider == "local":
+            async for chunk in self._stream_ollama(prompt, model):
+                yield chunk
+        else:
+            raise ValueError(f"Unknown provider: {provider}")
 
     async def stream(
         self,

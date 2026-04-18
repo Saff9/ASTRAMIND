@@ -1,10 +1,12 @@
 import json
+import logging
 from typing import AsyncIterator, Optional
 
 import httpx
 
 from app.providers.base import AIProvider
 from core.errors import AppError
+from core.system_prompt import get_system_prompt
 
 
 class OpenAICompatibleProvider(AIProvider):
@@ -100,6 +102,11 @@ async def _raise_for_status(provider_name: str, response: httpx.Response) -> Non
 
 
 async def _iterate_sse_data(response: httpx.Response) -> AsyncIterator[str]:
+    """
+    Iterate over SSE data lines with robust error handling.
+    Handles malformed JSON, incomplete chunks, and network issues gracefully.
+    """
+    buffer = ""
     async for line in response.aiter_lines():
         if not line:
             continue
@@ -108,10 +115,28 @@ async def _iterate_sse_data(response: httpx.Response) -> AsyncIterator[str]:
         data = line.removeprefix("data:").strip()
         if not data or data == "[DONE]":
             continue
-        # Validate it's JSON-ish but still return raw string (back-compat).
+        
+        # Robust JSON validation with fallback
         try:
-            json.loads(data)
-        except Exception:
-            pass
-        yield data
+            # Try to parse as JSON to validate
+            parsed = json.loads(data)
+            # Return the validated JSON string
+            yield json.dumps(parsed, ensure_ascii=False)
+        except json.JSONDecodeError:
+            # If JSON is incomplete/malformed, try to extract useful content
+            logger = logging.getLogger(__name__)
+            logger.debug(f"Skipping malformed JSON chunk from {response.url}: {data[:100]}...")
+            # Try to accumulate and parse partial JSON
+            buffer += data
+            try:
+                parsed = json.loads(buffer)
+                yield json.dumps(parsed, ensure_ascii=False)
+                buffer = ""
+            except json.JSONDecodeError:
+                # Still invalid, skip this chunk
+                continue
+        except Exception as e:
+            # Catch any other unexpected and continue streaming
+            logging.getLogger(__name__).debug(f"Error processing SSE chunk: {e}")
+            continue
 
