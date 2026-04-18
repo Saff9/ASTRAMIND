@@ -1,12 +1,14 @@
 # backend/api/v1/chat.py
 """
 ASTRAMIND Chat API - Production-ready streaming chat endpoint.
+Supports both streaming (SSE) and non-streaming (JSON) responses.
 """
 
 from fastapi import APIRouter, Depends, Request, HTTPException, BackgroundTasks
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Literal, Dict, List
+from typing import Literal, Dict, List, Optional
 
 from core.enhanced_security import (
     get_current_user_secure,
@@ -261,34 +263,76 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
 
     # ===== ROUTE TO AI PROVIDER =====
     try:
+        # BUG FIX: user is a dict — use user_email variable (already extracted above)
         logger.info(
-            f"Chat request from {user.email}: "
+            f"Chat request from {user_email}: "
             f"provider={provider}, model={payload.model}, prompt_len={len(payload.prompt)} "
             f"[request_id: {request_id}]"
         )
 
-        # Stream response from provider
+        # ── NON-STREAMING PATH (stream=false) ─────────────────────────────────
+        # When the client requests stream=false, accumulate all chunks into a
+        # single JSON response.  This is what the current frontend does.
+        if not payload.stream:
+            async def execute_ai_json():
+                chunks: List[str] = []
+                async for chunk in ai_router.stream(
+                    prompt=safe_prompt,
+                    model=real_model,
+                    provider=provider,
+                ):
+                    chunks.append(chunk)
+                full_text = "".join(chunks)
+                return JSONResponse(content={
+                    "response": full_text,
+                    "provider": provider,
+                    "model": real_model,
+                    "tier": payload.model,
+                    "request_id": request_id,
+                })
+
+            async def fallback_json():
+                return JSONResponse(content={
+                    "response": (
+                        f"Sorry, we're experiencing technical difficulties. "
+                        f"Please try again in a moment! ✨"
+                    ),
+                    "provider": "fallback",
+                    "model": "none",
+                    "tier": payload.model,
+                    "request_id": request_id,
+                })
+
+            return await stability_engine.execute_with_stability(
+                operation=execute_ai_json,
+                service_name="ai_router",
+                operation_name="chat_json",
+                fallback=fallback_json,
+            )
+
+        # ── STREAMING PATH (stream=true, SSE) ─────────────────────────────────
         base_stream_generator = ai_router.stream(
             prompt=safe_prompt,
             model=real_model,
             provider=provider,
         )
 
-        # Execute with stability protection
         async def execute_ai_stream():
             return stream_response(base_stream_generator)
 
-        async def fallback_response():
-            # Return a helpful fallback message
+        async def fallback_sse():
             async def fallback_generator():
-                yield f"Sorry {user_email}, we're experiencing technical difficulties. Please try again in a moment! ✨"
+                yield (
+                    f"Sorry, we're experiencing technical difficulties. "
+                    f"Please try again in a moment! ✨"
+                )
             return stream_response(fallback_generator())
 
         return await stability_engine.execute_with_stability(
             operation=execute_ai_stream,
             service_name="ai_router",
             operation_name="chat_stream",
-            fallback=fallback_response
+            fallback=fallback_sse,
         )
 
     except ValueError as e:
@@ -299,7 +343,7 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
         )
     except RuntimeError as e:
         error_str = str(e).lower()
-        
+
         if "rate limit" in error_str:
             logger.warning(f"Provider rate limited: {e}")
             raise HTTPException(

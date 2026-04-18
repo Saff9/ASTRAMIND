@@ -26,13 +26,6 @@ interface Message {
   loading?: boolean;
 }
 
-interface Conversation {
-  id: string;
-  title: string;
-  preview: string;
-  time: string;
-}
-
 const MODEL_OPTIONS = [
   // Top 3 (Always shown initially)
   { id: "gpt-4o",           label: "GPT-4o",              Icon: OpenAIIcon,   desc: "Flagship multi-modal",     provider: "OpenAI",    model: "gpt-4o",           tier: "smart",    speedMs: 1200 },
@@ -142,25 +135,54 @@ export default function ChatPage() {
 
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://astramind-reer.onrender.com";
+
+      // Build headers — include JWT from NextAuth session when available
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      // NextAuth session token lives in session.user (cast to any to access token)
+      const rawToken = (session as { accessToken?: string } | null)?.accessToken;
+      if (rawToken) {
+        headers["Authorization"] = `Bearer ${rawToken}`;
+      }
+
+      // Map frontend model id to backend tier
+      // selectedModel.tier is always one of: "fast" | "balanced" | "smart"
+      const backendModel: string = selectedModel.tier || "fast";
+
       const response = await fetch(`${apiBase}/api/v1/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           prompt: text,
-          model: selectedModel.tier || "fast",
-          stream: false,
+          model: backendModel,
+          stream: false,       // Always request JSON response (non-streaming)
         }),
       });
 
       if (response.status === 429) {
-        throw new Error("Rate limit exceeded. Please try again later.");
+        // Try to extract detail from body
+        let detail = "Rate limit exceeded. Please try again later.";
+        try {
+          const errData = await response.json();
+          if (errData?.detail) detail = typeof errData.detail === "string" ? errData.detail : JSON.stringify(errData.detail);
+        } catch { /* ignore */ }
+        throw new Error(detail);
       }
+
       if (!response.ok) {
-        throw new Error(`API returned ${response.status} ${response.statusText}`);
+        // Extract FastAPI error detail if present
+        let detail = `API returned ${response.status} ${response.statusText}`;
+        try {
+          const errData = await response.json();
+          if (errData?.detail) detail = typeof errData.detail === "string" ? errData.detail : JSON.stringify(errData.detail);
+          else if (errData?.error) detail = errData.error;
+        } catch { /* ignore */ }
+        throw new Error(detail);
       }
 
       const data = await response.json();
-      // Handle both streaming text and standard message formats
+      // Backend returns { response, provider, model, tier, request_id }
       const content =
         data.response ||
         data.content ||
@@ -172,12 +194,14 @@ export default function ChatPage() {
         id: loadId,
         role: "assistant",
         content,
-        provider: selectedModel.provider,
-        model: selectedModel.model,
+        // Show the actual provider the backend routed to (not just the label)
+        provider: data.provider || selectedModel.provider,
+        model: data.model || selectedModel.model,
         timestamp: new Date(),
       };
       setMessages((prev) => prev.map((m) => (m.id === loadId ? reply : m)));
-    } catch (error: any) {
+    } catch (err: unknown) {
+      const error = err as Error;
       const errorMsg: Message = {
         id: loadId,
         role: "assistant",
@@ -188,7 +212,7 @@ export default function ChatPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading, selectedModel]);
+  }, [isLoading, selectedModel, session]);
 
   const exportChat = (format: "json" | "doc" | "pdf") => {
     if (messages.length === 0) return;

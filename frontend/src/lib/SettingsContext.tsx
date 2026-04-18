@@ -72,23 +72,19 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       applyFont(savedFont);
     }, 0);
 
-    // Initial background fetch to sync settings from Backend
-    fetch("http://localhost:8000/api/v1/user/config", {
-      headers: { "Authorization": "Bearer mock-token-123" } // Replace when real Auth is connected
+    // Background sync from backend — optional, fails silently if unauthenticated
+    fetch("/api/v1/user/config", {
+      headers: { "Content-Type": "application/json" },
     })
-      .then(res => res.json())
+      .then(res => res.ok ? res.json() : null)
       .then(data => {
         if (data && data.preferred_theme) {
           setThemeState(data.preferred_theme as Theme);
           setResolvedTheme(applyTheme(data.preferred_theme as Theme));
         }
-        if (data && data.preferred_font) {
-          // Remap if needed, or directly assign if it aligns.
-          // Currently, API stores raw string e.g. "var(--font-fira)", while State expects FontId. 
-          // For simplicity, we just use local-first unless you define proper 2-way converters.
-        }
+        // preferred_font sync skipped until backend/frontend format alignment is done
       })
-      .catch((err) => console.log("Backend sync not ready:", err));
+      .catch(() => { /* silent — backend may be unavailable */ });
   }, []);
 
   // React to system preference changes when theme = "system"
@@ -100,19 +96,16 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     return () => mq.removeEventListener("change", handleChange);
   }, [theme]);
 
-  // Sync back to server
+  // Sync settings back to server (fire-and-forget, fails silently if unauthenticated)
   const syncToBackend = async (payload: { preferred_theme?: string, preferred_font?: string, last_used_model?: string }) => {
     try {
-      await fetch("http://localhost:8000/api/v1/user/config", {
+      await fetch("/api/v1/user/config", {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer mock-token-123"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
-    } catch (error) {
-      console.log("Failed to sync layout settings to backend:", error);
+    } catch {
+      // Silent — non-critical, local state is source of truth
     }
   };
 
