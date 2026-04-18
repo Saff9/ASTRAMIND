@@ -2,7 +2,7 @@
 
 import httpx
 import logging
-from typing import AsyncIterator
+from typing import AsyncIterator, List, Dict, Optional
 
 from app.providers.base import AIProvider
 from core.errors import AppError
@@ -26,23 +26,21 @@ class GroqProvider(AIProvider):
         prompt: str,
         model: str,
         api_key: str,
+        messages: Optional[List[Dict[str, str]]] = None,
     ) -> AsyncIterator[str]:
         """
         Stream response from Groq API.
-        
+
         Args:
-            prompt: User message
+            prompt: Current user message
             model: Model name (e.g., llama-3.1-8b-instant)
             api_key: Groq API key
-            
+            messages: Optional conversation history [{"role": "user"|"assistant", "content": "..."}]
+
         Yields:
             Response chunks
-            
-        Raises:
-            AppError: If API request fails
         """
-        
-        # Validate inputs
+
         if not api_key or not api_key.strip():
             raise AppError(400, "Groq API key is required")
         if not prompt or not isinstance(prompt, str):
@@ -50,8 +48,17 @@ class GroqProvider(AIProvider):
         if not model:
             raise AppError(400, "Model name is required")
 
-        # Get system prompt for AI identity
         system_prompt = get_system_prompt()
+
+        # Build messages array — system prompt + history + current message
+        msg_list = [{"role": "system", "content": system_prompt}]
+        if messages:
+            for m in messages[-20:]:  # cap at last 20 turns to save tokens
+                role = m.get("role", "user")
+                content = m.get("content", "")
+                if role in ("user", "assistant") and content:
+                    msg_list.append({"role": role, "content": content})
+        msg_list.append({"role": "user", "content": prompt})
 
         headers = {
             "Authorization": f"Bearer {api_key.strip()}",
@@ -60,10 +67,7 @@ class GroqProvider(AIProvider):
 
         payload = {
             "model": model,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt}
-            ],
+            "messages": msg_list,
             "stream": True,
             "temperature": 0.7,
         }

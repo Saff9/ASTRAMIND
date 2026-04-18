@@ -41,6 +41,7 @@ class OpenAICompatibleProvider(AIProvider):
         prompt: str,
         model: str,
         api_key: str,
+        messages: Optional[list] = None,
     ) -> AsyncIterator[str]:
         if not api_key or not api_key.strip():
             raise AppError(400, f"{self.name} API key is required")
@@ -59,12 +60,19 @@ class OpenAICompatibleProvider(AIProvider):
         # Get system prompt for AI identity
         system_prompt = get_system_prompt()
 
+        # Build messages array: system + history + current
+        msg_list = [{"role": "system", "content": system_prompt}]
+        if messages:
+            for m in (messages[-20:] if len(messages) > 20 else messages):
+                role = m.get("role") if isinstance(m, dict) else getattr(m, "role", "user")
+                content = m.get("content") if isinstance(m, dict) else getattr(m, "content", "")
+                if role in ("user", "assistant") and content:
+                    msg_list.append({"role": role, "content": content})
+        msg_list.append({"role": "user", "content": prompt})
+
         payload = {
             "model": model,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt}
-            ],
+            "messages": msg_list,
             "stream": True,
         }
 

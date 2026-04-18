@@ -35,6 +35,49 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["chat"])
 
+# ===== IP / USER DAILY RATE LIMITER =====
+# Lightweight in-memory daily quota (resets at midnight UTC).
+# No Redis required. Covers guests (by IP) and logged-in users (by email).
+# Limits: authenticated users → 50/day · guests → 70/day (by IP)
+
+_DAILY_LIMIT_USER = int(__import__("os").getenv("DAILY_LIMIT_USER", "50"))
+_DAILY_LIMIT_IP   = int(__import__("os").getenv("DAILY_LIMIT_IP", "70"))
+
+# { "user:email@x.com" | "ip:1.2.3.4" : (date_str, count) }
+_daily_counts: Dict[str, tuple] = {}
+
+def _today_utc() -> str:
+    return __import__("datetime").date.today().isoformat()
+
+def _check_and_increment(key: str, limit: int) -> tuple:
+    """Returns (allowed: bool, remaining: int)."""
+    today = _today_utc()
+    
+    # Memory leak prevention: periodically clean old entries (e.g., ~1 in 100 requests)
+    if __import__("random").random() < 0.01:
+        keys_to_delete = [k for k, v in _daily_counts.items() if v[0] != today]
+        for k in keys_to_delete:
+            del _daily_counts[k]
+            
+    existing = _daily_counts.get(key)
+    if existing is None or existing[0] != today:
+        _daily_counts[key] = (today, 1)
+        return True, limit - 1
+    date_str, count = existing
+    if count >= limit:
+        return False, 0
+    _daily_counts[key] = (date_str, count + 1)
+    return True, limit - count - 1
+
+def _get_client_ip(request: Request) -> str:
+    xff = request.headers.get("x-forwarded-for")
+    if xff:
+        return xff.split(",")[0].strip()
+    xri = request.headers.get("x-real-ip")
+    if xri:
+        return xri.strip()
+    return request.client.host if request.client else "unknown"
+
 # ===== BACKGROUND TASKS =====
 
 async def atomic_increment_quota(user_id: int, db: AsyncSession) -> bool:
@@ -101,28 +144,39 @@ def get_ai_router(request: Request) -> AIRouter:
 
 # ===== REQUEST VALIDATION =====
 
+class ChatMessage(BaseModel):
+    """A single message in a conversation."""
+    role: str = Field(..., description="'user' or 'assistant'")
+    content: str = Field(..., min_length=0, max_length=8000)
+
+
 class ChatRequest(BaseModel):
-    """Validated chat request with strict input constraints for security."""
+    """Validated chat request with conversation history support."""
 
     prompt: str = Field(
         ...,
         min_length=1,
         max_length=8000,
-        description="User prompt (max 8000 chars)",
+        description="Current user prompt (max 8000 chars)",
     )
     model: str = Field(
         default="fast",
-        description="AI model or tier to use",
+        description="AI model tier: fast | balanced | smart",
     )
     stream: bool = Field(
-        default=True,
-        description="Enable streaming response",
+        default=False,
+        description="Enable streaming SSE response (false = JSON)",
+    )
+    messages: Optional[List[ChatMessage]] = Field(
+        default=None,
+        description="Conversation history (last N turns, optional)",
+        max_length=30,
     )
 
     @field_validator("prompt")
     @classmethod
     def validate_prompt(cls, v: str) -> str:
-        """Sanitize prompt to prevent injection attacks and ensure content safety."""
+        """Sanitize prompt to prevent injection attacks."""
         try:
             return sanitize_prompt(v)
         except ValueError as e:
@@ -242,10 +296,10 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
             detail=f"Invalid model: {payload.model}",
         )
 
-    # ===== ATOMIC QUOTA ENFORCEMENT =====
-    # Skip quota for guest users (orm_user is None)
+    # ===== QUOTA ENFORCEMENT (DB + IN-MEMORY) =====
     orm_user = user.get("orm_user") if isinstance(user, dict) else getattr(user, "orm_user", None)
     if orm_user is not None:
+        # DB-based atomic quota for users
         quota_granted = await atomic_increment_quota(orm_user.id, db)
         if not quota_granted:
             logger.warning(
@@ -259,8 +313,20 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
                     "reset_date": orm_user.last_reset.isoformat() if orm_user.last_reset else None,
                 },
             )
+        # Also track in memory (fast sync limit)
+        key = f"user:{user_email}"
+        allowed, rem = _check_and_increment(key, _DAILY_LIMIT_USER)
+        if not allowed:
+            raise HTTPException(status_code=429, detail="Daily rate limit exceeded. Try again tomorrow.")
     else:
-        logger.debug(f"Guest user {user_id} — quota enforcement skipped")
+        # GUEST USER - Use IP address limit
+        ip = _get_client_ip(request)
+        key = f"ip:{ip}"
+        allowed, rem = _check_and_increment(key, _DAILY_LIMIT_IP)
+        if not allowed:
+            logger.warning(f"Daily IP limit exceeded for guest IP {ip} [request_id: {request_id}]")
+            raise HTTPException(status_code=429, detail="Daily limit reached for your IP. Please sign in for more messages.")
+        logger.debug(f"Guest IP {ip} quota remaining: {rem}")
 
     # ===== ROUTE TO AI PROVIDER =====
     try:
@@ -272,27 +338,31 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
         )
 
         # ── NON-STREAMING PATH (stream=false) ─────────────────────────────────
-        # When the client requests stream=false, accumulate all chunks into a
-        # single JSON response.  This is what the current frontend does.
         if not payload.stream:
+            # Build conversation history for the provider
+            history = [
+                {"role": m.role, "content": m.content}
+                for m in (payload.messages or [])[-20:]
+                if m.role in ("user", "assistant") and m.content
+            ]
+
             async def execute_ai_json():
                 chunks: List[str] = []
                 async for chunk in ai_router.stream(
                     prompt=safe_prompt,
                     model=real_model,
                     provider=provider,
+                    messages=history or None,
                 ):
                     try:
                         parsed = json.loads(chunk)
-                        # OpenAI-compatible delta format: extract text content
                         choices = parsed.get("choices", [])
                         content = ""
                         if choices:
                             content = choices[0].get("delta", {}).get("content", "") or ""
-                        if content:  # skip empty-string deltas (first/last chunks)
+                        if content:
                             chunks.append(content)
                     except (json.JSONDecodeError, IndexError, AttributeError, TypeError):
-                        # Not JSON — plain text from fallback generators, use as-is
                         if chunk and chunk.strip():
                             chunks.append(chunk)
                 full_text = "".join(chunks)

@@ -533,68 +533,69 @@ class AIRouter:
         return final_chain
     
     async def _stream_from_provider(
-        self, 
-        provider: str, 
-        prompt: str, 
-        model: str
+        self,
+        provider: str,
+        prompt: str,
+        model: str,
+        messages: Optional[List[Dict[str, str]]] = None,
     ) -> AsyncIterator[str]:
         """Route to specific provider streaming method."""
         if provider == "groq":
-            async for chunk in self._stream_groq(prompt, model):
+            async for chunk in self._stream_groq(prompt, model, messages):
                 yield chunk
         elif provider == "openrouter":
-            async for chunk in self._stream_openrouter(prompt, model):
+            async for chunk in self._stream_openrouter(prompt, model, messages):
                 yield chunk
         elif provider == "together":
-            async for chunk in self._stream_openai_compatible(self.together_provider, self.together_keys, prompt, model):
+            async for chunk in self._stream_openai_compatible(self.together_provider, self.together_keys, prompt, model, messages):
                 yield chunk
         elif provider == "mistral":
-            async for chunk in self._stream_openai_compatible(self.mistral_provider, self.mistral_keys, prompt, model):
+            async for chunk in self._stream_openai_compatible(self.mistral_provider, self.mistral_keys, prompt, model, messages):
                 yield chunk
         elif provider == "cerebras":
-            async for chunk in self._stream_openai_compatible(self.cerebras_provider, self.cerebras_keys, prompt, model):
+            async for chunk in self._stream_openai_compatible(self.cerebras_provider, self.cerebras_keys, prompt, model, messages):
                 yield chunk
         elif provider == "siliconflow":
-            async for chunk in self._stream_openai_compatible(self.siliconflow_provider, self.siliconflow_keys, prompt, model):
+            async for chunk in self._stream_openai_compatible(self.siliconflow_provider, self.siliconflow_keys, prompt, model, messages):
                 yield chunk
         elif provider == "openai":
-            async for chunk in self.openai_provider.stream(prompt=prompt, model=model, api_key=self.openai_key):
+            async for chunk in self.openai_provider.stream(prompt=prompt, model=model, api_key=self.openai_key, messages=messages):
                 yield chunk
         elif provider == "google_ai_studio":
-            async for chunk in self._stream_google(prompt, model):
+            async for chunk in self._stream_google(prompt, model, messages):
                 yield chunk
         elif provider == "cloudflare":
-            async for chunk in self.cloudflare_provider.stream(prompt=prompt, model=model, api_key=""):
+            async for chunk in self.cloudflare_provider.stream(prompt=prompt, model=model, api_key="", messages=messages):
                 yield chunk
         elif provider == "alibaba_bailian":
-            async for chunk in self._stream_openai_compatible(self.alibaba_bailian_provider, self.alibaba_bailian_keys, prompt, model):
+            async for chunk in self._stream_openai_compatible(self.alibaba_bailian_provider, self.alibaba_bailian_keys, prompt, model, messages):
                 yield chunk
         elif provider == "deepseek":
-            async for chunk in self._stream_openai_compatible(self.deepseek_provider, self.deepseek_keys, prompt, model):
+            async for chunk in self._stream_openai_compatible(self.deepseek_provider, self.deepseek_keys, prompt, model, messages):
                 yield chunk
         elif provider == "xai":
-            async for chunk in self._stream_openai_compatible(self.xai_provider, self.xai_keys, prompt, model):
+            async for chunk in self._stream_openai_compatible(self.xai_provider, self.xai_keys, prompt, model, messages):
                 yield chunk
         elif provider == "anthropic":
-            async for chunk in self._stream_anthropic(prompt, model):
+            async for chunk in self._stream_anthropic(prompt, model, messages):
                 yield chunk
         elif provider == "cohere":
-            async for chunk in self._stream_openai_compatible(self.cohere_provider, self.cohere_keys, prompt, model):
+            async for chunk in self._stream_openai_compatible(self.cohere_provider, self.cohere_keys, prompt, model, messages):
                 yield chunk
         elif provider == "ai21":
-            async for chunk in self._stream_openai_compatible(self.ai21_provider, self.ai21_keys, prompt, model):
+            async for chunk in self._stream_openai_compatible(self.ai21_provider, self.ai21_keys, prompt, model, messages):
                 yield chunk
         elif provider == "novita":
-            async for chunk in self._stream_openai_compatible(self.novita_provider, self.novita_keys, prompt, model):
+            async for chunk in self._stream_openai_compatible(self.novita_provider, self.novita_keys, prompt, model, messages):
                 yield chunk
         elif provider == "sambanova":
-            async for chunk in self._stream_openai_compatible(self.sambanova_provider, self.sambanova_keys, prompt, model):
+            async for chunk in self._stream_openai_compatible(self.sambanova_provider, self.sambanova_keys, prompt, model, messages):
                 yield chunk
         elif provider == "huggingface":
-            async for chunk in self._stream_huggingface(prompt, model):
+            async for chunk in self._stream_huggingface(prompt, model, messages):
                 yield chunk
         elif provider == "local":
-            async for chunk in self._stream_ollama(prompt, model):
+            async for chunk in self._stream_ollama(prompt, model, messages):
                 yield chunk
         else:
             raise ValueError(f"Unknown provider: {provider}")
@@ -604,23 +605,20 @@ class AIRouter:
         prompt: str,
         model: str,
         provider: str,
+        messages: Optional[List[Dict[str, str]]] = None,
     ) -> AsyncIterator[str]:
         """
         Stream AI response from specified provider with comprehensive error handling.
 
         Args:
-            prompt: User prompt
+            prompt: Current user prompt
             model: Model name
-            provider: Provider name (groq, openrouter, huggingface, local)
+            provider: Provider name (groq, openrouter, huggingface, local, ...)
+            messages: Optional conversation history [{"role": "user"|"assistant", "content": "..."}]
 
         Yields:
             Response chunks from AI provider
-
-        Raises:
-            ValueError: If provider not found or no keys available
-            RuntimeError: If all providers fail
         """
-        # Validate inputs
         if not prompt or not isinstance(prompt, str):
             raise ValueError("Prompt must be a non-empty string")
         if not model:
@@ -630,62 +628,62 @@ class AIRouter:
             if provider == "groq":
                 if not self.groq_keys:
                     raise ValueError("No Groq API keys configured")
-                async for chunk in self._stream_groq(prompt, model):
+                async for chunk in self._stream_groq(prompt, model, messages):
                     yield chunk
 
             elif provider == "openrouter":
                 if not self.openrouter_keys:
                     raise ValueError("No OpenRouter API keys configured")
-                async for chunk in self._stream_openrouter(prompt, model):
+                async for chunk in self._stream_openrouter(prompt, model, messages):
                     yield chunk
 
             elif provider == "together":
                 if not self.together_keys:
                     raise ValueError("No Together API keys configured")
-                async for chunk in self._stream_openai_compatible(self.together_provider, self.together_keys, prompt, model):
+                async for chunk in self._stream_openai_compatible(self.together_provider, self.together_keys, prompt, model, messages):
                     yield chunk
 
             elif provider == "mistral":
                 if not self.mistral_keys:
                     raise ValueError("No Mistral API keys configured")
-                async for chunk in self._stream_openai_compatible(self.mistral_provider, self.mistral_keys, prompt, model):
+                async for chunk in self._stream_openai_compatible(self.mistral_provider, self.mistral_keys, prompt, model, messages):
                     yield chunk
 
             elif provider == "cerebras":
                 if not self.cerebras_keys:
                     raise ValueError("No Cerebras API keys configured")
-                async for chunk in self._stream_openai_compatible(self.cerebras_provider, self.cerebras_keys, prompt, model):
+                async for chunk in self._stream_openai_compatible(self.cerebras_provider, self.cerebras_keys, prompt, model, messages):
                     yield chunk
 
             elif provider == "siliconflow":
                 if not self.siliconflow_keys:
                     raise ValueError("No SiliconFlow API keys configured")
-                async for chunk in self._stream_openai_compatible(self.siliconflow_provider, self.siliconflow_keys, prompt, model):
+                async for chunk in self._stream_openai_compatible(self.siliconflow_provider, self.siliconflow_keys, prompt, model, messages):
                     yield chunk
 
             elif provider == "openai":
                 if not self.openai_key:
                     raise ValueError("No OpenAI API key configured")
-                async for chunk in self.openai_provider.stream(prompt=prompt, model=model, api_key=self.openai_key):
+                async for chunk in self.openai_provider.stream(prompt=prompt, model=model, api_key=self.openai_key, messages=messages):
                     yield chunk
 
             elif provider == "google_ai_studio":
                 if not self.google_keys:
                     raise ValueError("No Google AI Studio API keys configured")
-                async for chunk in self._stream_google(prompt, model):
+                async for chunk in self._stream_google(prompt, model, messages):
                     yield chunk
 
             elif provider == "cloudflare":
                 if not self.cloudflare_provider:
                     raise ValueError("Cloudflare Workers AI not configured")
-                async for chunk in self.cloudflare_provider.stream(prompt=prompt, model=model, api_key=""):
+                async for chunk in self.cloudflare_provider.stream(prompt=prompt, model=model, api_key="", messages=messages):
                     yield chunk
 
             elif provider == "alibaba_bailian":
                 if not self.alibaba_bailian_keys:
                     raise ValueError("No Alibaba Bailian API keys configured")
                 async for chunk in self._stream_openai_compatible(
-                    self.alibaba_bailian_provider, self.alibaba_bailian_keys, prompt, model
+                    self.alibaba_bailian_provider, self.alibaba_bailian_keys, prompt, model, messages
                 ):
                     yield chunk
 
@@ -693,7 +691,7 @@ class AIRouter:
                 if not self.deepseek_keys:
                     raise ValueError("No DeepSeek API keys configured")
                 async for chunk in self._stream_openai_compatible(
-                    self.deepseek_provider, self.deepseek_keys, prompt, model
+                    self.deepseek_provider, self.deepseek_keys, prompt, model, messages
                 ):
                     yield chunk
 
@@ -701,21 +699,21 @@ class AIRouter:
                 if not self.xai_keys:
                     raise ValueError("No xAI API keys configured")
                 async for chunk in self._stream_openai_compatible(
-                    self.xai_provider, self.xai_keys, prompt, model
+                    self.xai_provider, self.xai_keys, prompt, model, messages
                 ):
                     yield chunk
 
             elif provider == "anthropic":
                 if not self.anthropic_keys:
                     raise ValueError("No Anthropic API keys configured")
-                async for chunk in self._stream_anthropic(prompt, model):
+                async for chunk in self._stream_anthropic(prompt, model, messages):
                     yield chunk
 
             elif provider == "cohere":
                 if not self.cohere_keys:
                     raise ValueError("No Cohere API keys configured")
                 async for chunk in self._stream_openai_compatible(
-                    self.cohere_provider, self.cohere_keys, prompt, model
+                    self.cohere_provider, self.cohere_keys, prompt, model, messages
                 ):
                     yield chunk
 
@@ -723,7 +721,7 @@ class AIRouter:
                 if not self.ai21_keys:
                     raise ValueError("No AI21 API keys configured")
                 async for chunk in self._stream_openai_compatible(
-                    self.ai21_provider, self.ai21_keys, prompt, model
+                    self.ai21_provider, self.ai21_keys, prompt, model, messages
                 ):
                     yield chunk
 
@@ -731,7 +729,7 @@ class AIRouter:
                 if not self.novita_keys:
                     raise ValueError("No Novita AI API keys configured")
                 async for chunk in self._stream_openai_compatible(
-                    self.novita_provider, self.novita_keys, prompt, model
+                    self.novita_provider, self.novita_keys, prompt, model, messages
                 ):
                     yield chunk
 
@@ -739,49 +737,44 @@ class AIRouter:
                 if not self.sambanova_keys:
                     raise ValueError("No SambaNova API keys configured")
                 async for chunk in self._stream_openai_compatible(
-                    self.sambanova_provider, self.sambanova_keys, prompt, model
+                    self.sambanova_provider, self.sambanova_keys, prompt, model, messages
                 ):
                     yield chunk
 
             elif provider == "huggingface":
                 if not self.hf_key:
                     raise ValueError("No HuggingFace API key configured")
-                async for chunk in self._stream_huggingface(prompt, model):
+                async for chunk in self._stream_huggingface(prompt, model, messages):
                     yield chunk
 
             elif provider == "local":
-                # Local Ollama provider - no API key needed
-                async for chunk in self._stream_ollama(prompt, model):
+                async for chunk in self._stream_ollama(prompt, model, messages):
                     yield chunk
 
             else:
                 raise ValueError(
                     f"Unknown provider: {provider}. "
-                    f"Available providers: groq, openrouter, together, mistral, cerebras, siliconflow, "
-                    f"google_ai_studio, cloudflare, alibaba_bailian, deepseek, xai, anthropic, cohere, ai21, "
-                    f"novita, sambanova, openai, huggingface, local"
+                    f"Available: groq, openrouter, together, mistral, cerebras, siliconflow, "
+                    f"google_ai_studio, cloudflare, alibaba_bailian, deepseek, xai, anthropic, "
+                    f"cohere, ai21, novita, sambanova, openai, huggingface, local"
                 )
         except ValueError:
-            # Re-raise validation errors
             raise
         except Exception as e:
             logger.error(f"Error streaming from {provider}: {e}", exc_info=e)
             raise RuntimeError(f"Failed to stream from {provider}: {str(e)}")
 
-    async def _stream_groq(self, prompt: str, model: str) -> AsyncIterator[str]:
+    async def _stream_groq(self, prompt: str, model: str, messages: Optional[List[Dict[str, str]]] = None) -> AsyncIterator[str]:
         """Stream response from Groq with key rotation and error handling."""
         if not self.groq_keys:
             raise RuntimeError("No Groq keys available")
 
         last_error = None
-        # Try each key
         for idx, key in enumerate(self.groq_keys):
             try:
                 logger.debug(f"Attempting Groq with key index {idx}/{len(self.groq_keys)}")
                 async for chunk in self.groq_provider.stream(
-                    prompt=prompt,
-                    model=model,
-                    api_key=key,
+                    prompt=prompt, model=model, api_key=key, messages=messages,
                 ):
                     yield chunk
                 return
@@ -794,20 +787,17 @@ class AIRouter:
 
         raise RuntimeError(f"All Groq keys exhausted. Last error: {last_error}")
 
-    async def _stream_openrouter(self, prompt: str, model: str) -> AsyncIterator[str]:
+    async def _stream_openrouter(self, prompt: str, model: str, messages: Optional[List[Dict[str, str]]] = None) -> AsyncIterator[str]:
         """Stream response from OpenRouter with key rotation and error handling."""
         if not self.openrouter_keys:
             raise RuntimeError("No OpenRouter keys available")
 
         last_error = None
-        # Try each key
         for idx, key in enumerate(self.openrouter_keys):
             try:
                 logger.debug(f"Attempting OpenRouter with key index {idx}/{len(self.openrouter_keys)}")
                 async for chunk in self.openrouter_provider.stream(
-                    prompt=prompt,
-                    model=model,
-                    api_key=key,
+                    prompt=prompt, model=model, api_key=key, messages=messages,
                 ):
                     yield chunk
                 return
@@ -856,11 +846,12 @@ class AIRouter:
         keys: list[str],
         prompt: str,
         model: str,
+        messages: Optional[List[Dict[str, str]]] = None,
     ) -> AsyncIterator[str]:
         last_error = None
         for idx, key in enumerate(keys):
             try:
-                async for chunk in provider.stream(prompt=prompt, model=model, api_key=key):
+                async for chunk in provider.stream(prompt=prompt, model=model, api_key=key, messages=messages):
                     yield chunk
                 return
             except Exception as e:
@@ -871,11 +862,11 @@ class AIRouter:
                 break
         raise RuntimeError(f"All {provider.name} keys exhausted. Last error: {last_error}")
 
-    async def _stream_google(self, prompt: str, model: str) -> AsyncIterator[str]:
+    async def _stream_google(self, prompt: str, model: str, messages: Optional[List[Dict[str, str]]] = None) -> AsyncIterator[str]:
         last_error = None
         for idx, key in enumerate(self.google_keys):
             try:
-                async for chunk in self.google_provider.stream(prompt=prompt, model=model, api_key=key):
+                async for chunk in self.google_provider.stream(prompt=prompt, model=model, api_key=key, messages=messages):
                     yield chunk
                 return
             except Exception as e:

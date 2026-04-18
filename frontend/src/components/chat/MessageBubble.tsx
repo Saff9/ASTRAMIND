@@ -127,14 +127,9 @@ export default function MessageBubble({ role, content, provider, model, timestam
       </div>
 
       <div style={{ flex: 1, minWidth: 0 }}>
-        {/* Header */}
+        {/* Header — just the ASTRAMIND label, no provider/model leak */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
           <span style={{ fontSize: 13, fontWeight: 600, color: "var(--brand-light)" }}>ASTRAMIND</span>
-          {provider && (
-            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
-              via {provider}{model ? ` · ${model}` : ""}
-            </span>
-          )}
         </div>
 
         {/* Loading */}

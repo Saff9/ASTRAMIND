@@ -65,6 +65,7 @@ export default function ChatPage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMessageTime = useRef<number>(0);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const selectedModel = MODEL_OPTIONS.find((m) => m.id === modelId) || MODEL_OPTIONS[0];
 
@@ -109,16 +110,26 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const stopResponse = useCallback(() => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    setIsLoading(false);
+    // Mark any loading message as stopped
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.loading ? { ...m, loading: false, content: m.content || "_Response stopped._" } : m
+      )
+    );
+  }, []);
+
   const handleSend = useCallback(async (text: string) => {
     if (!text.trim() || isLoading) return;
 
-    // Frontend Anti-Spam protection 
     const now = Date.now();
     if (now - lastMessageTime.current < 2000) {
       const errorMsg: Message = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: "🚨 **Abuse Protection Activity:** You are sending messages too fast. Please wait a moment before sending another message to prevent logic abuse.",
+        id: crypto.randomUUID(), role: "assistant",
+        content: "You are sending messages too fast. Please wait a moment.",
         timestamp: new Date()
       };
       setMessages((prev) => [...prev, errorMsg]);
@@ -133,68 +144,50 @@ export default function ChatPage() {
     setMessages((prev) => [...prev, userMsg, loadingMsg]);
     setIsLoading(true);
 
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://astramind-reer.onrender.com";
 
-      // Build headers — include JWT from NextAuth session when available
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      // NextAuth session token lives in session.user (cast to any to access token)
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
       const rawToken = (session as { accessToken?: string } | null)?.accessToken;
-      if (rawToken) {
-        headers["Authorization"] = `Bearer ${rawToken}`;
-      }
+      if (rawToken) headers["Authorization"] = `Bearer ${rawToken}`;
 
-      // Map frontend model id to backend tier
-      // selectedModel.tier is always one of: "fast" | "balanced" | "smart"
-      const backendModel: string = selectedModel.tier || "fast";
+      // Build conversation history from current messages (exclude the just-added loading msg)
+      const history = messages
+        .filter((m) => !m.loading && (m.role === "user" || m.role === "assistant") && m.content)
+        .slice(-20)  // last 20 messages for context
+        .map((m) => ({ role: m.role, content: m.content }));
 
       const response = await fetch(`${apiBase}/api/v1/chat`, {
         method: "POST",
         headers,
+        signal: controller.signal,
         body: JSON.stringify({
           prompt: text,
-          model: backendModel,
-          stream: false,       // Always request JSON response (non-streaming)
+          model: selectedModel.tier || "fast",
+          stream: false,
+          messages: history.length > 0 ? history : undefined,
         }),
       });
 
       if (response.status === 429) {
-        // Try to extract detail from body
-        let detail = "Rate limit exceeded. Please try again later.";
-        try {
-          const errData = await response.json();
-          if (errData?.detail) detail = typeof errData.detail === "string" ? errData.detail : JSON.stringify(errData.detail);
-        } catch { /* ignore */ }
+        let detail = "Daily limit reached. Please try again tomorrow.";
+        try { const d = await response.json(); if (d?.detail) detail = typeof d.detail === "string" ? d.detail : JSON.stringify(d.detail); } catch { /**/ }
         throw new Error(detail);
       }
-
       if (!response.ok) {
-        // Extract FastAPI error detail if present
-        let detail = `API returned ${response.status} ${response.statusText}`;
-        try {
-          const errData = await response.json();
-          if (errData?.detail) detail = typeof errData.detail === "string" ? errData.detail : JSON.stringify(errData.detail);
-          else if (errData?.error) detail = errData.error;
-        } catch { /* ignore */ }
+        let detail = `Request failed (${response.status})`;
+        try { const d = await response.json(); if (d?.detail) detail = typeof d.detail === "string" ? d.detail : JSON.stringify(d.detail); } catch { /**/ }
         throw new Error(detail);
       }
 
       const data = await response.json();
-      // Backend returns { response, provider, model, tier, request_id }
-      const content =
-        data.response ||
-        data.content ||
-        data.choices?.[0]?.message?.content ||
-        data.text ||
-        "No response generated.";
-      
+      const content = data.response || data.content || data.choices?.[0]?.message?.content || data.text || "No response generated.";
+
       const reply: Message = {
-        id: loadId,
-        role: "assistant",
-        content,
-        // Show the actual provider the backend routed to (not just the label)
+        id: loadId, role: "assistant", content,
         provider: data.provider || selectedModel.provider,
         model: data.model || selectedModel.model,
         timestamp: new Date(),
@@ -202,17 +195,19 @@ export default function ChatPage() {
       setMessages((prev) => prev.map((m) => (m.id === loadId ? reply : m)));
     } catch (err: unknown) {
       const error = err as Error;
+      // Aborted = user clicked stop, don't show error
+      if (error.name === "AbortError") return;
       const errorMsg: Message = {
-        id: loadId,
-        role: "assistant",
-        content: `🚨 **Error:** ${error.message || "Failed to fetch response."}`,
+        id: loadId, role: "assistant",
+        content: `**Error:** ${error.message || "Failed to fetch response."}`,
         timestamp: new Date()
       };
       setMessages((prev) => prev.map((m) => (m.id === loadId ? errorMsg : m)));
     } finally {
+      abortControllerRef.current = null;
       setIsLoading(false);
     }
-  }, [isLoading, selectedModel, session]);
+  }, [isLoading, selectedModel, session, messages]);
 
   const exportChat = (format: "json" | "doc" | "pdf") => {
     if (messages.length === 0) return;
@@ -531,15 +526,11 @@ export default function ChatPage() {
             </div>
           </div>
 
-          {/* Right actions */}
+          {/* Right actions — NO sign out here, that's in Settings */}
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            {!session ? (
+            {!session && (
               <button onClick={() => signIn()} style={{ padding: "6px 14px", borderRadius: 8, background: "var(--text-primary)", color: "var(--bg-primary)", fontSize: 13, fontWeight: 600, border: "none", cursor: "pointer" }}>
                 Sign In
-              </button>
-            ) : (
-              <button onClick={() => signOut()} style={{ padding: "6px 14px", borderRadius: 8, background: "transparent", border: "1px solid var(--border-default)", color: "var(--text-secondary)", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
-                Sign Out
               </button>
             )}
             {/* Export Menu */}
@@ -559,8 +550,8 @@ export default function ChatPage() {
           </div>
         </header>
 
-        {/* Message area */}
-        <div style={{ flex: 1, overflowY: "auto", position: "relative" }}>
+        {/* Message area — flex-1 with overflow-y:auto, no fixed height needed */}
+        <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", position: "relative", minHeight: 0 }}>
           {messages.length === 0 ? (
             // Empty state
             <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 24px", textAlign: "center" }}>
@@ -608,9 +599,27 @@ export default function ChatPage() {
         {/* Composer area */}
         <div className="mobile-p-sm" style={{ flexShrink: 0, padding: "12px 24px 16px", background: "var(--bg-primary)" }}>
           <div style={{ maxWidth: 760, margin: "0 auto" }}>
-            <ChatInput onSend={handleSend} isLoading={isLoading} model={selectedModel.label} />
+            {/* Stop button — shown while loading */}
+            {isLoading && (
+              <div style={{ textAlign: "center", marginBottom: 8 }}>
+                <button
+                  onClick={stopResponse}
+                  style={{
+                    padding: "6px 18px", borderRadius: 20, fontSize: 12, fontWeight: 600,
+                    background: "rgba(255,80,80,0.1)", border: "1px solid rgba(255,80,80,0.3)",
+                    color: "#ff5050", cursor: "pointer", transition: "all 0.2s ease",
+                  }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,80,80,0.2)"; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,80,80,0.1)"; }}
+                >
+                  ⏹ Stop generating
+                </button>
+              </div>
+            )}
+            {/* Pass onStop to ChatInput — model label hidden */}
+            <ChatInput onSend={handleSend} isLoading={isLoading} />
             <p style={{ textAlign: "center", fontSize: 11, color: "var(--text-muted)", marginTop: 8 }}>
-              ASTRAMIND can make mistakes. Verify important information.
+              AI can make mistakes. Verify important information.
             </p>
           </div>
         </div>
