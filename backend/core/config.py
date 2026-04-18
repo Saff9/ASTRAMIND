@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     )
 
     # ===== SECURITY =====
+    REQUIRE_AUTH: bool = Field(default=False, description="Strictly disable Guest Mode")
     JWT_SECRET: Optional[str] = Field(
         default=None,
         description="JWT signing secret (min 32 chars, base64 preferred)",
@@ -229,7 +230,12 @@ class Settings(BaseSettings):
     def _parse_csv(value: str, *, placeholder_prefixes: tuple[str, ...] = ()) -> list[str]:
         if not value:
             return []
-        keys = [k.strip() for k in value.split(",") if k.strip()]
+        
+        # Optionally decrypt using the global vault if the string is encrypted
+        from core.encryption import vault
+        keys_raw = vault.decrypt(value)
+        
+        keys = [k.strip() for k in keys_raw.split(",") if k.strip()]
         if not placeholder_prefixes:
             return keys
         return [k for k in keys if k and not any(k.startswith(p) for p in placeholder_prefixes)]

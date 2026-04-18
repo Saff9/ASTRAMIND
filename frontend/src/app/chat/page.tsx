@@ -157,7 +157,7 @@ export default function ChatPage() {
       // Build conversation history from current messages (exclude the just-added loading msg)
       const history = messages
         .filter((m) => !m.loading && (m.role === "user" || m.role === "assistant") && m.content)
-        .slice(-20)  // last 20 messages for context
+        .slice(-50)  // last 50 messages for context
         .map((m) => ({ role: m.role, content: m.content }));
 
       const response = await fetch(`${apiBase}/api/v1/chat`, {

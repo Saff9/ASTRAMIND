@@ -49,21 +49,29 @@ async def verify_jwt_comprehensive(request: Request) -> Dict[str, Any]:
 
     if token:
         try:
+            if not settings.JWT_SECRET:
+                raise RuntimeError("JWT_SECRET environment variable is explicitly required")
+                
             payload = jwt.decode(
                 token,
-                settings.JWT_SECRET or "fallback",
+                settings.JWT_SECRET,
                 algorithms=["HS256"],
                 options={"verify_exp": True},
             )
             user_id = payload.get("sub") or payload.get("id") or "guest"
             email   = payload.get("email") or f"{user_id}@astramind.local"
-        except Exception:
-            logger.debug("JWT decode failed, using guest mode")
+        except Exception as e:
+            logger.debug(f"JWT decode failed: {e}. Falling back if guest mode allowed.")
+            if getattr(settings, "REQUIRE_AUTH", False):
+                raise HTTPException(status_code=401, detail="Authentication strictly required. Invalid token.")
             client_ip = getattr(request.client, "host", "unknown")
             user_id = f"guest_{client_ip.replace('.', '_')}"
             email   = f"{user_id}@astramind.local"
     else:
-        # No token — guest mode
+        # No token — check if Auth is strictly required
+        if getattr(settings, "REQUIRE_AUTH", False):
+            raise HTTPException(status_code=401, detail="Authentication strictly required. Token missing.")
+        # Otherwise, allow guest mode
         client_ip = getattr(request.client, "host", "unknown")
         user_id = f"guest_{client_ip.replace('.', '_')}"
         email   = f"{user_id}@astramind.local"

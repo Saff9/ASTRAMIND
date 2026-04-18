@@ -13,6 +13,7 @@ from typing import AsyncIterator, List, Optional, Dict, Any
 from dataclasses import dataclass, field
 from enum import Enum
 import httpx
+import bleach
 from core.system_prompt import get_system_prompt
 from core.config import settings
 from app.providers.groq import GroqProvider
@@ -357,7 +358,10 @@ class AIRouter:
                 
                 # Stream from provider - pass the RESOLVED model name (NOT the alias)
                 async for chunk in self._stream_from_provider(provider, prompt, resolved_model, messages):
-                    yield chunk
+                    # Sanitize output (SEC-005 mitigation) against XSS injections
+                    allowed_tags = ['p', 'br', 'strong', 'em', 'code', 'pre', 'h1', 'h2', 'h3', 'ul', 'ol', 'li', 'a', 'blockquote']
+                    safe_chunk = bleach.clean(chunk, tags=allowed_tags, strip=True) if chunk else chunk
+                    yield safe_chunk
                     stats.circuit_breaker.record_success()
                 
                 # Success!

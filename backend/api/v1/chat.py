@@ -82,25 +82,24 @@ def _get_client_ip(request: Request) -> str:
 
 async def atomic_increment_quota(user_id: int, db: AsyncSession) -> bool:
     """
-    Atomically increment user quota usage in a single DB round-trip.
-
-    Returns True if the quota was incremented successfully (user had remaining quota).
-    Returns False if the user has already exhausted their quota.
-
-    This prevents the race condition (C-1) where multiple concurrent requests
-    all read the same stale daily_used value and all pass the quota check.
+    Atomically increment user quota usage safely using SQLAlchemy ORM.
     """
-    from sqlalchemy import text
-    result = await db.execute(text("""
-        UPDATE users
-        SET daily_used = daily_used + 1
-        WHERE id = :user_id
-          AND daily_used < daily_quota
-        RETURNING daily_used
-    """), {"user_id": user_id})
+    if not isinstance(user_id, int) or user_id <= 0:
+        return False
+        
+    from sqlalchemy import update
+    from app.db.models import User
+    
+    result = await db.execute(
+        update(User)
+        .where(User.id == user_id)
+        .where(User.daily_used < User.daily_quota)
+        .values(daily_used=User.daily_used + 1)
+        .returning(User.daily_used)
+    )
     await db.commit()
     row = result.fetchone()
-    return row is not None  # None means quota was already exhausted
+    return row is not None
 
 # ===== DEPENDENCIES =====
 
@@ -336,13 +335,26 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
             f"provider={provider}, model={payload.model}, prompt_len={len(payload.prompt)} "
             f"[request_id: {request_id}]"
         )
+        
+        # ── WEB SEARCH INTEGRATION ────────────────────────────────────
+        if getattr(settings, "ENABLE_WEB_SEARCH", False):
+            search_keywords = ["who", "what", "where", "when", "why", "how", "latest", "news", "current", "today", "now", "price", "stock", "weather"]
+            if any(kw in safe_prompt.lower() for kw in search_keywords) and len(safe_prompt) > 5:
+                try:
+                    from services.web_search import fetch_web_search
+                    logger.info(f"Triggering DuckDuckGo real-time search for: {safe_prompt}")
+                    search_context = await fetch_web_search(safe_prompt)
+                    if search_context:
+                        safe_prompt = f"{safe_prompt}\n\n{search_context}"
+                except Exception as e:
+                    logger.error(f"Web search integration failed: {e}")
 
         # ── NON-STREAMING PATH (stream=false) ─────────────────────────────────
         if not payload.stream:
             # Build conversation history for the provider
             history = [
                 {"role": m.role, "content": m.content}
-                for m in (payload.messages or [])[-20:]
+                for m in (payload.messages or [])[-50:]
                 if m.role in ("user", "assistant") and m.content
             ]
 
@@ -398,7 +410,7 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
         # but passing it here for consistency if frontend sends it.
         history_sse = [
             {"role": m.role, "content": m.content}
-            for m in (payload.messages or [])[-20:]
+            for m in (payload.messages or [])[-50:]
             if m.role in ("user", "assistant") and m.content
         ]
         
