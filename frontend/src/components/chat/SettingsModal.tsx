@@ -9,6 +9,7 @@ import {
 import { useSettings, FONT_CSS_VAR } from "@/lib/SettingsContext";
 import type { Theme, FontId } from "@/lib/SettingsContext";
 import { useSession, signOut } from "next-auth/react";
+import { usePWA } from "@/lib/PWAContext";
 
 interface SettingsModalProps {
   open: boolean;
@@ -65,6 +66,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
   const { data: session } = useSession();
   const user = session?.user;
   const isSignedIn = !!user;
+  const { isInstallable, triggerInstall } = usePWA();
 
   // Local-only UI state (not persisted globally)
   const [section, setSection]           = useState("appearance");
@@ -263,6 +265,24 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
         </Row>
         <Row label="Show message timestamps"><Toggle value={true} onChange={() => {}} /></Row>
         <Row label="Auto-scroll to latest"><Toggle value={true} onChange={() => {}} /></Row>
+        
+        {isInstallable && (
+          <Row label="Install ASTRAMIND App" sub="Add to your device for offline & full-screen access">
+            <button
+              onClick={triggerInstall}
+              style={{
+                display: "flex", alignItems: "center", gap: 8,
+                padding: "8px 16px", borderRadius: 10,
+                background: "var(--brand-glow)", border: "none", color: "var(--brand-light)",
+                fontSize: 13, fontWeight: 700, cursor: "pointer",
+                boxShadow: "0 0 10px rgba(232,160,48,0.2)"
+              }}
+            >
+              <Download style={{ width: 15, height: 15 }} />
+              Install
+            </button>
+          </Row>
+        )}
       </div>
     );
 

@@ -6,6 +6,7 @@ import {
 import Script from "next/script";
 import "./globals.css";
 import AppProviders from "@/components/AppProviders";
+import InstallPrompt from "@/components/common/InstallPrompt";
 
 const syne = Syne({ variable: "--font-syne", subsets: ["latin"], weight: ["400","500","600","700","800"], display: "optional", preload: false });
 const dmSans = DM_Sans({ variable: "--font-dm", subsets: ["latin"], weight: ["300","400","500","600"], display: "optional", preload: false });
@@ -47,6 +48,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           </Script>
           <AppProviders>
             {children}
+            <InstallPrompt />
           </AppProviders>
         </body>
       </html>
