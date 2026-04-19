@@ -9,6 +9,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { neonAuth } from "@/lib/neon-auth";
 
+export const dynamic = "force-dynamic";
+
+
 let sql: ((strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>) | null = null;
 
 async function getSQL() {

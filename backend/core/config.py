@@ -339,39 +339,29 @@ class Settings(BaseSettings):
 
     @property
     def effective_database_url(self) -> str:
-        """Get the effective database URL, falling back to SQLite for local development.
-
+        """Get the effective database URL for Postgres.
         asyncpg does NOT support ANY query parameters in the connection URL
         (sslmode, channel_binding, etc.). All params must be stripped and SSL
         configured via connect_args={"ssl": True} in the engine instead.
-
-        Uses urllib.parse for correct URL component parsing — not regex.
         """
-        if self.DATABASE_URL:
-            from urllib.parse import urlparse, urlunparse
+        if not self.DATABASE_URL:
+            raise ValueError("DATABASE_URL must be provided.")
+            
+        from urllib.parse import urlparse, urlunparse
+        url = self.DATABASE_URL
 
-            url = self.DATABASE_URL
+        # Parse URL and strip ALL query params
+        parsed = urlparse(url)
+        clean = parsed._replace(query="")
+        url = urlunparse(clean)
 
-            # Parse URL and strip ALL query params
-            # asyncpg rejects sslmode, channel_binding, and any other params
-            parsed = urlparse(url)
-            clean = parsed._replace(query="")
-            url = urlunparse(clean)
-
-            # Normalize scheme to async drivers
-            if url.startswith("postgresql://"):
-                return url.replace("postgresql://", "postgresql+asyncpg://", 1)
-            if url.startswith("postgres://"):
-                return url.replace("postgres://", "postgresql+asyncpg://", 1)
-            if url.startswith("libsql://"):
-                return url.replace("libsql://", "sqlite+libsql://", 1)
-            return url
-        else:
-            # Fallback to local SQLite database for development/demo mode
-            import os
-            db_dir = os.path.dirname(os.path.dirname(__file__))
-            db_path = os.path.join(db_dir, "ASTRAMINDai_local.db")
-            return f"sqlite+aiosqlite:///{db_path.replace(os.sep, '/')}"
+        # Normalize scheme to async drivers
+        if url.startswith("postgresql://"):
+            return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        if url.startswith("postgres://"):
+            return url.replace("postgres://", "postgresql+asyncpg://", 1)
+            
+        return url
 
 
 
@@ -402,10 +392,10 @@ def validate_startup():
         errors.append("ALLOWED_ORIGINS cannot be empty in production")
 
     # Database validation for production
-    if settings.is_production() and not settings.DATABASE_URL:
-        errors.append("DATABASE_URL not configured in production - SQLite fallback not suitable")
-    elif settings.is_production() and settings.DATABASE_URL and settings.DATABASE_URL.startswith("sqlite"):
-        warnings.append("Using SQLite in production - not recommended for high traffic")
+    if not settings.DATABASE_URL:
+        errors.append("DATABASE_URL not configured - requires a valid PostgreSQL connection string")
+    elif settings.DATABASE_URL.startswith("sqlite") or settings.DATABASE_URL.startswith("libsql"):
+        errors.append("SQLite and Turso are no longer supported. Please use Neon / PostgreSQL.")
 
     # AI providers validation - NOW A WARNING, NOT AN ERROR
     # The app should start even without API keys configured

@@ -24,20 +24,17 @@ def get_engine_kwargs() -> dict:
     Generate engine configuration based on environment.
     CRITICAL: asyncpg does NOT support sslmode in URL — use connect_args instead.
     """
-    is_pg = bool(settings.DATABASE_URL)
     kwargs: dict = {
         "echo": settings.is_development(),
         "pool_pre_ping": True,
+        "pool_size": settings.DATABASE_POOL_SIZE,
+        "max_overflow": settings.DATABASE_POOL_MAX_OVERFLOW,
+        "pool_recycle": settings.DATABASE_POOL_RECYCLE_SECONDS,
     }
 
-    # Pool settings only valid for PostgreSQL (not SQLite/aiosqlite)
-    if is_pg:
-        kwargs["pool_size"] = settings.DATABASE_POOL_SIZE
-        kwargs["max_overflow"] = settings.DATABASE_POOL_MAX_OVERFLOW
-        kwargs["pool_recycle"] = settings.DATABASE_POOL_RECYCLE_SECONDS
-        # SSL must be passed via connect_args for asyncpg — never in URL
-        if settings.is_production():
-            kwargs["connect_args"] = {"ssl": True}
+    # SSL must be passed via connect_args for asyncpg — never in URL
+    if settings.is_production():
+        kwargs["connect_args"] = {"ssl": True}
 
     return kwargs
 
@@ -49,8 +46,7 @@ try:
         settings.effective_database_url,
         **get_engine_kwargs(),
     )
-    db_type = "PostgreSQL" if settings.DATABASE_URL else "SQLite"
-    logger.info(f"Database engine created successfully ({db_type})")
+    logger.info("Database engine created successfully (PostgreSQL)")
 except Exception as e:
     logger.warning(f"⚠ Database engine creation failed: {e} — DB features disabled")
 
