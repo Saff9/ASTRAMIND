@@ -54,7 +54,7 @@ const EMPTY_SUGGESTIONS = [
 ];
 
 export default function ChatPage() {
-  const [session, setSession] = useState<{ user?: { email?: string; name?: string; image?: string }; accessToken?: string } | null>(undefined as any);
+  const [session, setSession] = useState<{ user?: { email?: string; name?: string; image?: string }; accessToken?: string } | null | undefined>(undefined);
   const [messages, setMessages]   = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [modelId, setModelId]     = useState("gpt-4o");
@@ -228,7 +228,7 @@ export default function ChatPage() {
                   m.id === loadId ? { ...m, content: streamedContent } : m
                 ));
               }
-            } catch (e) {
+            } catch {
               // Ignore partial JSON or metadata lines
             }
           }

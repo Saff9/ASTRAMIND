@@ -94,7 +94,7 @@ const markdownComponents = {
   h3({ children }: any) { return <h3 style={{ fontSize: "1.05rem", fontWeight: 600, margin: "0.9rem 0 0.3rem" }}>{children}</h3>; },
 };
 
-export default function MessageBubble({ role, content, provider, model, timestamp, loading }: MessageBubbleProps) {
+export default function MessageBubble({ role, content, timestamp, loading }: MessageBubbleProps) {
   const isUser = role === "user";
 
   if (isUser) {

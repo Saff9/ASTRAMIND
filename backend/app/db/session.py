@@ -6,7 +6,7 @@ Fixed for Supabase compatibility - no server_settings parameter.
 
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import (
     create_async_engine,
     AsyncSession,
@@ -170,10 +170,10 @@ async def initialize_local_database():
                     email="admin@localhost",
                     daily_quota=10000,  # High quota for development
                     daily_used=0,
-                    last_reset=datetime.utcnow(),
+                    last_reset=datetime.now(timezone.utc),
                     is_admin=True,
-                    created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow(),
+                    created_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc),
                 )
                 session.add(admin_user)
                 await session.commit()

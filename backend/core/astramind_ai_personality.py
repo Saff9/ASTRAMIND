@@ -8,7 +8,7 @@ Supports loading configuration from PERSONALITY_SKILLS.md or YAML files
 import random
 import re
 from typing import Dict, List, Optional, Tuple, Any
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 import json
 import asyncio
 from dataclasses import dataclass, field
@@ -131,7 +131,7 @@ class AstraMindPersonalityEngine:
             # Get or create conversation context
             context = self.conversation_contexts.get(conversation_id, ConversationContext())
             context.message_count += 1
-            context.last_interaction = datetime.utcnow()
+            context.last_interaction = datetime.now(timezone.utc)
 
             # Analyze user message for context
             user_analysis = self._analyze_user_message(user_message)

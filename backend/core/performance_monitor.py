@@ -7,7 +7,7 @@ Ensures ASTRAMIND delivers lightning-fast responses with intelligent caching.
 import time
 import asyncio
 from typing import Dict, List, Optional, Any
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from dataclasses import dataclass, field
 from collections import defaultdict, deque
 import logging
@@ -223,7 +223,7 @@ class PerformanceMonitor:
 
     def get_performance_stats(self) -> Dict[str, Any]:
         """Get comprehensive performance statistics."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         last_hour = now - timedelta(hours=1)
 
         # Analyze recent operations

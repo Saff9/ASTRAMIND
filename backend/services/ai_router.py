@@ -492,50 +492,6 @@ class AIRouter:
             # Otherwise return None to trigger error
             return None, None
     
-    def _build_fallback_chain(self, model: str, preferred: Optional[str] = None) -> List[str]:
-        """Build intelligent fallback chain based on model tier and provider health."""
-        # Default fallback chains by model tier
-        fast_chain = ["groq", "cerebras", "together", "siliconflow", "ollama", "openrouter"]
-        balanced_chain = ["groq", "mistral", "together", "openrouter", "deepseek", "ollama"]
-        smart_chain = ["anthropic", "openai", "google_ai_studio", "groq", "openrouter"]
-        
-        # Select base chain
-        model_lower = model.lower()
-        if "fast" in model_lower or "llama-3" in model_lower:
-            base_chain = fast_chain
-        elif "smart" in model_lower or "claude" in model_lower:
-            base_chain = smart_chain
-        else:
-            base_chain = balanced_chain
-        
-        # Add all remaining providers as ultimate fallback
-        all_providers = [
-            "groq", "openrouter", "together", "mistral", "cerebras", 
-            "siliconflow", "openai", "google_ai_studio", "cloudflare",
-            "alibaba_bailian", "deepseek", "xai", "anthropic", "cohere",
-            "ai21", "novita", "sambanova", "huggingface", "local"
-        ]
-        
-        # Build final chain: preferred -> healthy providers -> all others
-        final_chain = []
-        
-        # Add preferred provider first if specified
-        if preferred and preferred in all_providers:
-            final_chain.append(preferred)
-        
-        # Add healthy providers from base chain
-        for provider in base_chain:
-            if provider not in final_chain:
-                stats = self._get_provider_stats(provider)
-                if stats.is_healthy or stats.circuit_breaker.state == CircuitState.HALF_OPEN:
-                    final_chain.append(provider)
-        
-        # Add remaining providers as last resort
-        for provider in all_providers:
-            if provider not in final_chain:
-                final_chain.append(provider)
-        
-        return final_chain
     
     async def _stream_from_provider(
         self,

@@ -46,9 +46,8 @@ const PAGE_FONT = "var(--font-dm, 'DM Sans'), system-ui, sans-serif";
 const DISPLAY_FONT = "var(--font-syne, 'Syne'), system-ui, sans-serif";
 
 export default function HomePage() {
-  const [session, setSession] = useState<{ user?: { email?: string } } | null>(undefined as any);
+  const [session, setSession] = useState<{ user?: { email?: string } } | null | undefined>(undefined);
   const isSignedIn = !!session?.user;
-  const status = session === undefined ? "loading" : session === null ? "unauthenticated" : "authenticated";
   const [mounted, setMounted] = useState(false);
   const [promptIdx, setPromptIdx] = useState(0);
   const [displayText, setDisplayText] = useState("");

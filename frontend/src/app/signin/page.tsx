@@ -29,7 +29,6 @@ export default function SignInPage() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
-  const [hasGoogle, setHasGoogle] = useState(false);
 
   // Google state
   useEffect(() => {
@@ -60,8 +59,9 @@ export default function SignInPage() {
         provider: "google", 
         callbackURL: "/chat" 
       });
-    } catch (err: any) {
-      setError(err.message || "Google sign-in failed.");
+    } catch (err: unknown) {
+      const error = err as Error;
+      setError(error.message || "Google sign-in failed.");
       setGoogleLoading(false);
     }
   };

@@ -379,7 +379,7 @@ async def health_check():
                 "status": "unknown",
                 "error": str(e),
                 "version": APP_VERSION,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             },
         )
 
@@ -421,7 +421,7 @@ async def ready_check():
                 "database": "connected",
                 "ai_providers": "configured",
                 "environment": settings.ENV,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
 
         return JSONResponse(

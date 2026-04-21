@@ -21,7 +21,6 @@ export default function ChatInput({ onSend, isLoading = false, model }: ChatInpu
     if (!ta) return;
     ta.style.height = "24px";
     ta.style.height = `${Math.min(ta.scrollHeight, 160)}px`;
-    if (input.length < 4000) setErrorMsg(null);
   }, [input]);
 
   const handleSend = () => {
@@ -68,7 +67,10 @@ export default function ChatInput({ onSend, isLoading = false, model }: ChatInpu
         <textarea
           ref={textareaRef}
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(e) => {
+            setInput(e.target.value);
+            if (e.target.value.length < 4000) setErrorMsg(null);
+          }}
           onKeyDown={handleKey}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}

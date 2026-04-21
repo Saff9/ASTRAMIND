@@ -6,7 +6,7 @@ Runs every 60 seconds to check provider availability.
 
 import asyncio
 from contextlib import suppress
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import async_session_maker
@@ -125,13 +125,13 @@ async def check_providers_loop(stop_event: asyncio.Event):
                                 provider=name,
                                 status=status,
                                 uptime=100.0 if status == "up" else 0.0,
-                                last_checked=datetime.utcnow(),
+                                last_checked=datetime.now(timezone.utc),
                             )
                             logger.info(f"Created status record for {name}")
                         else:
                             # Update existing record
                             record.status = status
-                            record.last_checked = datetime.utcnow()
+                            record.last_checked = datetime.now(timezone.utc)
 
                             # Update uptime percentage
                             if status == "up":

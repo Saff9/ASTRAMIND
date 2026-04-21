@@ -1,7 +1,7 @@
 # backend/app/api/v1/health.py
 
 from fastapi import APIRouter
-from datetime import datetime
+from datetime import datetime, timezone
 
 router = APIRouter(tags=["health"])
 
@@ -16,5 +16,5 @@ async def health():
     return {
         "status": "ok",            # ok | degraded | down
         "ai": "operational",
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }

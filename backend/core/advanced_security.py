@@ -12,7 +12,7 @@ import json
 import re
 import time
 from collections import defaultdict, deque
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Optional, Set, Tuple, Any
 import logging
 from dataclasses import dataclass, field
@@ -78,7 +78,7 @@ class HierarchicalEncryption:
         payload = {
             'version': key_version,
             'data': base64.urlsafe_b64encode(encrypted).decode(),
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }
 
         return base64.urlsafe_b64encode(json.dumps(payload).encode()).decode()
@@ -182,7 +182,7 @@ class AIPoweredThreatDetector:
         """
 
         threats = []
-        current_time = datetime.utcnow()
+        current_time = datetime.now(timezone.utc)
 
         # 1. Behavioral Analysis
         if user_id:
@@ -289,7 +289,7 @@ class AIPoweredThreatDetector:
                     confidence=0.95,
                     indicators=[f"matched_pattern: {pattern}"],
                     severity="high",
-                    timestamp=datetime.utcnow(),
+                    timestamp=datetime.now(timezone.utc),
                     metadata={
                         "pattern": pattern,
                         "source_ip": source_ip,
@@ -314,7 +314,7 @@ class AIPoweredThreatDetector:
                     confidence=0.75,
                     indicators=[f"suspicious_agent: {agent}"],
                     severity="low",
-                    timestamp=datetime.utcnow(),
+                    timestamp=datetime.now(timezone.utc),
                     metadata={"user_agent": user_agent, "source_ip": source_ip}
                 ))
 
@@ -381,7 +381,7 @@ class AIPoweredThreatDetector:
                     confidence=0.8,
                     indicators=["excessive_sessionless_requests"],
                     severity="medium",
-                    timestamp=datetime.utcnow(),
+                    timestamp=datetime.now(timezone.utc),
                     metadata={"source_ip": source_ip, "sessionless_count": self.global_anomalies[session_key]}
                 ))
 
@@ -394,7 +394,7 @@ class AIPoweredThreatDetector:
                 confidence=0.7,
                 indicators=[f"unusually_large_payload: {payload_size} bytes"],
                 severity="low",
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(timezone.utc),
                 metadata={"payload_size": payload_size, "source_ip": source_ip}
             ))
 
@@ -466,7 +466,7 @@ class ComplianceEngine:
             self.violation_log.append({
                 'framework': framework,
                 'violation': violation,
-                'timestamp': datetime.utcnow().isoformat(),
+                'timestamp': datetime.now(timezone.utc).isoformat(),
                 'severity': violation.get('severity', 'medium')
             })
 
@@ -474,7 +474,7 @@ class ComplianceEngine:
             'framework': framework,
             'score': score,
             'results': results,
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }
 
     async def _check_gdpr_compliance(self) -> Dict[str, Any]:
@@ -585,7 +585,7 @@ class SecurityIntelligence:
             'vulnerability_assessment': await self._assess_vulnerabilities(),
             'risk_profile': await self._calculate_risk_profile(),
             'recommendations': await self._generate_security_recommendations(),
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }
 
     async def _analyze_threat_landscape(self) -> Dict[str, Any]:
@@ -604,7 +604,7 @@ class SecurityIntelligence:
             'high_vulnerabilities': 0,
             'medium_vulnerabilities': 0,
             'low_vulnerabilities': 0,
-            'last_assessment': datetime.utcnow().isoformat()
+            'last_assessment': datetime.now(timezone.utc).isoformat()
         }
 
     async def _calculate_risk_profile(self) -> Dict[str, Any]:
@@ -783,7 +783,7 @@ class AdvancedSecurityOrchestrator:
             'threats': [t.__dict__ for t in threats],
             'risk_assessment': risk_assessment,
             'response_actions': response_actions,
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(timezone.utc).isoformat(),
             'processed_by': 'AdvancedSecurityOrchestrator_v1.1.2'
         }
 

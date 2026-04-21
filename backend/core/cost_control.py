@@ -7,7 +7,7 @@ import time
 import asyncio
 from typing import Dict, Optional, Tuple, List
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 import logging
 
 logger = logging.getLogger(__name__)
@@ -178,7 +178,7 @@ class CostController:
             'cost_cents': cost_cents,
             'response_time_ms': response_time_ms,
             'success': success,
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }
 
         logger.info(f"Usage tracked: {usage_data}")

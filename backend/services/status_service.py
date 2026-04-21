@@ -1,6 +1,6 @@
 # backend/app/services/status_service.py
 
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from app.models.provider_status import ProviderStatus
 
@@ -11,7 +11,7 @@ def update_status(db: Session, provider: str, status: str):
         record = ProviderStatus(provider=provider)
 
     record.status = status
-    record.last_checked = datetime.utcnow()
+    record.last_checked = datetime.now(timezone.utc)
 
     if status == "down":
         record.uptime = max(record.uptime - 0.1, 0)

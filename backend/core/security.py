@@ -7,7 +7,7 @@ import re
 import secrets
 import hashlib
 import bcrypt
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Any, List
 from functools import wraps
 import jwt
@@ -96,7 +96,7 @@ class SecurityManager:
     def log_suspicious_activity(self, ip: str, activity: str, details: Dict = None):
         """Log suspicious activity."""
         self.suspicious_activity[ip].append({
-            "timestamp": datetime.utcnow(),
+            "timestamp": datetime.now(timezone.utc),
             "activity": activity,
             "details": details or {}
         })
@@ -104,7 +104,7 @@ class SecurityManager:
         # Auto-block after 5 suspicious activities in 1 hour
         recent_activities = [
             act for act in self.suspicious_activity[ip]
-            if datetime.utcnow() - act["timestamp"] < timedelta(hours=1)
+            if datetime.now(timezone.utc) - act["timestamp"] < timedelta(hours=1)
         ]
         
         if len(recent_activities) >= 5:
@@ -258,8 +258,8 @@ class AuthenticationManager:
             "user_id": user_data["user_id"],
             "email": user_data["email"],
             "is_admin": user_data.get("is_admin", False),
-            "iat": datetime.utcnow(),
-            "exp": datetime.utcnow() + timedelta(hours=expires_hours),
+            "iat": datetime.now(timezone.utc),
+            "exp": datetime.now(timezone.utc) + timedelta(hours=expires_hours),
             "type": "access"
         }
         
@@ -270,8 +270,8 @@ class AuthenticationManager:
         payload = {
             "user_id": user_data["user_id"],
             "email": user_data["email"],
-            "iat": datetime.utcnow(),
-            "exp": datetime.utcnow() + timedelta(days=SecurityConfig.JWT_REFRESH_EXPIRATION_DAYS),
+            "iat": datetime.now(timezone.utc),
+            "exp": datetime.now(timezone.utc) + timedelta(days=SecurityConfig.JWT_REFRESH_EXPIRATION_DAYS),
             "type": "refresh",
             "jti": secrets.token_urlsafe(32)  # Unique token ID
         }
@@ -325,7 +325,7 @@ def create_access_token(*, subject: str, email: str, expires_hours: int | None =
     if expires_hours is None:
         expires_hours = settings.JWT_EXPIRATION_HOURS
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     payload = {
         "sub": str(subject),
         "email": email,

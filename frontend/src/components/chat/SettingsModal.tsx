@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   X, Palette, Monitor, Cpu, Bell, Shield, User,
   Keyboard, Check, ChevronRight, Moon, Sun, Zap,
@@ -64,18 +64,18 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
   // Real context — reads and writes persist to localStorage + DOM
   const { theme, font, setTheme, setFont } = useSettings();
   // Local session state
-  const [session, setSession] = useState<{ user?: { email?: string; name?: string } } | null>(undefined as any);
+  const [session, setSession] = useState<{ user?: { email?: string; name?: string } } | null | undefined>(undefined);
   const user = session?.user;
   const isSignedIn = !!user;
 
   // Fetch session on mount
-  useState(() => {
+  useEffect(() => {
     async function fetchSession() {
       const { data } = await neonAuthClient.getSession();
       setSession(data ? { user: { email: data.user.email, name: data.user.name || undefined } } : null);
     }
     fetchSession();
-  });
+  }, []);
   const { isInstallable, triggerInstall } = usePWA();
 
   // Local-only UI state (not persisted globally)
@@ -433,7 +433,6 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
       return (
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 16, padding: 20, background: "var(--surface-2)", borderRadius: 16, border: "1px solid var(--border-default)", marginBottom: 20 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <div style={{ width: 52, height: 52, borderRadius: "50%", flexShrink: 0, border: "2px solid var(--border-default)", background: "var(--brand)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 700, color: "var(--bg-primary)" }}>
               {user.name?.[0]?.toUpperCase() || "A"}
             </div>
