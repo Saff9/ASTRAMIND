@@ -1,293 +1,102 @@
-# 🚀 AstraMind Production Deployment Guide
+# 🚀 ASTRAMIND - Production Deployment Guide (v1.1.5)
 
-**Deploy AstraMind backend (Python/FastAPI) on Render and frontend (Next.js) on Render/Vercel**
-
----
-
-## 📋 Prerequisites
-
-- GitHub account with repository access
-- Render account (render.com)
-- Vercel account (vercel.com) - optional, alternative to Render for frontend
-- Supabase account for database
-- API keys for AI providers (Groq, OpenRouter, etc.)
+This guide provides the official instructions for deploying the ASTRAMIND platform in a production environment.
 
 ---
 
-## 🏗️ Backend Deployment (Render)
+## 📋 System Architecture
 
-### 1. Prepare Repository
-
-Ensure your backend code is in the `backend/` directory with:
-- `main.py` (FastAPI entry point)
-- `requirements.txt` (Python dependencies)
-- `runtime.txt` (Python version specification)
-
-### 2. Create Render Web Service
-
-1. Go to [render.com](https://render.com) and sign in
-2. Click **"New"** → **"Web Service"**
-3. Connect your GitHub repository
-4. Configure service:
-   ```
-   Name: ASTRAMINDai-backend
-   Runtime: Python 3
-   Build Command: pip install -r requirements.txt
-   Start Command: python main.py
-   ```
-
-### 3. Environment Variables
-
-In Render dashboard, add these environment variables:
-
-#### Core Configuration
-```
-ENV=production
-LOG_LEVEL=INFO
-PORT=10000
-```
-
-#### Database
-```
-DATABASE_URL=postgresql://user:pass@host:port/dbname
-```
-
-#### Security
-```
-JWT_SECRET=your-very-long-secure-random-string-min-32-chars
-JWT_ALGORITHM=HS256
-JWT_EXPIRATION_HOURS=24
-```
-
-#### AI Provider API Keys
-```
-GROQ_API_KEYS=key1,key2,key3
-OPENROUTER_API_KEYS=key1,key2
-HUGGINGFACE_API_KEY=hf_xxxxxxxxx
-```
-
-#### Admin Configuration
-```
-ADMIN_EMAILS=admin@yourdomain.com
-```
-
-#### CORS (if needed)
-```
-ALLOWED_ORIGINS=https://your-frontend-domain.com,https://www.your-frontend-domain.com
-```
-
-### 4. Deploy & Verify
-
-1. Click **"Create Web Service"**
-2. Wait for deployment (5-10 minutes)
-3. Check **"Logs"** tab for any errors
-4. Test health endpoint: `curl https://your-service.onrender.com/health`
-5. Test readiness: `curl https://your-service.onrender.com/ready`
-
-**Expected Response:**
-```json
-{
-  "status": "healthy",
-  "version": "1.0.0",
-  "service": "AstraMind Backend"
-}
-```
+*   **Backend**: Python 3.13 / FastAPI (Web Service)
+*   **Frontend**: Next.js 14 (Static Site or Managed Next.js)
+*   **Database**: PostgreSQL (Neon, Supabase, or AWS RDS)
+*   **AI Orchestration**: Multi-provider AIRouter with Circuit Breakers
+*   **Security**: Zero-Trust architecture with IP-based rate limiting and JWT
 
 ---
 
-## 🎨 Frontend Deployment (Render)
+## 🏗️ Backend Deployment (Render Web Service)
 
-### 1. Prepare Repository
+### 1. Service Configuration
 
-Ensure your frontend code is in the `frontend/` directory with:
-- `package.json` with build scripts
-- `next.config.js` configured
-- Environment variables properly set
+Connect your repository to [Render](https://render.com) and create a new **Web Service**.
 
-### 2. Create Render Static Site
-
-1. In Render dashboard, click **"New"** → **"Static Site"**
-2. Connect your GitHub repository
-3. Configure site:
-   ```
-   Name: ASTRAMINDai-frontend
-   Build Command: cd frontend && npm install && npm run build
-   Publish Directory: frontend/out
-   ```
-
-### 3. Environment Variables
-
-Add these environment variables in Render:
-
-```
-NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-
-# Optional: Override API keys globally
-OPENAI_API_KEY=sk-xxxxx
-GROQ_API_KEY=gsk_xxxxx
-OPENROUTER_API_KEY=sk-or-xxxxx
-```
-
-### 4. Deploy & Verify
-
-1. Click **"Create Static Site"**
-2. Wait for deployment (3-5 minutes)
-3. Visit the generated URL
-4. Test login and basic functionality
-
----
-
-## ⚡ Frontend Deployment (Vercel) - Alternative
-
-### 1. Import Repository
-
-1. Go to [vercel.com](https://vercel.com) and sign in
-2. Click **"Import Project"**
-3. Connect your GitHub repository
-4. Configure project:
-   ```
-   Framework Preset: Next.js
-   Root Directory: frontend
-   Build Command: npm run build
-   Output Directory: .next
-   ```
+*   **Name**: `astramind-backend`
+*   **Runtime**: Python 3
+*   **Root Directory**: `backend`
+*   **Build Command**: `pip install -r requirements.txt`
+*   **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+*   **Plan**: Pro or higher (recommended for 2GB+ RAM)
 
 ### 2. Environment Variables
 
-In Vercel dashboard, add environment variables:
+Set the following variables in the Render Dashboard:
 
-```
-NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+| Key | Description |
+| :--- | :--- |
+| `ENV` | `production` |
+| `LOG_LEVEL` | `INFO` |
+| `DATABASE_URL` | PostgreSQL connection string (`postgresql+asyncpg://...`) |
+| `JWT_SECRET` | Strong secret key (min 32 chars) |
+| `ALLOWED_ORIGINS` | Comma-separated frontend URLs (e.g., `https://astramind.vercel.app`) |
+| `GROQ_API_KEYS` | Comma-separated API keys for Groq |
+| `OPENROUTER_API_KEYS` | Comma-separated API keys for OpenRouter |
+| `GOOGLE_AI_STUDIO_API_KEYS` | Comma-separated API keys for Gemini |
 
-# Optional: Override API keys
-OPENAI_API_KEY=sk-xxxxx
-GROQ_API_KEY=gsk_xxxxx
-```
-
-### 3. Deploy
-
-1. Click **"Deploy"**
-2. Wait for deployment (2-3 minutes)
-3. Visit the generated URL
-4. Configure custom domain if needed
+### 3. Health & Readiness
+*   **Health Check Path**: `/api/v1/health`
+*   **Readiness Path**: `/api/v1/ready`
 
 ---
 
-## 🗄️ Database Setup (Supabase)
+## 🎨 Frontend Deployment (Vercel or Render)
 
-### 1. Create Supabase Project
+### 1. Build Configuration
+*   **Framework**: Next.js
+*   **Root Directory**: `frontend`
+*   **Build Command**: `npm run build`
+*   **Output Directory**: `.next` (or `out` for static exports)
 
-1. Go to [supabase.com](https://supabase.com)
-2. Create new project
-3. Wait for setup completion
-
-### 2. Get Connection Details
-
-From Supabase dashboard:
-- **Project URL**: `https://xxxxx.supabase.co`
-- **Anon Key**: `eyJhbGc...`
-- **Service Role Key**: `eyJhbGc...`
-
-### 3. Database URL for Backend
-
-Use the PostgreSQL connection string from Supabase:
-```
-postgresql://postgres:[password]@db.xxxxx.supabase.co:5432/postgres
-```
+### 2. Environment Variables
+*   **`NEXT_PUBLIC_API_URL`**: Your backend URL (e.g., `https://astramind-backend.onrender.com`)
+*   **`NEXT_PUBLIC_APP_VERSION`**: `1.1.5`
 
 ---
 
-## 🔑 API Keys Setup
+## 🛡️ Security Operations
 
-### Groq (Fast AI)
-1. Visit [console.groq.com](https://console.groq.com)
-2. Create API key
-3. Add to environment: `GROQ_API_KEYS=gsk_xxxxx`
+### 1. IP Whitelisting
+Ensure your database (e.g., Neon or Supabase) accepts connections from your backend service IP.
 
-### OpenRouter (Smart AI)
-1. Visit [openrouter.ai](https://openrouter.ai)
-2. Create API key
-3. Add to environment: `OPENROUTER_API_KEYS=sk-or-xxxxx`
-
-### Optional: Other Providers
-- HuggingFace: `HUGGINGFACE_API_KEY=hf_xxxxx`
-- OpenAI: `OPENAI_API_KEY=sk-xxxxx`
+### 2. Rate Limiting
+Production limits are enforced at two levels:
+*   **Application Level**: 60 requests/min per IP (configurable in `config.py`)
+*   **User Level**: Daily quotas based on account tier (Guest: 70, User: 50, Premium: 200).
 
 ---
 
-## 🔍 Troubleshooting Common Issues
+## 🔍 Monitoring & Stability
 
-### Backend Issues
+### 1. Stability Engine
+The backend includes a `StabilityEngine` that monitors error rates and manages circuit breakers.
+*   **Status Endpoint**: `/api/v1/stability` provides a real-time stability score and health metrics.
 
-**Port binding error:**
-- Ensure `runtime.txt` specifies correct Python version
-- Check that `PORT` environment variable is used
-
-**Database connection failed:**
-- Verify `DATABASE_URL` is correct
-- Ensure Supabase project is active
-- Check firewall settings
-
-**Health check fails:**
-- Check logs for startup errors
-- Verify AI API keys are set
-- Ensure database tables exist
-
-### Frontend Issues
-
-**Build fails:**
-- Check Node.js version compatibility
-- Ensure all dependencies are in `package.json`
-- Verify environment variables are set
-
-**API calls fail:**
-- Check Supabase configuration
-- Verify API keys are set correctly
-- Check CORS settings
-
-**Authentication issues:**
-- Ensure Supabase keys are correct
-- Check JWT configuration matches backend
+### 2. Logging
+Logs are structured as JSON for production. Monitor Render logs for:
+*   `Circuit Breaker state changed`
+*   `Rate limit exceeded`
+*   `Quota enforcement`
 
 ---
 
-## 📊 Monitoring & Maintenance
+## 🔄 Scaling Strategy
 
-### Health Checks
-- Set up uptime monitoring on `/health` endpoint
-- Monitor `/ready` endpoint for service availability
-- Check provider status via `/api/v1/status`
-
-### Logs
-- Monitor Render/Vercel logs for errors
-- Set up alerts for failed deployments
-- Regularly check AI provider rate limits
-
-### Scaling
-- Render: Upgrade instance type as needed
-- Vercel: Functions scale automatically
-- Monitor response times and error rates
+1.  **Vertical Scaling**: Start with 1GB-2GB RAM. If memory usage exceeds 80%, upgrade to the next tier.
+2.  **Horizontal Scaling**: Render supports multiple instances. The system is stateless and supports horizontal scaling out of the box, provided `DATABASE_POOL_SIZE` is adjusted accordingly (default: 20).
 
 ---
 
-## 🔄 Updates & Rollbacks
+## 🆘 Troubleshooting
 
-### Backend Updates
-1. Push code changes to GitHub
-2. Render auto-deploys from main branch
-3. Monitor logs during deployment
-4. Rollback if needed via Render dashboard
-
-### Frontend Updates
-1. Push changes to GitHub
-2. Vercel/Render auto-deploys
-3. Test functionality after deployment
-4. Use preview deployments for testing
-
----
-
-**🎉 AstraMind is now live and ready to serve users!**
+*   **Database Error**: Ensure the URL uses the `+asyncpg` driver for SQLAlchemy.
+*   **CORS Issues**: Cross-check `ALLOWED_ORIGINS` in backend config with the actual frontend URL.
+*   **Provider Failures**: Check `/api/v1/stability` to see if a specific AI provider's circuit breaker is open.
