@@ -89,8 +89,13 @@ export function MetaIcon({ size = 20, ...props }: IconProps) {
 
 export function AstraIcon({ size = 20, ...props }: IconProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <path d="M12 2l3 7h7l-5 5 2 8-7-4-7 4 2-8-5-5h7z" />
-    </svg>
+    <img 
+      src="/logo.png" 
+      alt="ASTRAMIND" 
+      width={size} 
+      height={size} 
+      style={{ borderRadius: "20%", objectFit: "cover" }} 
+      {...props as any}
+    />
   );
 }
