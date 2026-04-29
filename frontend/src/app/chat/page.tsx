@@ -241,7 +241,7 @@ export default function ChatPage() {
               if (delta) {
                 streamedContent += delta;
                 setMessages((prev) => prev.map((m) => 
-                  m.id === loadId ? { ...m, content: streamedContent, loading: true } : m
+                  m.id === loadId ? { ...m, content: streamedContent, loading: false } : m
                 ));
               }
             } catch {
@@ -633,18 +633,24 @@ export default function ChatPage() {
               </p>
 
               {/* Popular Models Badges */}
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center", marginBottom: 40, maxWidth: 600 }}>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center", marginBottom: 40, maxWidth: 640 }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, padding: "6px 12px", borderRadius: 20, border: "1px solid var(--border-default)", background: "var(--surface-1)", color: "var(--text-secondary)", boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>
                   <OpenAIIcon size={14} /> GPT-4o
                 </span>
                 <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, padding: "6px 12px", borderRadius: 20, border: "1px solid var(--border-default)", background: "var(--surface-1)", color: "var(--text-secondary)", boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>
-                  <ClaudeIcon size={14} /> Claude 3.5 Sonnet
+                  <ClaudeIcon size={14} /> Claude 3.7 Sonnet
+                </span>
+                <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, padding: "6px 12px", borderRadius: 20, border: "1px solid var(--border-default)", background: "var(--surface-1)", color: "var(--text-secondary)", boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>
+                  <DeepSeekIcon size={14} /> DeepSeek V3 / R1
                 </span>
                 <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, padding: "6px 12px", borderRadius: 20, border: "1px solid var(--border-default)", background: "var(--surface-1)", color: "var(--text-secondary)", boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>
                   <GeminiIcon size={14} /> Gemini 1.5 Pro
                 </span>
                 <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, padding: "6px 12px", borderRadius: 20, border: "1px solid var(--border-default)", background: "var(--surface-1)", color: "var(--text-secondary)", boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>
-                  <GroqLogoIcon size={14} /> Llama 3 70B
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2l3 7h7l-5 5 2 8-7-4-7 4 2-8-5-5h7z" /></svg> xAI Grok-2
+                </span>
+                <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, padding: "6px 12px", borderRadius: 20, border: "1px solid var(--border-default)", background: "var(--surface-1)", color: "var(--text-secondary)", boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>
+                  <GroqLogoIcon size={14} /> Llama 3.1 405B
                 </span>
               </div>
 
@@ -662,26 +668,6 @@ export default function ChatPage() {
                     {s}
                   </button>
                 ))}
-              </div>
-
-              {/* Trusted By Section */}
-              <div style={{ marginTop: 50, paddingTop: 24, borderTop: "1px solid var(--border-subtle)", width: "100%", maxWidth: 680 }}>
-                <p style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 20 }}>
-                  Trusted By & Powered By
-                </p>
-                <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "24px 32px", alignItems: "center", opacity: 0.6, filter: "grayscale(100%)", transition: "opacity 0.3s ease" }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.opacity = "0.9"; (e.currentTarget as HTMLDivElement).style.filter = "grayscale(0%)"; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.opacity = "0.6"; (e.currentTarget as HTMLDivElement).style.filter = "grayscale(100%)"; }}>
-                  {/* Text-based stylized logos to guarantee fast loading and premium feel */}
-                  <span style={{ fontSize: 16, fontWeight: 700, fontFamily: "sans-serif", letterSpacing: "-0.05em" }}>OpenAI</span>
-                  <span style={{ fontSize: 16, fontWeight: 700, fontFamily: "serif", letterSpacing: "0.02em" }}>Anthropic</span>
-                  <span style={{ fontSize: 18, fontWeight: 800, fontFamily: "sans-serif", letterSpacing: "-0.02em" }}>Meta</span>
-                  <span style={{ fontSize: 18, fontWeight: 800, fontFamily: "monospace", letterSpacing: "0.05em", border: "2px solid currentColor", padding: "0 4px" }}>IBM</span>
-                  <span style={{ fontSize: 17, fontWeight: 800, fontFamily: "sans-serif", fontStyle: "italic" }}>xAI</span>
-                  <span style={{ fontSize: 16, fontWeight: 700, fontFamily: "sans-serif", color: "#FF6A00" }}>Alibaba</span>
-                  <span style={{ fontSize: 16, fontWeight: 800, fontFamily: "sans-serif", letterSpacing: "0.05em" }}>VERCEL</span>
-                  <span style={{ fontSize: 16, fontWeight: 700, fontFamily: "sans-serif" }}>Render</span>
-                </div>
               </div>
             </div>
           ) : (

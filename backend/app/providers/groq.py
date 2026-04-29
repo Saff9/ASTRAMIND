@@ -53,7 +53,7 @@ class GroqProvider(AIProvider):
         # Build messages array — system prompt + history + current message
         msg_list = [{"role": "system", "content": system_prompt}]
         if messages:
-            for m in messages[-20:]:  # cap at last 20 turns to save tokens
+            for m in messages[-50:]:  # cap at last 20 turns to save tokens
                 role = m.get("role", "user")
                 content = m.get("content", "")
                 if role in ("user", "assistant") and content:

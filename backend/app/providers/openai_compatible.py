@@ -63,7 +63,7 @@ class OpenAICompatibleProvider(AIProvider):
         # Build messages array: system + history + current
         msg_list = [{"role": "system", "content": system_prompt}]
         if messages:
-            for m in (messages[-20:] if len(messages) > 20 else messages):
+            for m in (messages[-50:] if len(messages) > 20 else messages):
                 role = m.get("role") if isinstance(m, dict) else getattr(m, "role", "user")
                 content = m.get("content") if isinstance(m, dict) else getattr(m, "content", "")
                 if role in ("user", "assistant") and content:

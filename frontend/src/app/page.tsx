@@ -285,6 +285,42 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ═══ TRUSTED BY MARQUEE ═══ */}
+      <section style={{ position: "relative", zIndex: 1, padding: "20px 0 60px", overflow: "hidden", borderBottom: "1px solid var(--border-subtle)", marginBottom: "40px" }}>
+        <p style={{ textAlign: "center", fontSize: 11, fontWeight: 600, letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: 30 }}>
+          Trusted By & Powered By Industry Leaders
+        </p>
+        
+        {/* Masking gradients for smooth fade-in/fade-out at edges */}
+        <div style={{ position: "absolute", left: 0, top: 50, bottom: 0, width: "15%", background: "linear-gradient(to right, var(--bg-primary), transparent)", zIndex: 2, pointerEvents: "none" }} />
+        <div style={{ position: "absolute", right: 0, top: 50, bottom: 0, width: "15%", background: "linear-gradient(to left, var(--bg-primary), transparent)", zIndex: 2, pointerEvents: "none" }} />
+
+        {/* Marquee container */}
+        <div style={{ display: "flex", width: "200%" }}>
+          <div style={{ display: "flex", width: "50%", justifyContent: "space-around", alignItems: "center", opacity: 0.5, filter: "grayscale(100%)", animation: "marquee 35s linear infinite" }}>
+            <span style={{ fontSize: 22, fontWeight: 700, fontFamily: "sans-serif", letterSpacing: "-0.05em", color: "var(--text-primary)" }}>OpenAI</span>
+            <span style={{ fontSize: 22, fontWeight: 700, fontFamily: "serif", letterSpacing: "0.02em", color: "var(--text-primary)" }}>Anthropic</span>
+            <span style={{ fontSize: 24, fontWeight: 800, fontFamily: "sans-serif", letterSpacing: "-0.02em", color: "var(--text-primary)" }}>Meta</span>
+            <span style={{ fontSize: 24, fontWeight: 800, fontFamily: "monospace", letterSpacing: "0.05em", border: "2px solid var(--text-primary)", padding: "0 6px", color: "var(--text-primary)" }}>IBM</span>
+            <span style={{ fontSize: 23, fontWeight: 800, fontFamily: "sans-serif", fontStyle: "italic", color: "var(--text-primary)" }}>xAI</span>
+            <span style={{ fontSize: 22, fontWeight: 700, fontFamily: "sans-serif", color: "var(--text-primary)" }}>Alibaba</span>
+            <span style={{ fontSize: 22, fontWeight: 800, fontFamily: "sans-serif", letterSpacing: "0.05em", color: "var(--text-primary)" }}>VERCEL</span>
+            <span style={{ fontSize: 22, fontWeight: 700, fontFamily: "sans-serif", color: "var(--text-primary)" }}>Render</span>
+          </div>
+          {/* Duplicate for infinite loop */}
+          <div style={{ display: "flex", width: "50%", justifyContent: "space-around", alignItems: "center", opacity: 0.5, filter: "grayscale(100%)", animation: "marquee 35s linear infinite" }}>
+            <span style={{ fontSize: 22, fontWeight: 700, fontFamily: "sans-serif", letterSpacing: "-0.05em", color: "var(--text-primary)" }}>OpenAI</span>
+            <span style={{ fontSize: 22, fontWeight: 700, fontFamily: "serif", letterSpacing: "0.02em", color: "var(--text-primary)" }}>Anthropic</span>
+            <span style={{ fontSize: 24, fontWeight: 800, fontFamily: "sans-serif", letterSpacing: "-0.02em", color: "var(--text-primary)" }}>Meta</span>
+            <span style={{ fontSize: 24, fontWeight: 800, fontFamily: "monospace", letterSpacing: "0.05em", border: "2px solid var(--text-primary)", padding: "0 6px", color: "var(--text-primary)" }}>IBM</span>
+            <span style={{ fontSize: 23, fontWeight: 800, fontFamily: "sans-serif", fontStyle: "italic", color: "var(--text-primary)" }}>xAI</span>
+            <span style={{ fontSize: 22, fontWeight: 700, fontFamily: "sans-serif", color: "var(--text-primary)" }}>Alibaba</span>
+            <span style={{ fontSize: 22, fontWeight: 800, fontFamily: "sans-serif", letterSpacing: "0.05em", color: "var(--text-primary)" }}>VERCEL</span>
+            <span style={{ fontSize: 22, fontWeight: 700, fontFamily: "sans-serif", color: "var(--text-primary)" }}>Render</span>
+          </div>
+        </div>
+      </section>
+
       {/* ═══ PROVIDER BAR ═══ */}
       <section style={{ padding: "48px 24px", position: "relative", zIndex: 1, display: "flex", justifyContent: "center" }}>
         <div style={{ 
