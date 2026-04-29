@@ -62,7 +62,7 @@ const SHORTCUTS = [
 // ────────────────────────────────────────────────────────────────────
 export default function SettingsModal({ open, onClose }: SettingsModalProps) {
   // Real context — reads and writes persist to localStorage + DOM
-  const { theme, font, setTheme, setFont } = useSettings();
+  const { theme, font, vibration, setTheme, setFont, setVibration } = useSettings();
   // Local session state
   const [session, setSession] = useState<{ user?: { email?: string; name?: string } } | null | undefined>(undefined);
   const user = session?.user;
@@ -275,6 +275,9 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
         </Row>
         <Row label="Show message timestamps"><Toggle value={true} onChange={() => {}} /></Row>
         <Row label="Auto-scroll to latest"><Toggle value={true} onChange={() => {}} /></Row>
+        <Row label="Haptic feedback (Vibration)" sub="Vibrate device when AI starts responding">
+          <Toggle value={vibration} onChange={setVibration} />
+        </Row>
         
         {isInstallable && (
           <Row label="Install ASTRAMIND App" sub="Add to your device for offline & full-screen access">
@@ -451,9 +454,16 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
           <div style={{ marginTop: 24 }}>
             <button 
               onClick={async () => { 
-                await neonAuthClient.signOut();
-                onClose();
-                window.location.href = "/"; // Force refresh to clear state
+                try {
+                  await neonAuthClient.signOut();
+                  // Optional: clear local state if needed
+                  // localStorage.removeItem(`chat_sessions_${user?.email}`);
+                  onClose();
+                  window.location.href = "/"; // Force refresh to home
+                } catch (err) {
+                  console.error("Sign out error:", err);
+                  window.location.href = "/";
+                }
               }}
               style={{
               width: "100%", padding: "12px", borderRadius: 12,

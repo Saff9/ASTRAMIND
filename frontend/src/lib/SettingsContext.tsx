@@ -9,9 +9,11 @@ export type FontId = "dm" | "fira" | "playfair" | "rajdhani" | "pacifico" | "spa
 interface SettingsContextValue {
   theme: Theme;
   font: FontId;
+  vibration: boolean;
   resolvedTheme: "dark" | "light"; // actual applied theme after resolving "system"
   setTheme: (t: Theme) => void;
   setFont: (f: FontId) => void;
+  setVibration: (v: boolean) => void;
 }
 
 // ─── CSS variable map ────────────────────────────────────────────────
@@ -28,9 +30,11 @@ export const FONT_CSS_VAR: Record<FontId, string> = {
 const SettingsContext = createContext<SettingsContextValue>({
   theme: "dark",
   font: "dm",
+  vibration: true,
   resolvedTheme: "dark",
   setTheme: () => {},
   setFont: () => {},
+  setVibration: () => {},
 });
 
 export const useSettings = () => useContext(SettingsContext);
@@ -59,15 +63,19 @@ function applyFont(font: FontId) {
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("dark");
   const [font, setFontState] = useState<FontId>("dm");
+  const [vibration, setVibrationState] = useState<boolean>(true);
   const [resolvedTheme, setResolvedTheme] = useState<"dark" | "light">("dark");
 
   // On mount: load from localStorage and apply. Optionally fetch from DB in background.
   useEffect(() => {
     const savedTheme = (localStorage.getItem("astramind-theme") as Theme) || "dark";
     const savedFont  = (localStorage.getItem("astramind-font")  as FontId) || "dm";
+    const savedVibe  = localStorage.getItem("astramind-vibration") !== "false"; // Default true
+
     setTimeout(() => {
       setThemeState(savedTheme);
       setFontState(savedFont);
+      setVibrationState(savedVibe);
       setResolvedTheme(applyTheme(savedTheme));
       applyFont(savedFont);
     }, 0);
@@ -123,8 +131,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     syncToBackend({ preferred_font: f });
   }, []);
 
+  const setVibration = useCallback((v: boolean) => {
+    setVibrationState(v);
+    localStorage.setItem("astramind-vibration", String(v));
+  }, []);
+
   return (
-    <SettingsContext.Provider value={{ theme, font, resolvedTheme, setTheme, setFont }}>
+    <SettingsContext.Provider value={{ theme, font, vibration, resolvedTheme, setTheme, setFont, setVibration }}>
       {children}
     </SettingsContext.Provider>
   );

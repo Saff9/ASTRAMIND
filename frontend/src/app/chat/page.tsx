@@ -15,6 +15,7 @@ import {
   OpenAIIcon, GeminiIcon, MistralIcon, MetaIcon 
 } from "@/components/common/ProviderIcons";
 import { neonAuthClient } from "@/lib/auth-client";
+import { useSettings } from "@/lib/SettingsContext";
 
 interface Message {
   id: string;
@@ -61,6 +62,7 @@ const EMPTY_SUGGESTIONS = [
 ];
 
 export default function ChatPage() {
+  const { vibration } = useSettings();
   const [session, setSession] = useState<{ user?: { email?: string; name?: string; image?: string }; accessToken?: string } | null | undefined>(undefined);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
@@ -278,10 +280,17 @@ export default function ChatPage() {
       
       const decoder = new TextDecoder();
       let streamedContent = "";
+      let vibrationTriggered = false;
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
+
+        // Haptic feedback pulse on first response chunk
+        if (!vibrationTriggered && vibration && typeof window !== "undefined" && window.navigator.vibrate) {
+          try { window.navigator.vibrate(12); } catch { /* silent */ }
+          vibrationTriggered = true;
+        }
 
         const chunk = decoder.decode(value, { stream: true });
         // Handle SSE data format: each line starts with "data: "
