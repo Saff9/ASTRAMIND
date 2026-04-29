@@ -286,37 +286,75 @@ export default function HomePage() {
       </section>
 
       {/* ═══ TRUSTED BY MARQUEE ═══ */}
-      <section style={{ position: "relative", zIndex: 1, padding: "20px 0 60px", overflow: "hidden", borderBottom: "1px solid var(--border-subtle)", marginBottom: "40px" }}>
-        <p style={{ textAlign: "center", fontSize: 11, fontWeight: 600, letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: 30 }}>
+      <section style={{ position: "relative", zIndex: 1, padding: "30px 0 70px", overflow: "hidden", borderBottom: "1px solid var(--border-subtle)", marginBottom: "40px" }}>
+        <p style={{ textAlign: "center", fontSize: 11, fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: 40 }}>
           Trusted By & Powered By Industry Leaders
         </p>
         
         {/* Masking gradients for smooth fade-in/fade-out at edges */}
-        <div style={{ position: "absolute", left: 0, top: 50, bottom: 0, width: "15%", background: "linear-gradient(to right, var(--bg-primary), transparent)", zIndex: 2, pointerEvents: "none" }} />
-        <div style={{ position: "absolute", right: 0, top: 50, bottom: 0, width: "15%", background: "linear-gradient(to left, var(--bg-primary), transparent)", zIndex: 2, pointerEvents: "none" }} />
+        <div style={{ position: "absolute", left: 0, top: 60, bottom: 0, width: "20%", background: "linear-gradient(to right, var(--bg-primary), transparent)", zIndex: 2, pointerEvents: "none" }} />
+        <div style={{ position: "absolute", right: 0, top: 60, bottom: 0, width: "20%", background: "linear-gradient(to left, var(--bg-primary), transparent)", zIndex: 2, pointerEvents: "none" }} />
 
         {/* Marquee container */}
-        <div style={{ display: "flex", width: "200%" }}>
-          <div style={{ display: "flex", width: "50%", justifyContent: "space-around", alignItems: "center", opacity: 0.5, filter: "grayscale(100%)", animation: "marquee 35s linear infinite" }}>
-            <span style={{ fontSize: 22, fontWeight: 700, fontFamily: "sans-serif", letterSpacing: "-0.05em", color: "var(--text-primary)" }}>OpenAI</span>
-            <span style={{ fontSize: 22, fontWeight: 700, fontFamily: "serif", letterSpacing: "0.02em", color: "var(--text-primary)" }}>Anthropic</span>
-            <span style={{ fontSize: 24, fontWeight: 800, fontFamily: "sans-serif", letterSpacing: "-0.02em", color: "var(--text-primary)" }}>Meta</span>
-            <span style={{ fontSize: 24, fontWeight: 800, fontFamily: "monospace", letterSpacing: "0.05em", border: "2px solid var(--text-primary)", padding: "0 6px", color: "var(--text-primary)" }}>IBM</span>
-            <span style={{ fontSize: 23, fontWeight: 800, fontFamily: "sans-serif", fontStyle: "italic", color: "var(--text-primary)" }}>xAI</span>
-            <span style={{ fontSize: 22, fontWeight: 700, fontFamily: "sans-serif", color: "var(--text-primary)" }}>Alibaba</span>
-            <span style={{ fontSize: 22, fontWeight: 800, fontFamily: "sans-serif", letterSpacing: "0.05em", color: "var(--text-primary)" }}>VERCEL</span>
-            <span style={{ fontSize: 22, fontWeight: 700, fontFamily: "sans-serif", color: "var(--text-primary)" }}>Render</span>
+        <div style={{ display: "flex", width: "200%" }} className="marquee-container">
+          <div style={{ display: "flex", width: "50%", justifyContent: "space-evenly", alignItems: "center", opacity: 0.45, filter: "grayscale(100%)", animation: "marquee 40s linear infinite" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--text-primary)", transition: "all 0.3s ease" }}>
+              <OpenAIIcon size={26} /> <span style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.05em" }}>OpenAI</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--text-primary)", transition: "all 0.3s ease" }}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M17.304 3.54H13.63l6.696 16.918H24zm-10.608 0L0 20.458h3.744l1.37-3.552h7.005l1.369 3.552h3.744L10.536 3.54zm-.371 10.223 2.291-5.945 2.292 5.945z"/></svg>
+              <span style={{ fontSize: 22, fontWeight: 600, fontFamily: "serif", letterSpacing: "0.02em" }}>Anthropic</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--text-primary)", transition: "all 0.3s ease" }}>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z"/></svg>
+              <span style={{ fontSize: 24, fontWeight: 800, letterSpacing: "-0.02em" }}>Meta</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--text-primary)", transition: "all 0.3s ease" }}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><rect x="2" y="5" width="20" height="3" /><rect x="2" y="10" width="20" height="3" /><rect x="2" y="15" width="20" height="3" /></svg>
+              <span style={{ fontSize: 24, fontWeight: 800, fontFamily: "monospace", letterSpacing: "0.05em" }}>IBM</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--text-primary)", transition: "all 0.3s ease" }}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2l3 7h7l-5 5 2 8-7-4-7 4 2-8-5-5h7z" /></svg>
+              <span style={{ fontSize: 23, fontWeight: 800, fontStyle: "italic" }}>xAI</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--text-primary)", transition: "all 0.3s ease" }}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L24 22H0L12 1Z"/></svg>
+              <span style={{ fontSize: 22, fontWeight: 800, letterSpacing: "0.05em" }}>VERCEL</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--text-primary)", transition: "all 0.3s ease" }}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>
+              <span style={{ fontSize: 22, fontWeight: 700, letterSpacing: "0.05em" }}>Render</span>
+            </div>
           </div>
           {/* Duplicate for infinite loop */}
-          <div style={{ display: "flex", width: "50%", justifyContent: "space-around", alignItems: "center", opacity: 0.5, filter: "grayscale(100%)", animation: "marquee 35s linear infinite" }}>
-            <span style={{ fontSize: 22, fontWeight: 700, fontFamily: "sans-serif", letterSpacing: "-0.05em", color: "var(--text-primary)" }}>OpenAI</span>
-            <span style={{ fontSize: 22, fontWeight: 700, fontFamily: "serif", letterSpacing: "0.02em", color: "var(--text-primary)" }}>Anthropic</span>
-            <span style={{ fontSize: 24, fontWeight: 800, fontFamily: "sans-serif", letterSpacing: "-0.02em", color: "var(--text-primary)" }}>Meta</span>
-            <span style={{ fontSize: 24, fontWeight: 800, fontFamily: "monospace", letterSpacing: "0.05em", border: "2px solid var(--text-primary)", padding: "0 6px", color: "var(--text-primary)" }}>IBM</span>
-            <span style={{ fontSize: 23, fontWeight: 800, fontFamily: "sans-serif", fontStyle: "italic", color: "var(--text-primary)" }}>xAI</span>
-            <span style={{ fontSize: 22, fontWeight: 700, fontFamily: "sans-serif", color: "var(--text-primary)" }}>Alibaba</span>
-            <span style={{ fontSize: 22, fontWeight: 800, fontFamily: "sans-serif", letterSpacing: "0.05em", color: "var(--text-primary)" }}>VERCEL</span>
-            <span style={{ fontSize: 22, fontWeight: 700, fontFamily: "sans-serif", color: "var(--text-primary)" }}>Render</span>
+          <div style={{ display: "flex", width: "50%", justifyContent: "space-evenly", alignItems: "center", opacity: 0.45, filter: "grayscale(100%)", animation: "marquee 40s linear infinite" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--text-primary)", transition: "all 0.3s ease" }}>
+              <OpenAIIcon size={26} /> <span style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.05em" }}>OpenAI</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--text-primary)", transition: "all 0.3s ease" }}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M17.304 3.54H13.63l6.696 16.918H24zm-10.608 0L0 20.458h3.744l1.37-3.552h7.005l1.369 3.552h3.744L10.536 3.54zm-.371 10.223 2.291-5.945 2.292 5.945z"/></svg>
+              <span style={{ fontSize: 22, fontWeight: 600, fontFamily: "serif", letterSpacing: "0.02em" }}>Anthropic</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--text-primary)", transition: "all 0.3s ease" }}>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z"/></svg>
+              <span style={{ fontSize: 24, fontWeight: 800, letterSpacing: "-0.02em" }}>Meta</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--text-primary)", transition: "all 0.3s ease" }}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><rect x="2" y="5" width="20" height="3" /><rect x="2" y="10" width="20" height="3" /><rect x="2" y="15" width="20" height="3" /></svg>
+              <span style={{ fontSize: 24, fontWeight: 800, fontFamily: "monospace", letterSpacing: "0.05em" }}>IBM</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--text-primary)", transition: "all 0.3s ease" }}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2l3 7h7l-5 5 2 8-7-4-7 4 2-8-5-5h7z" /></svg>
+              <span style={{ fontSize: 23, fontWeight: 800, fontStyle: "italic" }}>xAI</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--text-primary)", transition: "all 0.3s ease" }}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L24 22H0L12 1Z"/></svg>
+              <span style={{ fontSize: 22, fontWeight: 800, letterSpacing: "0.05em" }}>VERCEL</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--text-primary)", transition: "all 0.3s ease" }}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>
+              <span style={{ fontSize: 22, fontWeight: 700, letterSpacing: "0.05em" }}>Render</span>
+            </div>
           </div>
         </div>
       </section>

@@ -253,6 +253,12 @@ code:not(pre code) {
   to { transform: translateX(-50%); }
 }
 
+.marquee-container:hover > div {
+  animation-play-state: paused !important;
+  opacity: 0.9 !important;
+  filter: grayscale(0%) !important;
+}
+
 /* ─────────────────────── TYPOGRAPHY ─────────────────────── */
 .font-display {
   font-family: var(--font-syne, "Syne"), sans-serif;
