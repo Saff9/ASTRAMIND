@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Plus, Settings, SidebarClose, SidebarOpen,
-  ArrowLeft, Info, Shield, Wrench, SquarePen, Download
+  ArrowLeft, Info, Shield, Wrench, SquarePen, Download, Trash2
 } from "lucide-react";
 import MessageBubble from "@/components/chat/MessageBubble";
 import ChatInput from "@/components/chat/ChatInput";
@@ -26,10 +26,17 @@ interface Message {
   loading?: boolean;
 }
 
+interface ChatSession {
+  id: string;
+  title: string;
+  updatedAt: number;
+  messages: Message[];
+}
+
 const MODEL_OPTIONS = [
   // Top 3 (Always shown initially)
-  { id: "gpt-4o",           label: "GPT-4o",              Icon: OpenAIIcon,   desc: "Flagship multi-modal",     provider: "OpenAI",    model: "gpt-4o",           tier: "smart",    speedMs: 1200 },
-  { id: "claude-sonnet",    label: "Claude 3.5 Sonnet",   Icon: ClaudeIcon,   desc: "Top coding & reasoning",   provider: "Anthropic", model: "claude-3-5-sonnet",tier: "smart",    speedMs: 1600 },
+  { id: "gpt-4.5",          label: "GPT-4.5",             Icon: OpenAIIcon,   desc: "Flagship multi-modal",     provider: "OpenAI",    model: "gpt-4.5",          tier: "smart",    speedMs: 1200 },
+  { id: "claude-sonnet",    label: "Claude 3.7 Sonnet",   Icon: ClaudeIcon,   desc: "Top coding & reasoning",   provider: "Anthropic", model: "claude-3-7-sonnet",tier: "smart",    speedMs: 1600 },
   { id: "llama-3-70b",      label: "Llama 3.3 70B",       Icon: GroqLogoIcon, desc: "Lightning fast open weight",provider:"Groq",      model: "llama-3.3-70b",    tier: "balanced", speedMs: 400 },
   // The rest (Shown on 'Show more')
   { id: "deepseek-r1",      label: "DeepSeek R1",         Icon: DeepSeekIcon, desc: "Advanced reasoning",       provider: "DeepSeek",  model: "deepseek-reasoner",tier: "smart",    speedMs: 2500 },
@@ -55,9 +62,11 @@ const EMPTY_SUGGESTIONS = [
 
 export default function ChatPage() {
   const [session, setSession] = useState<{ user?: { email?: string; name?: string; image?: string }; accessToken?: string } | null | undefined>(undefined);
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [messages, setMessages]   = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [modelId, setModelId]     = useState("gpt-4o");
+  const [modelId, setModelId]     = useState("gpt-4.5");
   const [sidebarOpen, setSidebarOpen]   = useState(true);
   const [isMobile, setIsMobile]         = useState(false);
   const [modelOpen, setModelOpen]       = useState(false);
@@ -91,19 +100,74 @@ export default function ChatPage() {
         // Sync user to Neon (fire-and-forget, non-blocking)
         fetch("/api/users/sync", { method: "POST" }).catch(() => {/* silent */});
         
-        // Load persisted chat history
-        const stored = localStorage.getItem(`chat_history_${data.user.email}`);
-        if (stored) {
-          try { setMessages(JSON.parse(stored)); } catch { /* ignore */ }
+        // Load persisted chat sessions
+        const storedSessions = localStorage.getItem(`chat_sessions_${data.user.email}`);
+        if (storedSessions) {
+          try {
+            const parsed = JSON.parse(storedSessions);
+            setSessions(parsed);
+            if (parsed.length > 0) {
+              setCurrentSessionId(parsed[0].id);
+              setMessages(parsed[0].messages);
+            }
+          } catch { /* ignore */ }
+        } else {
+          // Legacy migration
+          const legacyStored = localStorage.getItem(`chat_history_${data.user.email}`);
+          if (legacyStored) {
+            try {
+              const parsedMessages = JSON.parse(legacyStored);
+              if (parsedMessages.length > 0) {
+                const newSession = {
+                  id: crypto.randomUUID(),
+                  title: parsedMessages[0].content.slice(0, 30) + '...',
+                  updatedAt: Date.now(),
+                  messages: parsedMessages
+                };
+                setSessions([newSession]);
+                setCurrentSessionId(newSession.id);
+                setMessages(parsedMessages);
+              }
+            } catch { /* ignore */ }
+          }
         }
       }
     }
     checkSession();
   }, [router]);
 
+  const currentSessionIdRef = useRef<string | null>(null);
+  useEffect(() => { currentSessionIdRef.current = currentSessionId; }, [currentSessionId]);
+
   useEffect(() => {
-    if (session?.user?.email && messages.length > 0) {
-      localStorage.setItem(`chat_history_${session.user.email}`, JSON.stringify(messages));
+    const userEmail = session?.user?.email;
+    if (userEmail && messages.length > 0) {
+      let cid = currentSessionIdRef.current;
+      setSessions((prev) => {
+        let updated = [...prev];
+        if (!cid) {
+          cid = crypto.randomUUID();
+          setCurrentSessionId(cid);
+          updated.unshift({
+            id: cid,
+            title: messages.find(m => m.role === "user")?.content.slice(0, 30) + "..." || "New Chat",
+            updatedAt: Date.now(),
+            messages
+          });
+        } else {
+          const idx = updated.findIndex(s => s.id === cid);
+          if (idx >= 0) {
+            updated[idx].messages = messages;
+            updated[idx].updatedAt = Date.now();
+            const [moved] = updated.splice(idx, 1);
+            updated.unshift(moved);
+          } else {
+             updated.unshift({ id: cid, title: "Chat", updatedAt: Date.now(), messages });
+          }
+        }
+        localStorage.setItem(`chat_sessions_${userEmail}`, JSON.stringify(updated));
+        return updated;
+      });
     }
   }, [messages, session]);
 
@@ -273,6 +337,36 @@ export default function ChatPage() {
     }
   }, [isLoading, selectedModel, session, messages]);
 
+  const startNewChat = () => {
+    setMessages([]);
+    setCurrentSessionId(null);
+    if (isMobile) setSidebarOpen(false);
+  };
+
+  const loadSession = (id: string) => {
+    const s = sessions.find((s) => s.id === id);
+    if (s) {
+      setMessages(s.messages);
+      setCurrentSessionId(id);
+    }
+    if (isMobile) setSidebarOpen(false);
+  };
+
+  const deleteSession = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    setSessions((prev) => {
+      const updated = prev.filter((s) => s.id !== id);
+      if (session?.user?.email) {
+        localStorage.setItem(`chat_sessions_${session.user.email}`, JSON.stringify(updated));
+      }
+      return updated;
+    });
+    if (currentSessionId === id) {
+      setMessages([]);
+      setCurrentSessionId(null);
+    }
+  };
+
   const exportChat = (format: "json" | "doc" | "pdf") => {
     if (messages.length === 0) return;
     const title = `ASTRAMIND_Chat_${new Date().toISOString().split("T")[0]}`;
@@ -343,7 +437,7 @@ export default function ChatPage() {
           {/* New chat button */}
           <div style={{ padding: "10px 10px 6px" }}>
             <button
-              onClick={() => setMessages([])}
+              onClick={startNewChat}
               style={{
                 width: "100%", display: "flex", alignItems: "center", gap: 10,
                 padding: "10px 14px", borderRadius: 10, fontSize: 14, fontWeight: 500,
@@ -364,19 +458,42 @@ export default function ChatPage() {
             <p style={{ padding: "8px 6px 6px", fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)" }}>
               Recent
             </p>
-            {messages.length > 0 ? (
-              <button style={{
-                width: "100%", textAlign: "left", padding: "10px 10px", borderRadius: 10,
-                background: "var(--surface-2)", border: "none", cursor: "pointer",
-                display: "block", transition: "background 0.15s ease", marginBottom: 2,
-              }}>
-                <p style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)", marginBottom: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  Current Conversation
-                </p>
-                <p style={{ fontSize: 12, color: "var(--text-muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {messages[messages.length - 1]?.content?.slice(0, 40)}...
-                </p>
-              </button>
+            {sessions.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                {sessions.map((s) => (
+                  <div
+                    key={s.id}
+                    onClick={() => loadSession(s.id)}
+                    style={{
+                      display: "flex", justifyContent: "space-between", alignItems: "center",
+                      padding: "10px 10px", borderRadius: 10, cursor: "pointer",
+                      background: currentSessionId === s.id ? "var(--surface-3)" : "transparent",
+                      color: currentSessionId === s.id ? "var(--text-primary)" : "var(--text-secondary)",
+                      transition: "all 0.15s ease"
+                    }}
+                    onMouseEnter={(e) => { if (currentSessionId !== s.id) (e.currentTarget as HTMLDivElement).style.background = "var(--surface-2)"; }}
+                    onMouseLeave={(e) => { if (currentSessionId !== s.id) (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
+                  >
+                    <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, paddingRight: 8 }}>
+                      <p style={{ fontSize: 13, fontWeight: 500, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis" }}>{s.title}</p>
+                      <p style={{ fontSize: 11, color: "var(--text-disabled)" }}>
+                        {new Date(s.updatedAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <button
+                      onClick={(e) => deleteSession(e, s.id)}
+                      style={{
+                        padding: 6, background: "transparent", border: "none",
+                        color: "var(--text-muted)", cursor: "pointer", borderRadius: 6
+                      }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--error)"; (e.currentTarget as HTMLButtonElement).style.background = "rgba(245, 100, 90, 0.1)"; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--text-muted)"; (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+                    >
+                      <Trash2 style={{ width: 14, height: 14 }} />
+                    </button>
+                  </div>
+                ))}
+              </div>
             ) : (
               <p style={{ fontSize: 12, color: "var(--text-muted)", textAlign: "center", padding: "20px 0" }}>No recent chats</p>
             )}
@@ -635,7 +752,7 @@ export default function ChatPage() {
               {/* Popular Models Badges */}
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center", marginBottom: 40, maxWidth: 640 }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, padding: "6px 12px", borderRadius: 20, border: "1px solid var(--border-default)", background: "var(--surface-1)", color: "var(--text-secondary)", boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>
-                  <OpenAIIcon size={14} /> GPT-4o
+                  <OpenAIIcon size={14} /> GPT-4.5
                 </span>
                 <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, padding: "6px 12px", borderRadius: 20, border: "1px solid var(--border-default)", background: "var(--surface-1)", color: "var(--text-secondary)", boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>
                   <ClaudeIcon size={14} /> Claude 3.7 Sonnet
