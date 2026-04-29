@@ -261,9 +261,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins,  # Now a list via @property
     allow_credentials=False,
-    allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization"],
-    expose_headers=["X-Request-ID", "X-RateLimit-Remaining"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Request-ID"],
+    expose_headers=["X-Request-ID", "X-RateLimit-Remaining", "X-RateLimit-Limit"],
     max_age=3600,
 )
 

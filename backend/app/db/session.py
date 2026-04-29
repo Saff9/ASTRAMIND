@@ -21,9 +21,22 @@ logger = logging.getLogger(__name__)
 
 def get_engine_kwargs() -> dict:
     """
-    Generate engine configuration based on environment.
+    Generate engine configuration based on environment and database type.
     CRITICAL: asyncpg does NOT support sslmode in URL — use connect_args instead.
+    SQLite does NOT support connection pooling — use StaticPool instead.
     """
+    db_url = settings.effective_database_url
+    is_sqlite = db_url.startswith("sqlite")
+
+    if is_sqlite:
+        # SQLite needs StaticPool for async usage
+        from sqlalchemy.pool import StaticPool
+        return {
+            "echo": settings.is_development(),
+            "connect_args": {"check_same_thread": False},
+            "poolclass": StaticPool,
+        }
+
     kwargs: dict = {
         "echo": settings.is_development(),
         "pool_pre_ping": True,
@@ -110,6 +123,9 @@ async def check_database_connection() -> bool:
         True if connection successful, False otherwise
     """
     import asyncio
+    if engine is None:
+        logger.error("✗ Database engine not initialized")
+        return False
     try:
         # Set a timeout for the connection check
         async with asyncio.timeout(5):  # 5 second timeout
@@ -129,6 +145,8 @@ async def cleanup_database():
     """
     Called on app shutdown to properly close database connections.
     """
+    if engine is None:
+        return
     try:
         await engine.dispose()
         logger.info("Database connections closed")

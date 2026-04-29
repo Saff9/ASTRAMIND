@@ -771,7 +771,7 @@ class AIRouter:
 
         raise RuntimeError(f"All OpenRouter keys exhausted. Last error: {last_error}")
 
-    async def _stream_huggingface(self, prompt: str, model: str) -> AsyncIterator[str]:
+    async def _stream_huggingface(self, prompt: str, model: str, messages: Optional[List[Dict[str, str]]] = None) -> AsyncIterator[str]:
         """Stream response from HuggingFace with proper error handling."""
         if not self.hf_key:
             raise RuntimeError("HuggingFace key not configured")
@@ -788,7 +788,7 @@ class AIRouter:
             logger.error(f"HuggingFace failed: {type(e).__name__}: {str(e)}", exc_info=e)
             raise RuntimeError(f"HuggingFace unavailable: {str(e)}")
 
-    async def _stream_ollama(self, prompt: str, model: str) -> AsyncIterator[str]:
+    async def _stream_ollama(self, prompt: str, model: str, messages: Optional[List[Dict[str, str]]] = None) -> AsyncIterator[str]:
         """Stream response from local Ollama with proper error handling."""
         try:
             logger.debug(f"Attempting Ollama with model: {model}")
@@ -838,7 +838,7 @@ class AIRouter:
                 break
         raise RuntimeError(f"All Google AI Studio keys exhausted. Last error: {last_error}")
 
-    async def _stream_anthropic(self, prompt: str, model: str) -> AsyncIterator[str]:
+    async def _stream_anthropic(self, prompt: str, model: str, messages: Optional[List[Dict[str, str]]] = None) -> AsyncIterator[str]:
         """Stream response from Anthropic (Claude) with key rotation and error handling."""
         if not self.anthropic_keys:
             raise RuntimeError("No Anthropic keys available")
@@ -851,6 +851,7 @@ class AIRouter:
                     prompt=prompt,
                     model=model,
                     api_key=key,
+                    messages=messages,
                 ):
                     yield chunk
                 return
@@ -862,3 +863,4 @@ class AIRouter:
                 break
 
         raise RuntimeError(f"All Anthropic keys exhausted. Last error: {last_error}")
+

@@ -38,8 +38,7 @@ router = APIRouter(tags=["chat"])
 # ===== IP / USER DAILY RATE LIMITER =====
 # Lightweight in-memory daily quota (resets at midnight UTC).
 # No Redis required. Covers guests (by IP) and logged-in users (by email).
-# Limits: authenticated users → 50/day · guests → 70/day (by IP)
-
+# Limits: authenticated users → 50/day · 
 _DAILY_LIMIT_USER = int(__import__("os").getenv("DAILY_LIMIT_USER", "50"))
 _DAILY_LIMIT_IP   = int(__import__("os").getenv("DAILY_LIMIT_IP", "70"))
 
@@ -80,12 +79,12 @@ def _get_client_ip(request: Request) -> str:
 
 # ===== BACKGROUND TASKS =====
 
-async def atomic_increment_quota(auth_id: str, db: AsyncSession) -> bool:
+async def atomic_increment_quota(user_id: int, db: AsyncSession) -> bool:
     """
-    Atomically increment user quota usage based on their auth_id (string).
-    Works for both logged-in users and guest IPs.
+    Atomically increment user quota usage based on their integer primary key.
+    Returns True if quota was incremented, False if limit is already reached.
     """
-    if not auth_id:
+    if not user_id:
         return False
         
     from sqlalchemy import update
@@ -93,7 +92,7 @@ async def atomic_increment_quota(auth_id: str, db: AsyncSession) -> bool:
     
     result = await db.execute(
         update(User)
-        .where(User.auth_id == auth_id)
+        .where(User.id == user_id)
         .where(User.daily_used < User.daily_quota)
         .values(daily_used=User.daily_used + 1)
         .returning(User.daily_used)
@@ -297,9 +296,13 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
         )
 
     # ===== QUOTA ENFORCEMENT (DB + IN-MEMORY) =====
-    orm_user = user.get("orm_user") if isinstance(user, dict) else getattr(user, "orm_user", None)
-    if orm_user is not None:
-        # DB-based atomic quota for users
+    # auth_data["user"] is a plain dict (from verify_jwt_comprehensive)
+    # orm_user key holds the real SQLAlchemy User object (or None for guests)
+    user_dict = user if isinstance(user, dict) else {}
+    orm_user = user_dict.get("orm_user") if user_dict else None
+
+    if db is not None and orm_user is not None:
+        # DB-based atomic quota for authenticated users
         quota_granted = await atomic_increment_quota(orm_user.id, db)
         if not quota_granted:
             logger.warning(
@@ -313,7 +316,9 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
                     "reset_date": orm_user.last_reset.isoformat() if orm_user.last_reset else None,
                 },
             )
-        # Also track in memory (fast sync limit)
+    # In-memory per-user or per-IP rate limit (always enforced)
+    if user_email and not user_email.endswith("@astramind.local"):
+        # Logged-in user
         key = f"user:{user_email}"
         allowed, rem = _check_and_increment(key, _DAILY_LIMIT_USER)
         if not allowed:
@@ -489,13 +494,31 @@ async def get_quota(
 ):
     """
     Get current user's quota information.
+    auth_data["user"] is a plain dict from verify_jwt_comprehensive.
     """
-    user = auth_data["user"]
+    user = auth_data.get("user", {})
+    if isinstance(user, dict):
+        daily_used  = user.get("daily_used", 0)
+        daily_quota = user.get("daily_quota", 100)
+        last_reset  = user.get("last_reset", None)
+    else:
+        # Fallback: ORM user object
+        daily_used  = getattr(user, "daily_used", 0)
+        daily_quota = getattr(user, "daily_quota", 100)
+        last_reset  = getattr(user, "last_reset", None)
+
+    reset_at = None
+    if last_reset is not None:
+        try:
+            reset_at = last_reset.isoformat()
+        except Exception:
+            reset_at = str(last_reset)
+
     return {
-        "used": user.daily_used,
-        "limit": user.daily_quota,
-        "remaining": max(0, user.daily_quota - user.daily_used),
-        "resets_at": user.last_reset.isoformat() if user.last_reset else None,
+        "used":          daily_used,
+        "limit":         daily_quota,
+        "remaining":     max(0, daily_quota - daily_used),
+        "resets_at":     reset_at,
         "reset_time_utc": "00:00 UTC",
     }
 

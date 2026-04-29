@@ -61,10 +61,11 @@ async def verify_neon_session(token: str) -> Optional[Dict[str, Any]]:
                 }
                 
                 # --- AUTO-SYNC TO USERS TABLE ---
-                # Ensuring metadata/quota exists for this Neon identity
+                # FIX: use correct column name 'auth_id' not 'user_id'
+                # FIX: removed 'is_active' column which doesn't exist on User model
                 sync_query = text("""
-                    INSERT INTO users (user_id, email, daily_quota, daily_used, last_reset, is_active)
-                    VALUES (:uid, :email, 100, 0, NOW(), true)
+                    INSERT INTO users (auth_id, email, daily_quota, daily_used, last_reset)
+                    VALUES (:uid, :email, 100, 0, CURRENT_DATE)
                     ON CONFLICT (email) DO NOTHING
                 """)
                 await db.execute(sync_query, {"uid": row.user_id, "email": row.email})
@@ -125,12 +126,13 @@ async def verify_jwt_comprehensive(request: Request) -> Dict[str, Any]:
         email   = f"{user_id}@astramind.local"
         
     # --- AUTO-SYNC IDENTITIES (User OR Guest) ---
+    # FIX: removed 'is_active' column which doesn't exist on User model
     if async_session_maker:
         try:
             async with async_session_maker() as db:
                 sync_query = text("""
-                    INSERT INTO users (auth_id, email, daily_quota, daily_used, last_reset, is_active)
-                    VALUES (:aid, :email, 50, 0, NOW(), true)
+                    INSERT INTO users (auth_id, email, daily_quota, daily_used, last_reset)
+                    VALUES (:aid, :email, 50, 0, CURRENT_DATE)
                     ON CONFLICT (auth_id) DO NOTHING
                 """)
                 await db.execute(sync_query, {"aid": user_id, "email": email})
@@ -178,20 +180,20 @@ def validate_prompt_security(prompt: str) -> Dict[str, Any]:
     if not prompt or len(prompt.strip()) == 0:
         raise HTTPException(status_code=400, detail="Prompt cannot be empty")
 
-    # Length limits
+    # Length limits (8000 chars - AI models handle this fine)
     if len(prompt) > 8000:
         raise HTTPException(status_code=400, detail="Prompt too long (max 8000 characters)")
 
-    # Check for prompt injection patterns
+    # Check for actual prompt injection patterns (must be deliberate override attempts)
+    # These are tight patterns that match actual injection attacks, not educational queries
     injection_patterns = [
-        r'\b(system|assistant)\b.*:',
-        r'ignore.*previous.*instructions',
-        r'you.*are.*not.*bound.*by.*rules',
-        r'override.*safety.*settings',
-        r'jailbreak',
-        r'dan.*mode',
-        r'uncensored',
-        r'developer.*mode'
+        r'ignore\s+(all\s+)?previous\s+instructions',
+        r'you\s+are\s+not\s+bound\s+by\s+(any\s+)?rules',
+        r'override\s+(your\s+)?safety\s+settings',
+        r'\bjailbreak\b',
+        r'\bdan\s+mode\b',
+        r'disregard\s+(all\s+)?previous\s+(system\s+)?prompt',
+        r'act\s+as\s+(if\s+you\s+are\s+)?an?\s+uncensored',
     ]
 
     for pattern in injection_patterns:
@@ -201,18 +203,6 @@ def validate_prompt_security(prompt: str) -> Dict[str, Any]:
                 status_code=400,
                 detail="Prompt contains potentially harmful content"
             )
-
-    # Check for dangerous content
-    dangerous_keywords = [
-        'ignore', 'bypass', 'override', 'admin', 'root', 'sudo',
-        'exploit', 'hack', 'attack', 'malware', 'virus'
-    ]
-
-    prompt_lower = prompt.lower()
-    for keyword in dangerous_keywords:
-        if keyword in prompt_lower:
-            # Allow in educational contexts, but log
-            logger.info(f"Potentially sensitive keyword in prompt: {keyword}")
 
     return {
         "safe": True,

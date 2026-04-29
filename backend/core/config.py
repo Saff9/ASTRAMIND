@@ -143,7 +143,7 @@ class Settings(BaseSettings):
 
     # ===== CORS =====
     ALLOWED_ORIGINS: str = Field(
-        default="https://astramind-lake.vercel.app,http://localhost:3000,http://localhost:3001",
+        default="https://astramind-lake.vercel.app,https://astramind-reer.onrender.com,http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000",
         description="Comma-separated allowed origins",
     )
 
@@ -339,13 +339,17 @@ class Settings(BaseSettings):
 
     @property
     def effective_database_url(self) -> str:
-        """Get the effective database URL for Postgres.
+        """Get the effective database URL for Postgres or SQLite fallback.
         asyncpg does NOT support ANY query parameters in the connection URL
         (sslmode, channel_binding, etc.). All params must be stripped and SSL
         configured via connect_args={"ssl": True} in the engine instead.
         """
         if not self.DATABASE_URL:
-            raise ValueError("DATABASE_URL must be provided.")
+            # Local SQLite fallback for development (no DATABASE_URL configured)
+            import os
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            db_path = os.path.join(os.path.dirname(base_dir), "astramind_local.db")
+            return f"sqlite+aiosqlite:///{db_path}"
             
         from urllib.parse import urlparse, urlunparse
         url = self.DATABASE_URL
@@ -360,6 +364,9 @@ class Settings(BaseSettings):
             return url.replace("postgresql://", "postgresql+asyncpg://", 1)
         if url.startswith("postgres://"):
             return url.replace("postgres://", "postgresql+asyncpg://", 1)
+        if url.startswith("sqlite://"):
+            # Ensure aiosqlite driver for async SQLite
+            return url.replace("sqlite://", "sqlite+aiosqlite://", 1)
             
         return url
 
@@ -391,11 +398,16 @@ def validate_startup():
     elif settings.is_production() and len(settings.allowed_origins) == 0:
         errors.append("ALLOWED_ORIGINS cannot be empty in production")
 
-    # Database validation for production
+    # Database validation
     if not settings.DATABASE_URL:
-        errors.append("DATABASE_URL not configured - requires a valid PostgreSQL connection string")
-    elif settings.DATABASE_URL.startswith("sqlite") or settings.DATABASE_URL.startswith("libsql"):
-        errors.append("SQLite and Turso are no longer supported. Please use Neon / PostgreSQL.")
+        if settings.is_production():
+            errors.append("DATABASE_URL not configured - requires a valid PostgreSQL connection string")
+        else:
+            warnings.append("DATABASE_URL not configured. Using SQLite for local development.")
+    elif settings.is_production() and (
+        settings.DATABASE_URL.startswith("sqlite") or settings.DATABASE_URL.startswith("libsql")
+    ):
+        errors.append("SQLite is not supported in production. Please use Neon / PostgreSQL.")
 
     # AI providers validation - NOW A WARNING, NOT AN ERROR
     # The app should start even without API keys configured

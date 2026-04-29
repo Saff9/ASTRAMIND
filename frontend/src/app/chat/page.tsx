@@ -213,27 +213,50 @@ export default function ChatPage() {
         if (done) break;
 
         const chunk = decoder.decode(value, { stream: true });
-        // Handle SSE data format (data: { ... })
+        // Handle SSE data format: each line starts with "data: "
         const lines = chunk.split("\n");
         for (const line of lines) {
           if (line.startsWith("data: ")) {
             try {
               const str = line.slice(6).trim();
-              if (str === "[DONE]") continue;
-              const json = JSON.parse(str);
-              const delta = json.choices?.[0]?.delta?.content || json.content || "";
+              if (!str || str === "[DONE]") continue;
+              const parsed = JSON.parse(str);
+
+              // Handle error payloads from backend stream.py
+              if (parsed.type === "error" || parsed.error) {
+                const errMsg = parsed.message || parsed.error || "Stream error occurred";
+                setMessages((prev) => prev.map((m) =>
+                  m.id === loadId ? { ...m, loading: false, content: `**Error:** ${errMsg}` } : m
+                ));
+                return;
+              }
+
+              // PRIMARY FORMAT: {"content": "...", "type": "text"}  ← backend stream.py output
+              // FALLBACK FORMAT: {"choices":[{"delta":{"content":"..."}}]}  ← raw OpenAI/Groq format
+              const delta: string =
+                (typeof parsed.content === "string" ? parsed.content : null) ??
+                (parsed.choices?.[0]?.delta?.content as string | undefined) ??
+                "";
+
               if (delta) {
                 streamedContent += delta;
                 setMessages((prev) => prev.map((m) => 
-                  m.id === loadId ? { ...m, content: streamedContent } : m
+                  m.id === loadId ? { ...m, content: streamedContent, loading: true } : m
                 ));
               }
             } catch {
-              // Ignore partial JSON or metadata lines
+              // Ignore partial JSON, keep-alive pings, or metadata lines
             }
           }
         }
       }
+
+      // Stream complete — finalize loading state
+      setMessages((prev) => prev.map((m) =>
+        m.id === loadId
+          ? { ...m, loading: false, content: m.content || "_No response received._" }
+          : m
+      ));
     } catch (err: unknown) {
       const error = err as Error;
       // Aborted = user clicked stop, don't show error
