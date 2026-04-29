@@ -94,10 +94,12 @@ export default function HomePage() {
   return (
     <div style={{ background: "var(--bg-primary)", color: "var(--text-primary)", minHeight: "100vh", overflowX: "hidden" }}>
 
-      {/* Decorative glow orbs */}
+      {/* Decorative glow orbs & Hero Background */}
       <div style={{ position: "fixed", inset: 0, pointerEvents: "none", overflow: "hidden", zIndex: 0 }} aria-hidden>
-        <div style={{ position: "absolute", top: "-200px", left: "50%", transform: "translateX(-50%)", width: 700, height: 700, borderRadius: "50%", background: "radial-gradient(circle, rgba(212,118,59,0.12) 0%, transparent 70%)", filter: "blur(60px)" }} />
-        <div style={{ position: "absolute", bottom: 0, right: "-100px", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(32,178,170,0.08) 0%, transparent 70%)", filter: "blur(80px)" }} />
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "100vh", background: "url('/images/hero.png') center/cover no-repeat", opacity: 0.15, filter: "blur(2px) brightness(0.7)" }} />
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "40vh", background: "linear-gradient(to bottom, var(--bg-primary), transparent)", zIndex: 1 }} />
+        <div style={{ position: "absolute", top: "-200px", left: "50%", transform: "translateX(-50%)", width: 800, height: 800, borderRadius: "50%", background: "radial-gradient(circle, rgba(242,169,59,0.15) 0%, transparent 70%)", filter: "blur(80px)" }} />
+        <div style={{ position: "absolute", bottom: 0, right: "-100px", width: 600, height: 600, borderRadius: "50%", background: "radial-gradient(circle, rgba(139,122,252,0.1) 0%, transparent 70%)", filter: "blur(100px)" }} />
       </div>
 
       {/* ═══ NAV ═══ */}
@@ -194,9 +196,9 @@ export default function HomePage() {
           </div>
 
           {/* Headline */}
-          <h1 style={{ fontSize: "clamp(2.8rem,6vw,4.5rem)", fontWeight: 800, letterSpacing: "-0.04em", lineHeight: 1.05, marginBottom: 20, fontFamily: DISPLAY_FONT }}>
-            <span style={{ display: "block", color: "var(--text-primary)" }}>Ask anything.</span>
-            <span style={{ display: "block", background: "linear-gradient(135deg,var(--brand) 0%,var(--brand-light) 50%,#ffd080 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+          <h1 style={{ fontSize: "clamp(3.2rem, 8vw, 5.5rem)", fontWeight: 900, letterSpacing: "-0.05em", lineHeight: 0.95, marginBottom: 24, fontFamily: DISPLAY_FONT }}>
+            <span style={{ display: "block", color: "var(--text-primary)", marginBottom: 8 }}>Ask anything.</span>
+            <span style={{ display: "block", background: "linear-gradient(135deg, var(--brand) 0%, var(--brand-light) 50%, #fff 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
               Get smarter answers.
             </span>
           </h1>
@@ -286,18 +288,18 @@ export default function HomePage() {
       </section>
 
       {/* ═══ TRUSTED BY MARQUEE ═══ */}
-      <section style={{ position: "relative", zIndex: 1, padding: "30px 0 70px", overflow: "hidden", borderBottom: "1px solid var(--border-subtle)", marginBottom: "40px" }}>
-        <p style={{ textAlign: "center", fontSize: 11, fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: 40 }}>
+      <section style={{ position: "relative", zIndex: 1, padding: "40px 0 80px", overflow: "hidden", borderBottom: "1px solid var(--border-subtle)", marginBottom: "40px" }}>
+        <p style={{ textAlign: "center", fontSize: 10, fontWeight: 700, letterSpacing: "0.25em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: 45, opacity: 0.8 }}>
           Trusted By & Powered By Industry Leaders
         </p>
         
         {/* Masking gradients for smooth fade-in/fade-out at edges */}
-        <div style={{ position: "absolute", left: 0, top: 60, bottom: 0, width: "20%", background: "linear-gradient(to right, var(--bg-primary), transparent)", zIndex: 2, pointerEvents: "none" }} />
-        <div style={{ position: "absolute", right: 0, top: 60, bottom: 0, width: "20%", background: "linear-gradient(to left, var(--bg-primary), transparent)", zIndex: 2, pointerEvents: "none" }} />
+        <div style={{ position: "absolute", left: 0, top: 80, bottom: 0, width: "25%", background: "linear-gradient(to right, var(--bg-primary), transparent)", zIndex: 2, pointerEvents: "none" }} />
+        <div style={{ position: "absolute", right: 0, top: 80, bottom: 0, width: "25%", background: "linear-gradient(to left, var(--bg-primary), transparent)", zIndex: 2, pointerEvents: "none" }} />
 
         {/* Marquee container */}
-        <div style={{ display: "flex", width: "200%" }} className="marquee-container">
-          <div style={{ display: "flex", width: "50%", justifyContent: "space-evenly", alignItems: "center", opacity: 0.45, filter: "grayscale(100%)", animation: "marquee 40s linear infinite" }}>
+        <div style={{ display: "flex", width: "200%", gap: 0 }} className="marquee-container">
+          <div style={{ display: "flex", width: "50%", justifyContent: "space-between", alignItems: "center", padding: "0 40px", opacity: 0.4, filter: "grayscale(100%)", animation: "marquee 45s linear infinite" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--text-primary)", transition: "all 0.3s ease" }}>
               <OpenAIIcon size={26} /> <span style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.05em" }}>OpenAI</span>
             </div>
@@ -418,27 +420,28 @@ export default function HomePage() {
           </p>
         </div>
 
-        <div className="mobile-col" style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 20 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 24 }}>
           {FEATURES.map((f, i) => (
             <div key={i} style={{
-              background: "var(--surface-1)", border: "1px solid var(--border-subtle)",
-              borderRadius: 20, padding: "32px",
-              transition: "all 0.3s cubic-bezier(0.16,1,0.3,1)",
+              background: "rgba(20,20,25,0.4)", backdropFilter: "blur(12px)",
+              border: "1px solid var(--border-subtle)",
+              borderRadius: 24, padding: "40px",
+              transition: "all 0.4s cubic-bezier(0.16,1,0.3,1)",
               cursor: "default",
             }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--brand)"; (e.currentTarget as HTMLDivElement).style.transform = "translateY(-4px)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "0 12px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(212,118,59,0.2)"; }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--brand)"; (e.currentTarget as HTMLDivElement).style.transform = "translateY(-6px)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "0 20px 50px rgba(0,0,0,0.5), 0 0 0 1px rgba(242,169,59,0.3)"; }}
             onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border-subtle)"; (e.currentTarget as HTMLDivElement).style.transform = ""; (e.currentTarget as HTMLDivElement).style.boxShadow = ""; }}>
               <div style={{
-                width: 42, height: 42, borderRadius: 12,
-                background: "var(--brand-glow)", color: "var(--brand-light)",
-                border: "1px solid rgba(212,118,59,0.3)",
+                width: 48, height: 48, borderRadius: 14,
+                background: "linear-gradient(135deg, var(--brand-glow), transparent)", color: "var(--brand-light)",
+                border: "1px solid rgba(242,169,59,0.3)",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                marginBottom: 20,
+                marginBottom: 24,
               }}>
                 {f.icon}
               </div>
-              <h3 style={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: 8, color: "var(--text-primary)" }}>{f.title}</h3>
-              <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)", lineHeight: 1.65 }}>{f.desc}</p>
+              <h3 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: 12, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>{f.title}</h3>
+              <p style={{ fontSize: "1rem", color: "var(--text-secondary)", lineHeight: 1.6, opacity: 0.85 }}>{f.desc}</p>
             </div>
           ))}
         </div>
