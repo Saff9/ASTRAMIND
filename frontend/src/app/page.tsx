@@ -57,10 +57,15 @@ export default function HomePage() {
 
   useEffect(() => {
     async function check() {
-      const { data } = await neonAuthClient.getSession();
-      setSession(data ? { user: { email: data.user.email } } : null);
-      if (data) {
-        router.push("/chat");
+      try {
+        const { data } = await neonAuthClient.getSession();
+        setSession(data ? { user: { email: data.user.email } } : null);
+        if (data) {
+          router.push("/chat");
+        }
+      } catch (err) {
+        console.error("Auth session check failed:", err);
+        setSession(null); // Fallback to signed-out state on error
       }
     }
     check();
@@ -442,6 +447,38 @@ export default function HomePage() {
               </div>
               <h3 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: 12, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>{f.title}</h3>
               <p style={{ fontSize: "1rem", color: "var(--text-secondary)", lineHeight: 1.6, opacity: 0.85 }}>{f.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ═══ SHOWCASE ═══ */}
+      <section id="showcase" style={{ maxWidth: 1100, margin: "0 auto", padding: "80px 24px", position: "relative", zIndex: 1 }}>
+        <div style={{ textAlign: "center", marginBottom: 64 }}>
+          <h2 style={{ fontSize: "clamp(2rem, 5vw, 3rem)", fontWeight: 900, letterSpacing: "-0.04em", marginBottom: 16, fontFamily: DISPLAY_FONT }}>
+            Experience the Future of AI
+          </h2>
+          <p style={{ fontSize: "1.1rem", color: "var(--text-secondary)", maxWidth: 600, margin: "0 auto", opacity: 0.8 }}>
+            A unified interface for the world's most powerful models. Built for speed, precision, and intelligence.
+          </p>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 32 }}>
+          {[
+            { img: "/images/showcase1.png", title: "Intelligent Coding", desc: "Write, debug, and optimize code with real-time AI assistance across 10+ models." },
+            { img: "/images/showcase2.png", title: "Model Orchestration", desc: "Compare outputs and latency from GPT-4.5, Claude 3.7, and Llama 3 in a single view." },
+            { img: "/images/showcase3.png", title: "Global Intelligence", desc: "Lightning-fast routing to the nearest inference engine for sub-50ms response times." },
+          ].map((item, i) => (
+            <div key={i} style={{ overflow: "hidden", borderRadius: 24, background: "var(--surface-1)", border: "1px solid var(--border-subtle)", transition: "all 0.4s ease" }}
+                 onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.transform = "translateY(-8px)"; (e.currentTarget as HTMLDivElement).style.borderColor = "var(--brand)"; }}
+                 onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.transform = ""; (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border-subtle)"; }}>
+              <div style={{ height: 240, overflow: "hidden" }}>
+                <img src={item.img} alt={item.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              </div>
+              <div style={{ padding: 32 }}>
+                <h3 style={{ fontSize: "1.4rem", fontWeight: 700, marginBottom: 12, color: "var(--text-primary)" }}>{item.title}</h3>
+                <p style={{ fontSize: "1rem", color: "var(--text-secondary)", lineHeight: 1.6, opacity: 0.8 }}>{item.desc}</p>
+              </div>
             </div>
           ))}
         </div>

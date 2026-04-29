@@ -82,55 +82,62 @@ export default function ChatPage() {
 
   useEffect(() => {
     async function checkSession() {
-      const { data } = await neonAuthClient.getSession();
-      if (!data) {
-        setSession(null);
-        router.replace("/signin");
-      } else {
-        const mappedSession = {
-          user: {
-            email: data.user.email,
-            name: data.user.name || undefined,
-            image: data.user.image || undefined,
-          },
-          accessToken: data.session.id
-        };
-        setSession(mappedSession);
-        
-        // Sync user to Neon (fire-and-forget, non-blocking)
-        fetch("/api/users/sync", { method: "POST" }).catch(() => {/* silent */});
-        
-        // Load persisted chat sessions
-        const storedSessions = localStorage.getItem(`chat_sessions_${data.user.email}`);
-        if (storedSessions) {
-          try {
-            const parsed = JSON.parse(storedSessions);
-            setSessions(parsed);
-            if (parsed.length > 0) {
-              setCurrentSessionId(parsed[0].id);
-              setMessages(parsed[0].messages);
-            }
-          } catch { /* ignore */ }
+      try {
+        const { data } = await neonAuthClient.getSession();
+        if (!data) {
+          setSession(null);
+          router.replace("/signin");
         } else {
-          // Legacy migration
-          const legacyStored = localStorage.getItem(`chat_history_${data.user.email}`);
-          if (legacyStored) {
+          const mappedSession = {
+            user: {
+              email: data.user.email,
+              name: data.user.name || undefined,
+              image: data.user.image || undefined,
+            },
+            accessToken: data.session.id
+          };
+          setSession(mappedSession);
+          
+          // Sync user to Neon (fire-and-forget, non-blocking)
+          fetch("/api/users/sync", { method: "POST" }).catch(() => {/* silent */});
+          
+          // Load persisted chat sessions
+          const storedSessions = localStorage.getItem(`chat_sessions_${data.user.email}`);
+          if (storedSessions) {
             try {
-              const parsedMessages = JSON.parse(legacyStored);
-              if (parsedMessages.length > 0) {
-                const newSession = {
-                  id: crypto.randomUUID(),
-                  title: parsedMessages[0].content.slice(0, 30) + '...',
-                  updatedAt: Date.now(),
-                  messages: parsedMessages
-                };
-                setSessions([newSession]);
-                setCurrentSessionId(newSession.id);
-                setMessages(parsedMessages);
+              const parsed = JSON.parse(storedSessions);
+              setSessions(parsed);
+              if (parsed.length > 0) {
+                setCurrentSessionId(parsed[0].id);
+                setMessages(parsed[0].messages);
               }
-            } catch { /* ignore */ }
+            } catch { /* session parse error */ }
+          } else {
+            // Check for legacy single-chat history
+            const legacyHistory = localStorage.getItem(`chat_history_${data.user.email}`);
+            if (legacyHistory) {
+              try {
+                const parsed = JSON.parse(legacyHistory);
+                const newSessionId = crypto.randomUUID();
+                const migratedSession: ChatSession = {
+                  id: newSessionId,
+                  title: parsed.find((m: any) => m.role === "user")?.content.slice(0, 30) + "..." || "Migrated Chat",
+                  updatedAt: Date.now(),
+                  messages: parsed
+                };
+                setSessions([migratedSession]);
+                setCurrentSessionId(newSessionId);
+                setMessages(parsed);
+                localStorage.setItem(`chat_sessions_${data.user.email}`, JSON.stringify([migratedSession]));
+                localStorage.removeItem(`chat_history_${data.user.email}`);
+              } catch { /* migration fail */ }
+            }
           }
         }
+      } catch (err) {
+        console.error("Chat session check failed:", err);
+        setSession(null);
+        router.replace("/signin");
       }
     }
     checkSession();
