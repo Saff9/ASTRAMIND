@@ -452,6 +452,31 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ═══ HOW IT WORKS ═══ */}
+      <section style={{ maxWidth: 960, margin: "0 auto", padding: "64px 24px", position: "relative", zIndex: 1 }}>
+        <div style={{ textAlign: "center", marginBottom: 56 }}>
+          <h2 style={{ fontSize: "clamp(1.8rem,4vw,2.5rem)", fontWeight: 800, letterSpacing: "-0.03em", marginBottom: 12, fontFamily: DISPLAY_FONT }}>How It Works</h2>
+          <p style={{ fontSize: "1.05rem", color: "var(--text-secondary)", maxWidth: 480, margin: "0 auto", fontFamily: PAGE_FONT }}>Get smarter AI answers in three simple steps</p>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 32, position: "relative" }}>
+          {[
+            { step: "01", emoji: "🤖", title: "Choose Your AI", desc: "Pick from 15+ cutting-edge models — GPT-4.5, Claude 3.7, Gemini 2.0, DeepSeek R1, and more." },
+            { step: "02", emoji: "💬", title: "Ask Anything", desc: "Type your question. We auto-search the web for real-time info and route to the best model instantly." },
+            { step: "03", emoji: "⚡", title: "Get Smart Answers", desc: "Receive streaming responses in milliseconds with sources, code highlighting, and live HTML preview." },
+          ].map((item, i) => (
+            <div key={i} style={{ textAlign: "center", padding: "36px 28px", background: "rgba(20,20,25,0.5)", backdropFilter: "blur(12px)", border: "1px solid var(--border-subtle)", borderRadius: 24, transition: "all 0.3s ease", position: "relative", overflow: "hidden" }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--brand)"; (e.currentTarget as HTMLDivElement).style.transform = "translateY(-4px)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border-subtle)"; (e.currentTarget as HTMLDivElement).style.transform = ""; }}
+            >
+              <div style={{ position: "absolute", top: 16, right: 20, fontSize: 42, fontWeight: 900, color: "rgba(212,118,59,0.08)", fontFamily: DISPLAY_FONT, lineHeight: 1 }}>{item.step}</div>
+              <div style={{ fontSize: 40, marginBottom: 16 }}>{item.emoji}</div>
+              <h3 style={{ fontSize: "1.2rem", fontWeight: 700, marginBottom: 10, color: "var(--text-primary)" }}>{item.title}</h3>
+              <p style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.65, opacity: 0.85 }}>{item.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* ═══ SHOWCASE ═══ */}
       <section id="showcase" style={{ maxWidth: 1100, margin: "0 auto", padding: "80px 24px", position: "relative", zIndex: 1 }}>
         <div style={{ textAlign: "center", marginBottom: 64 }}>
@@ -481,6 +506,43 @@ export default function HomePage() {
               </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* ═══ SUPPORT US ═══ */}
+      <section style={{ maxWidth: 860, margin: "0 auto", padding: "64px 24px", position: "relative", zIndex: 1 }}>
+        <div style={{ background: "linear-gradient(135deg, rgba(212,118,59,0.1), rgba(139,122,252,0.08))", border: "1px solid rgba(212,118,59,0.25)", borderRadius: 32, padding: "56px 48px", textAlign: "center" }}>
+          <div style={{ fontSize: 40, marginBottom: 16 }}>❤️</div>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 20, background: "rgba(212,118,59,0.12)", border: "1px solid rgba(212,118,59,0.25)", borderRadius: 100, padding: "5px 16px" }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--brand-light)", display: "inline-block" }} />
+            <span style={{ fontSize: 11, fontWeight: 700, color: "var(--brand-light)", letterSpacing: "0.08em", textTransform: "uppercase" }}>Community Supported</span>
+          </div>
+          <h2 style={{ fontSize: "clamp(1.6rem,4vw,2.2rem)", fontWeight: 800, letterSpacing: "-0.03em", marginBottom: 16, fontFamily: DISPLAY_FONT }}>
+            Help us run our <span style={{ background: "linear-gradient(135deg,var(--brand),var(--brand-light))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>own AI models</span>
+          </h2>
+          <p style={{ fontSize: "1rem", color: "var(--text-secondary)", lineHeight: 1.75, maxWidth: 540, margin: "0 auto 16px", fontFamily: PAGE_FONT }}>
+            We currently pay third-party API costs so you can use ASTRAMIND completely free.
+            Your support helps us self-host open-source models — giving you <strong style={{ color: "var(--text-primary)" }}>faster, more private AI with zero rate limits</strong>.
+          </p>
+          <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 32 }}>No subscription required. Even $1 helps keep the lights on. 💡</p>
+          <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
+            <a href="https://ko-fi.com" target="_blank" rel="noopener noreferrer" style={{
+              display: "inline-flex", alignItems: "center", gap: 10, padding: "14px 32px", borderRadius: 14,
+              background: "linear-gradient(135deg,var(--brand),var(--brand-light))", color: "var(--bg-primary)",
+              fontWeight: 700, fontSize: 15, textDecoration: "none", boxShadow: "0 4px 20px var(--brand-glow)", transition: "all 0.2s",
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 8px 30px var(--brand-glow)"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.transform = ""; (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 4px 20px var(--brand-glow)"; }}
+            >
+              ☕ Support on Ko-fi
+            </a>
+            <Link href="/chat">
+              <button style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "14px 28px", borderRadius: 14, background: "transparent", border: "1px solid var(--border-strong)", color: "var(--text-secondary)", fontSize: 15, fontWeight: 500, cursor: "pointer", transition: "all 0.2s" }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--text-primary)"; (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-2)"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--text-secondary)"; (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+              >Continue for Free</button>
+            </Link>
+          </div>
         </div>
       </section>
 
@@ -562,6 +624,7 @@ export default function HomePage() {
               <h4 style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", marginBottom: 4 }}>Resources</h4>
               <Link href="#features" style={{ fontSize: 14, color: "var(--text-secondary)", textDecoration: "none", transition: "color 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.color = "var(--brand-light)"} onMouseLeave={(e) => e.currentTarget.style.color = "var(--text-secondary)"}>Documentation</Link>
               <Link href="/privacy" style={{ fontSize: 14, color: "var(--text-secondary)", textDecoration: "none", transition: "color 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.color = "var(--brand-light)"} onMouseLeave={(e) => e.currentTarget.style.color = "var(--text-secondary)"}>Privacy Policy</Link>
+              <Link href="/disclaimer" style={{ fontSize: 14, color: "var(--text-secondary)", textDecoration: "none", transition: "color 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.color = "var(--brand-light)"} onMouseLeave={(e) => e.currentTarget.style.color = "var(--text-secondary)"}>API Disclaimer</Link>
               <Link href="/terms" style={{ fontSize: 14, color: "var(--text-secondary)", textDecoration: "none", transition: "color 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.color = "var(--brand-light)"} onMouseLeave={(e) => e.currentTarget.style.color = "var(--text-secondary)"}>Terms of Service</Link>
             </div>
 

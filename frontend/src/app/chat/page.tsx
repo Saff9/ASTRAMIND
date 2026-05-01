@@ -25,6 +25,7 @@ interface Message {
   model?: string;
   timestamp: Date;
   loading?: boolean;
+  sources?: Array<{ title: string; url: string; snippet?: string }>;
 }
 
 interface ChatSession {
@@ -61,6 +62,20 @@ const EMPTY_SUGGESTIONS = [
   "Summarize the key ideas from Atomic Habits",
 ];
 
+// ─── Search intent detection ─────────────────────────────────────────────────
+const SEARCH_KEYWORDS = [
+  "latest", "today", "current", "news", "now", "2024", "2025", "2026",
+  "weather", "stock", "price", "who is", "what is", "what happened",
+  "recently", "last week", "this week", "yesterday", "upcoming",
+  "new release", "update", "announcement", "trending", "live", "real time",
+  "search for", "look up", "find me", "tell me about recent",
+];
+
+function detectSearchIntent(text: string): boolean {
+  const lower = text.toLowerCase();
+  return SEARCH_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
 export default function ChatPage() {
   const { vibration } = useSettings();
   const [session, setSession] = useState<{ user?: { email?: string; name?: string; image?: string }; accessToken?: string } | null | undefined>(undefined);
@@ -68,6 +83,7 @@ export default function ChatPage() {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [messages, setMessages]   = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [searchingWeb, setSearchingWeb] = useState(false);
   const [modelId, setModelId]     = useState("gpt-4.5");
   const [sidebarOpen, setSidebarOpen]   = useState(true);
   const [isMobile, setIsMobile]         = useState(false);
@@ -221,11 +237,49 @@ export default function ChatPage() {
     }
     lastMessageTime.current = now;
 
+    // ── DuckDuckGo auto-search ──────────────────────────────────────────────
+    let webSources: Array<{ title: string; url: string; snippet?: string }> = [];
+    let enrichedPrompt = text;
+    if (detectSearchIntent(text)) {
+      try {
+        setSearchingWeb(true);
+        const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://astramind-reer.onrender.com";
+        let rawToken = (session as { accessToken?: string } | null)?.accessToken;
+        if (!rawToken) {
+          const ns = await neonAuthClient.getSession();
+          rawToken = ns?.data?.session?.id;
+        }
+        const headers: Record<string, string> = {};
+        if (rawToken) headers["Authorization"] = `Bearer ${rawToken}`;
+        const searchRes = await fetch(`${apiBase}/api/v1/web-search?q=${encodeURIComponent(text)}`, { headers });
+        if (searchRes.ok) {
+          const searchData = await searchRes.json();
+          if (searchData.results?.length > 0) {
+            webSources = searchData.results.slice(0, 5).map((r: { title?: string; link?: string; url?: string; snippet?: string }) => ({
+              title: r.title || "Source",
+              url: r.link || r.url || "#",
+              snippet: r.snippet,
+            }));
+            const context = webSources
+              .map((s, i) => `[${i + 1}] ${s.title}\n${s.snippet || ""}\nURL: ${s.url}`)
+              .join("\n\n");
+            enrichedPrompt = `[Real-time web search results for: "${text}"]\n\n${context}\n\n---\nBased on the above search results, please answer: ${text}`;
+          }
+        }
+      } catch {
+        /* silent — fallback to normal */
+      } finally {
+        setSearchingWeb(false);
+      }
+    }
+
     const userMsg: Message = { id: crypto.randomUUID(), role: "user", content: text, timestamp: new Date() };
     const loadId = crypto.randomUUID();
     const loadingMsg: Message = { id: loadId, role: "assistant", content: "", loading: true, timestamp: new Date() };
 
     setMessages((prev) => [...prev, userMsg, loadingMsg]);
+    // Store sources to attach after streaming completes
+    const pendingSources = webSources;
     setIsLoading(true);
 
     const controller = new AbortController();
@@ -261,7 +315,7 @@ export default function ChatPage() {
         headers,
         signal: controller.signal,
         body: JSON.stringify({
-          prompt: text,
+          prompt: enrichedPrompt,
           model: selectedModel.tier || "fast",
           stream: true,
           messages: history.length > 0 ? history : undefined,
@@ -331,10 +385,10 @@ export default function ChatPage() {
         }
       }
 
-      // Stream complete — finalize loading state
+      // Stream complete — finalize loading state + attach sources
       setMessages((prev) => prev.map((m) =>
         m.id === loadId
-          ? { ...m, loading: false, content: m.content || "_No response received._" }
+          ? { ...m, loading: false, content: m.content || "_No response received._", sources: pendingSources.length > 0 ? pendingSources : undefined }
           : m
       ));
     } catch (err: unknown) {
@@ -469,48 +523,65 @@ export default function ChatPage() {
             </button>
           </div>
 
-          {/* Conversation list */}
+          {/* Conversation list with date groupings */}
           <div style={{ flex: 1, overflowY: "auto", padding: "4px 10px" }}>
-            <p style={{ padding: "8px 6px 6px", fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)" }}>
-              Recent
-            </p>
-            {sessions.length > 0 ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                {sessions.map((s) => (
-                  <div
-                    key={s.id}
-                    onClick={() => loadSession(s.id)}
-                    style={{
-                      display: "flex", justifyContent: "space-between", alignItems: "center",
-                      padding: "10px 10px", borderRadius: 10, cursor: "pointer",
-                      background: currentSessionId === s.id ? "var(--surface-3)" : "transparent",
-                      color: currentSessionId === s.id ? "var(--text-primary)" : "var(--text-secondary)",
-                      transition: "all 0.15s ease"
-                    }}
-                    onMouseEnter={(e) => { if (currentSessionId !== s.id) (e.currentTarget as HTMLDivElement).style.background = "var(--surface-2)"; }}
-                    onMouseLeave={(e) => { if (currentSessionId !== s.id) (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
-                  >
-                    <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, paddingRight: 8 }}>
-                      <p style={{ fontSize: 13, fontWeight: 500, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis" }}>{s.title}</p>
-                      <p style={{ fontSize: 11, color: "var(--text-disabled)" }}>
-                        {new Date(s.updatedAt).toLocaleDateString()}
+            {sessions.length > 0 ? (() => {
+              const now = Date.now();
+              const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+              const yesterdayStart = new Date(todayStart); yesterdayStart.setDate(todayStart.getDate() - 1);
+              const weekStart = new Date(todayStart); weekStart.setDate(todayStart.getDate() - 7);
+
+              const groups: Array<{ label: string; items: typeof sessions }> = [
+                { label: "Today", items: sessions.filter(s => s.updatedAt >= todayStart.getTime()) },
+                { label: "Yesterday", items: sessions.filter(s => s.updatedAt >= yesterdayStart.getTime() && s.updatedAt < todayStart.getTime()) },
+                { label: "This Week", items: sessions.filter(s => s.updatedAt >= weekStart.getTime() && s.updatedAt < yesterdayStart.getTime()) },
+                { label: "Older", items: sessions.filter(s => s.updatedAt < weekStart.getTime()) },
+              ].filter(g => g.items.length > 0);
+
+              return (
+                <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                  {groups.map((group) => (
+                    <div key={group.label}>
+                      <p style={{ padding: "10px 6px 4px", fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)" }}>
+                        {group.label}
                       </p>
+                      {group.items.map((s) => (
+                        <div
+                          key={s.id}
+                          onClick={() => loadSession(s.id)}
+                          style={{
+                            display: "flex", justifyContent: "space-between", alignItems: "center",
+                            padding: "9px 10px", borderRadius: 10, cursor: "pointer",
+                            background: currentSessionId === s.id ? "var(--surface-3)" : "transparent",
+                            color: currentSessionId === s.id ? "var(--text-primary)" : "var(--text-secondary)",
+                            transition: "all 0.15s ease"
+                          }}
+                          onMouseEnter={(e) => { if (currentSessionId !== s.id) (e.currentTarget as HTMLDivElement).style.background = "var(--surface-2)"; }}
+                          onMouseLeave={(e) => { if (currentSessionId !== s.id) (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
+                        >
+                          <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, paddingRight: 8 }}>
+                            <p style={{ fontSize: 13, fontWeight: 500, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis" }}>{s.title}</p>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <p style={{ fontSize: 10, color: "var(--text-disabled)" }}>
+                                {s.messages.length} msg{s.messages.length !== 1 ? "s" : ""}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={(e) => deleteSession(e, s.id)}
+                            style={{ padding: 6, background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", borderRadius: 6, flexShrink: 0 }}
+                            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--error)"; (e.currentTarget as HTMLButtonElement).style.background = "rgba(245,100,90,0.1)"; }}
+                            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--text-muted)"; (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+                          >
+                            <Trash2 style={{ width: 14, height: 14 }} />
+                          </button>
+                        </div>
+                      ))}
                     </div>
-                    <button
-                      onClick={(e) => deleteSession(e, s.id)}
-                      style={{
-                        padding: 6, background: "transparent", border: "none",
-                        color: "var(--text-muted)", cursor: "pointer", borderRadius: 6
-                      }}
-                      onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--error)"; (e.currentTarget as HTMLButtonElement).style.background = "rgba(245, 100, 90, 0.1)"; }}
-                      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--text-muted)"; (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
-                    >
-                      <Trash2 style={{ width: 14, height: 14 }} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : (
+                  ))}
+                </div>
+              );
+            })() : (
               <p style={{ fontSize: 12, color: "var(--text-muted)", textAlign: "center", padding: "20px 0" }}>No recent chats</p>
             )}
           </div>
@@ -807,7 +878,7 @@ export default function ChatPage() {
             <div style={{ maxWidth: 760, margin: "0 auto", padding: "32px 24px" }}>
               {messages.map((msg) => (
                 <div key={msg.id} style={{ marginBottom: 28 }}>
-                  <MessageBubble {...msg} />
+                  <MessageBubble {...msg} sources={msg.sources} />
                 </div>
               ))}
               <div ref={messagesEndRef} />
@@ -818,6 +889,13 @@ export default function ChatPage() {
         {/* Composer area */}
         <div className="mobile-p-sm" style={{ flexShrink: 0, padding: "12px 24px 16px", background: "var(--bg-primary)" }}>
           <div style={{ maxWidth: 760, margin: "0 auto" }}>
+            {/* Web search indicator */}
+            {searchingWeb && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center", marginBottom: 8, padding: "6px 16px", borderRadius: 20, background: "rgba(212,118,59,0.08)", border: "1px solid rgba(212,118,59,0.2)", width: "fit-content", margin: "0 auto 8px" }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--brand)", animation: "thinking 1s ease-in-out infinite" }} />
+                <span style={{ fontSize: 12, color: "var(--brand-light)", fontWeight: 600 }}>🔍 Searching the web…</span>
+              </div>
+            )}
             {/* Stop button — shown while loading */}
             {isLoading && (
               <div style={{ textAlign: "center", marginBottom: 8 }}>
@@ -835,10 +913,10 @@ export default function ChatPage() {
                 </button>
               </div>
             )}
-            {/* Pass onStop to ChatInput — model label hidden */}
             <ChatInput onSend={handleSend} isLoading={isLoading} />
             <p style={{ textAlign: "center", fontSize: 11, color: "var(--text-muted)", marginTop: 8 }}>
-              AI can make mistakes. Verify important information.
+              AI can make mistakes. Verify important information. ·{" "}
+              <a href="/disclaimer" style={{ color: "var(--text-muted)", textDecoration: "underline", textUnderlineOffset: 2 }}>API Disclaimer</a>
             </p>
           </div>
         </div>
