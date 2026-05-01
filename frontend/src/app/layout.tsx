@@ -18,9 +18,59 @@ const pacifico = Pacifico({ variable: "--font-pacifico", subsets: ["latin"], wei
 const spaceMono = Space_Mono({ variable: "--font-space-mono", subsets: ["latin"], weight: ["400","700"], display: "optional", preload: false });
 
 export const metadata: Metadata = {
-  title: "ASTRAMIND — AI, your way",
-  description: "Route your prompts to 10+ AI providers. Fast, smart, always on.",
+  title: "ASTRAMIND — The Intelligent AI Orchestration Platform",
+  description: "Access GPT-4.5, Claude 3.7, Gemini 2.0, DeepSeek R1, and 15+ other cutting-edge AI models in one unified, lightning-fast platform with real-time web search.",
+  keywords: ["AI", "Artificial Intelligence", "GPT-4", "Claude", "Gemini", "DeepSeek", "LLM", "Chatbot", "AI Orchestration", "ASTRAMIND"],
+  authors: [{ name: "ASTRAMIND Team" }],
+  openGraph: {
+    title: "ASTRAMIND — AI, your way",
+    description: "The world's fastest multi-AI platform. Chat with GPT-4, Claude, Gemini, and more in one unified interface.",
+    url: "https://astramind.ai",
+    siteName: "ASTRAMIND",
+    images: [
+      {
+        url: "https://astramind.ai/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "ASTRAMIND AI Platform Preview",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ASTRAMIND — The Ultimate AI Assistant",
+    description: "One interface. Every frontier model. Sub-50ms latency. Try ASTRAMIND for free today.",
+    images: ["https://astramind.ai/og-image.png"],
+    creator: "@astramind_ai",
+  },
   manifest: "/manifest.json",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+};
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "ASTRAMIND",
+  "operatingSystem": "Web",
+  "applicationCategory": "UtilitiesApplication",
+  "description": "An intelligent AI orchestration layer allowing users to chat with OpenAI, Anthropic, Google, and other leading language models from a single interface.",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  }
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -45,6 +95,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
                 });
               }
             `}
+          </Script>
+          <Script id="json-ld" type="application/ld+json" strategy="beforeInteractive">
+            {JSON.stringify(jsonLd)}
           </Script>
           <AppProviders>
             {children}
