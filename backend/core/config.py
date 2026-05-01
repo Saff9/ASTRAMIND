@@ -171,6 +171,10 @@ class Settings(BaseSettings):
     DATABASE_POOL_SIZE: int = Field(default=20)
     DATABASE_POOL_MAX_OVERFLOW: int = Field(default=40)
     DATABASE_POOL_RECYCLE_SECONDS: int = Field(default=3600)
+    DATABASE_POOL_TIMEOUT_SECONDS: float = Field(
+        default=30.0,
+        description="Max seconds to wait for a DB connection from the pool (avoids indefinite hangs under load)",
+    )
 
     # ===== REQUEST LIMITS =====
     MAX_REQUEST_SIZE_BYTES: int = Field(default=500_000, description="Max request size in bytes")

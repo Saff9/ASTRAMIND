@@ -1,9 +1,22 @@
 import type { NextConfig } from "next";
 
+const isProd = process.env.NODE_ENV === "production";
+
 const nextConfig: NextConfig = {
+  poweredByHeader: false,
+  ...(isProd && {
+    compiler: {
+      removeConsole: { exclude: ["error", "warn"] },
+    },
+  }),
+  experimental: {
+    optimizePackageImports: ["lucide-react", "framer-motion", "react-markdown"],
+  },
   async rewrites() {
-    // Only proxy through Next.js in development to avoid double-hop in prod
-    // In production the frontend calls NEXT_PUBLIC_API_URL directly (Render backend)
+    // Only proxy through Next.js in development to avoid double-hop and extra latency in prod
+    if (isProd) {
+      return [];
+    }
     return [
       {
         source: '/api/v1/:path*',

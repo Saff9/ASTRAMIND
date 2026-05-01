@@ -26,7 +26,7 @@ from datetime import datetime, timezone
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse, ORJSONResponse, Response
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from api.v1 import chat, status, health, admin, web_search, auth
@@ -80,8 +80,7 @@ async def lifespan(app: FastAPI):
             # Programmatically run migrations on startup
             try:
                 from alembic.config import Config
-                from alembic import command
-                
+
                 # Get the path to alembic.ini relative to this file
                 base_dir = os.path.dirname(os.path.abspath(__file__))
                 ini_path = os.path.join(base_dir, "alembic.ini")
@@ -97,11 +96,32 @@ async def lifespan(app: FastAPI):
                         sync_url = db_url.replace("postgresql+asyncpg://", "postgresql://")
                         alembic_cfg.set_main_option("sqlalchemy.url", sync_url)
                     
-                    # Run the migration in a thread pool
+                    def _upgrade_with_process_lock(cfg):
+                        """Serialize alembic across Gunicorn workers (same host)."""
+                        import sys
+                        from alembic import command as alembic_command
+
+                        if sys.platform == "win32":
+                            alembic_command.upgrade(cfg, "head")
+                            return
+                        import fcntl
+
+                        tmp = os.environ.get("TMPDIR") or os.environ.get("TEMP") or "/tmp"
+                        lock_path = os.path.join(tmp, "astramind_alembic.lock")
+                        with open(lock_path, "a+", encoding="utf-8") as lock_f:
+                            fcntl.flock(lock_f.fileno(), fcntl.LOCK_EX)
+                            try:
+                                alembic_command.upgrade(cfg, "head")
+                            finally:
+                                fcntl.flock(lock_f.fileno(), fcntl.LOCK_UN)
+
+                    # Run the migration in a thread pool (blocking lock is OK at startup)
                     import asyncio
                     import functools
                     loop = asyncio.get_running_loop()
-                    await loop.run_in_executor(None, functools.partial(command.upgrade, alembic_cfg, "head"))
+                    await loop.run_in_executor(
+                        None, functools.partial(_upgrade_with_process_lock, alembic_cfg)
+                    )
                     logger.info("[OK] Database migrations applied successfully")
                 else:
                     logger.warning(f"[WARN] alembic.ini not found at {ini_path}, skipping migrations")
@@ -210,6 +230,7 @@ app = FastAPI(
     version=APP_VERSION,
     description="Multi-provider AI orchestration platform with enterprise-grade stability and security",
     lifespan=lifespan,
+    default_response_class=ORJSONResponse,
     # Disable API schema endpoints in production to prevent schema exposure
     docs_url=None if os.getenv("ENV", "development").lower() == "production" else "/docs",
     redoc_url=None if os.getenv("ENV", "development").lower() == "production" else "/redoc",
