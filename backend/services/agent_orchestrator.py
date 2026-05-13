@@ -346,13 +346,11 @@ async def run_agent_phase(
             raw = await collect_openai_style_stream(gen)
         except Exception as e:
             logger.warning("Agent planner LLM failed: %s", e)
-            log_parts.append(f"[planner_error step={step}] {e}")
             break
 
         decision = _extract_json_obj(raw)
         if not decision:
             logger.warning("Agent planner returned non-JSON: %s", raw[:200])
-            log_parts.append(f"[planner_parse_error step={step}] raw: {raw[:300]!r}")
             break
 
         thought = decision.get("thought", "")
@@ -369,7 +367,6 @@ async def run_agent_phase(
         # Execute tool calls
         calls = decision.get("tool_calls") or []
         if not isinstance(calls, list) or len(calls) == 0:
-            log_parts.append(f"[step={step}] Planner requested finish=false but no tools — stopping")
             break
 
         # Execute tools (up to 6 per step, in parallel where safe)
@@ -403,14 +400,17 @@ async def run_agent_phase(
                 )
 
     # Build final block
-    body = "\n\n".join(p for p in log_parts if p.strip())
+    # Only include tool executions and draft answers, skip internal thoughts to keep context clean
+    body_lines = [p for p in log_parts if p.strip() and not p.startswith("💭 **Thought")]
+    body = "\n\n".join(body_lines)
+    
     if not body.strip():
         return ""
 
     return (
         "### 🤖 AstraMind Agent Workspace\n"
-        "_The following research and tool execution steps were performed to answer your question:_\n\n"
+        "_The following research and tool execution steps were performed in the background:_\n\n"
         f"{body}\n\n"
         "---\n"
-        "_Use the above context to give a comprehensive, accurate final answer._"
+        "_Use the above context to give a comprehensive, accurate final answer directly to the user._"
     )
