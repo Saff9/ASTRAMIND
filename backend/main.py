@@ -40,7 +40,6 @@ from app.middleware.request_validation import RequestValidationMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
 from core.exceptions import global_exception_handler
 from core.stability_engine import stability_engine
-from services.provider_monitor import start_provider_monitor, stop_provider_monitor
 from core.monitoring import MonitoringMiddleware, stop_monitoring
 
 import logging
@@ -148,12 +147,6 @@ async def lifespan(app: FastAPI):
         logger.info("[OK] Shared HTTP client initialized")
 
         if os.getenv("DISABLE_BACKGROUND_TASKS") != "1":
-            start_provider_monitor(app)
-            logger.info("[OK] Provider monitor started")
-        else:
-            logger.info("[SKIP] Provider monitor disabled")
-
-        if os.getenv("DISABLE_BACKGROUND_TASKS") != "1":
             # Start stability engine background tasks
             stability_engine.start_background_tasks()
             logger.info("[OK] Stability engine tasks started")
@@ -197,13 +190,6 @@ async def lifespan(app: FastAPI):
         logger.info("[OK] Stability engine tasks stopped")
     except Exception as e:
         logger.error(f"Error stopping stability engine tasks: {e}")
-
-    # Stop provider monitor task
-    try:
-        await stop_provider_monitor(app)
-        logger.info("[OK] Provider monitor stopped")
-    except Exception as e:
-        logger.error(f"Error stopping provider monitor: {e}")
 
     # Close shared HTTP client
     try:
