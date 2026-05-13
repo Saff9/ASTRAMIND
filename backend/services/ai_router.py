@@ -504,6 +504,8 @@ class AIRouter:
         last_error = None
         tried: List[str] = []
 
+        from services.models import get_model_for_provider
+
         for provider in fallback_chain:
             tried.append(provider)
             stats = self._stats(provider)
@@ -517,10 +519,14 @@ class AIRouter:
 
             try:
                 start = time.time()
-                logger.info(f"Attempting: {provider} / {resolved_model}")
+                
+                # Dynamically resolve correct model string for this provider
+                provider_model = get_model_for_provider(model, provider) or resolved_model
+                
+                logger.info(f"Attempting: {provider} / {provider_model}")
 
                 async for chunk in self._stream_from_provider(
-                    provider, prompt, resolved_model, messages
+                    provider, prompt, provider_model, messages
                 ):
                     yield chunk  # Pass through RAW — no sanitization of streaming JSON
 

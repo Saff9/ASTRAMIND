@@ -7,7 +7,7 @@ Competitive with Claude/ChatGPT/Perplexity on zero budget.
 """
 
 import asyncio
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Tuple, Optional
 from core.model_provider import model_router, ModelProvider
 import logging
 
@@ -231,3 +231,20 @@ def get_model_config(alias: str) -> Dict[str, Any]:
         "available_providers": [p.value for p in config["preferred_providers"]],
         "models": {p.value: m for p, m in config["models"].items()},
     }
+
+
+def get_model_for_provider(alias: str, provider_name: str) -> Optional[str]:
+    """Get the specific model string for a given provider within a tier."""
+    tier = alias.lower().strip()
+    if tier not in MODEL_CONFIGS:
+        tier = MODEL_MAPPING.get(tier, "balanced")
+    
+    config = MODEL_CONFIGS.get(tier)
+    if not config:
+        return None
+        
+    for p_enum, m_str in config["models"].items():
+        if p_enum.value == provider_name:
+            return m_str
+            
+    return None
