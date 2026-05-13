@@ -29,6 +29,7 @@ aiohttp>=3.9
 requests>=2.31.0
 bleach>=6.1.0
 duckduckgo-search>=6.0.0
+markdown>=3.6
 
 # Web Parsing & Utilities
 beautifulsoup4>=4.12.3

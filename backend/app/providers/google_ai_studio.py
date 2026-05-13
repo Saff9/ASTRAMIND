@@ -1,17 +1,21 @@
 import json
-from typing import AsyncIterator
+import logging
+from typing import AsyncIterator, Dict, List, Optional
 
 import httpx
 
 from app.providers.base import AIProvider
 from core.errors import AppError
+from core.system_prompt import get_system_prompt
+
+logger = logging.getLogger(__name__)
 
 
 class GoogleAIStudioProvider(AIProvider):
     """
     Google AI Studio (Gemini) provider using the Generative Language API.
 
-    This yields OpenAI-style delta chunks encoded as JSON strings to keep the
+    Yields OpenAI-style delta chunks encoded as JSON strings to keep the
     downstream streaming format consistent with existing providers.
     """
 
@@ -20,7 +24,13 @@ class GoogleAIStudioProvider(AIProvider):
     def __init__(self, http_client: httpx.AsyncClient | None = None):
         self._client = http_client
 
-    async def stream(self, prompt: str, model: str, api_key: str) -> AsyncIterator[str]:
+    async def stream(
+        self,
+        prompt: str,
+        model: str,
+        api_key: str,
+        messages: Optional[List[Dict[str, str]]] = None,
+    ) -> AsyncIterator[str]:
         if not api_key or not api_key.strip():
             raise AppError(400, "Google AI Studio API key is required")
         if not prompt or not isinstance(prompt, str):
@@ -28,19 +38,30 @@ class GoogleAIStudioProvider(AIProvider):
         if not model:
             model = "gemini-1.5-flash"
 
-        # Streaming endpoint
         url = (
             "https://generativelanguage.googleapis.com/v1beta/"
             f"models/{model}:streamGenerateContent"
         )
 
-        payload = {
-            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+        contents: List[Dict] = []
+        if messages:
+            for m in messages[-50:]:
+                role = m.get("role", "user")
+                text = (m.get("content") or "").strip()
+                if not text:
+                    continue
+                gem_role = "user" if role == "user" else "model"
+                contents.append({"role": gem_role, "parts": [{"text": text}]})
+        contents.append({"role": "user", "parts": [{"text": prompt}]})
+
+        payload: Dict = {
+            "systemInstruction": {"parts": [{"text": get_system_prompt()}]},
+            "contents": contents,
             "generationConfig": {"temperature": 0.7},
         }
 
         headers = {"Content-Type": "application/json"}
-        timeout = httpx.Timeout(30.0, connect=5.0)
+        timeout = httpx.Timeout(120.0, connect=10.0)
 
         try:
             if self._client is None:
@@ -74,7 +95,6 @@ class GoogleAIStudioProvider(AIProvider):
 
 
 def _as_openai_delta(text: str) -> str:
-    # OpenAI-compatible chunk shape (minimal)
     return json.dumps(
         {
             "choices": [
@@ -102,24 +122,16 @@ async def _raise_for_status(response: httpx.Response) -> None:
 
 
 async def _iterate_google_stream_text(response: httpx.Response) -> AsyncIterator[str]:
-    """
-    Google streamGenerateContent returns a stream of JSON objects (one per line).
-    We extract the newly generated text from candidates[].content.parts[].text.
-    Enhanced with robust error handling for malformed JSON and network issues.
-    """
     async for line in response.aiter_lines():
         if not line:
             continue
         try:
             obj = json.loads(line)
         except json.JSONDecodeError as e:
-            # Log and skip malformed JSON lines
-            logger = logging.getLogger(__name__)
-            logger.debug(f"Skipping malformed JSON from Google AI: {line[:100]}... Error: {e}")
+            logger.debug("Skipping malformed JSON from Google AI: %s... Error: %s", line[:100], e)
             continue
         except Exception as e:
-            # Catch any other parsing errors
-            logging.getLogger(__name__).debug(f"Error parsing Google AI response line: {e}")
+            logger.debug("Error parsing Google AI response line: %s", e)
             continue
 
         candidates = obj.get("candidates") or []
@@ -130,4 +142,3 @@ async def _iterate_google_stream_text(response: httpx.Response) -> AsyncIterator
                 text = part.get("text")
                 if text:
                     yield text
-

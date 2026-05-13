@@ -349,6 +349,84 @@ textarea::placeholder, input::placeholder {
   color: var(--text-muted);
 }
 
+/* ─────────────────────── MESSAGE ANIMATIONS ─────────────────────── */
+@keyframes msg-in-user {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes msg-in-ai {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.message-user   { animation: msg-in-user 0.25s cubic-bezier(0.16,1,0.3,1) both; }
+.message-ai     { animation: msg-in-ai  0.3s  cubic-bezier(0.16,1,0.3,1) both; }
+
+/* ─────────────────────── GLOW PULSE ─────────────────────── */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 8px var(--brand-glow); }
+  50%       { box-shadow: 0 0 24px rgba(242,169,59,0.3), 0 0 48px rgba(242,169,59,0.1); }
+}
+.glow-pulse { animation: glow-pulse 2.5s ease-in-out infinite; }
+
+/* ─────────────────────── TYPING INDICATOR ─────────────────────── */
+@keyframes typing-dot {
+  0%, 80%, 100% { transform: scale(0.7); opacity: 0.4; }
+  40%           { transform: scale(1.1); opacity: 1; }
+}
+.typing-dot { animation: typing-dot 1.2s ease-in-out infinite; }
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+/* ─────────────────────── SIDEBAR TRANSITION ─────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ─────────────────────── PREMIUM CODE BLOCKS ─────────────────────── */
+pre {
+  position: relative;
+}
+pre::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, rgba(242,169,59,0.02), transparent);
+  pointer-events: none;
+}
+
+/* ─────────────────────── LINK STYLES ─────────────────────── */
+a {
+  color: var(--brand-light);
+  text-underline-offset: 3px;
+}
+a:hover { color: var(--brand); }
+
+/* ─────────────────────── TABLES IN MESSAGES ─────────────────────── */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.9em;
+}
+th, td {
+  padding: 8px 12px;
+  border: 1px solid var(--border-default);
+  text-align: left;
+}
+th {
+  background: var(--surface-2);
+  font-weight: 700;
+  font-size: 0.85em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+tr:nth-child(even) td { background: var(--surface-1); }
+
 /* ─────────────────────── MOBILE UTILITIES ─────────────────────── */
 @media (max-width: 768px) {
   .mobile-col {

@@ -490,15 +490,19 @@ export default function HomePage() {
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 32 }}>
           {[
-            { img: "/images/showcase1.png", title: "Intelligent Coding", desc: "Write, debug, and optimize code with real-time AI assistance across 10+ models." },
-            { img: "/images/showcase2.png", title: "Model Orchestration", desc: "Compare outputs and latency from GPT-4.5, Claude 3.7, and Llama 3 in a single view." },
-            { img: "/images/showcase3.png", title: "Global Intelligence", desc: "Lightning-fast routing to the nearest inference engine for sub-50ms response times." },
+            { gradient: "linear-gradient(135deg, #1a1a2e 0%, #16213e 40%, #0f3460 100%)", icon: "💻", badge: "Code", title: "Intelligent Coding", desc: "Write, debug, and optimize code with real-time AI assistance across 10+ models. Supports Python, TypeScript, Rust, Go, and more." },
+            { gradient: "linear-gradient(135deg, #1a1a2e 0%, #2d1b4e 40%, #4a1942 100%)", icon: "⚡", badge: "Speed", title: "Model Orchestration", desc: "Sub-50ms routing to Groq, DeepSeek R1, Llama 3.3-70B, and more. Circuit breakers keep you online when providers fail." },
+            { gradient: "linear-gradient(135deg, #0d1b2a 0%, #1b2838 40%, #1e3a5f 100%)", icon: "🔍", badge: "Research", title: "Web-Augmented Intelligence", desc: "Real-time web search with source citations. Ask about today's news, prices, or any current event — we search the web instantly." },
           ].map((item, i) => (
             <div key={i} style={{ overflow: "hidden", borderRadius: 24, background: "var(--surface-1)", border: "1px solid var(--border-subtle)", transition: "all 0.4s ease" }}
                  onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.transform = "translateY(-8px)"; (e.currentTarget as HTMLDivElement).style.borderColor = "var(--brand)"; }}
                  onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.transform = ""; (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border-subtle)"; }}>
-              <div style={{ height: 240, overflow: "hidden" }}>
-                <img src={item.img} alt={item.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              <div style={{ height: 200, background: item.gradient, display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
+                <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 30% 50%, rgba(242,169,59,0.15), transparent 60%)" }} />
+                <div style={{ textAlign: "center", zIndex: 1 }}>
+                  <div style={{ fontSize: 56, marginBottom: 8 }}>{item.icon}</div>
+                  <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", padding: "4px 12px", borderRadius: 100, background: "rgba(242,169,59,0.2)", color: "var(--brand-light)", border: "1px solid rgba(242,169,59,0.3)" }}>{item.badge}</span>
+                </div>
               </div>
               <div style={{ padding: 32 }}>
                 <h3 style={{ fontSize: "1.4rem", fontWeight: 700, marginBottom: 12, color: "var(--text-primary)" }}>{item.title}</h3>
@@ -617,7 +621,7 @@ export default function HomePage() {
               <h4 style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", marginBottom: 4 }}>Product</h4>
               <Link href="/chat" style={{ fontSize: 14, color: "var(--text-secondary)", textDecoration: "none", transition: "color 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.color = "var(--brand-light)"} onMouseLeave={(e) => e.currentTarget.style.color = "var(--text-secondary)"}>Chat Engine</Link>
               <Link href="/discover" style={{ fontSize: 14, color: "var(--text-secondary)", textDecoration: "none", transition: "color 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.color = "var(--brand-light)"} onMouseLeave={(e) => e.currentTarget.style.color = "var(--text-secondary)"}>Discover <span style={{fontSize: 10, padding: "2px 6px", background: "var(--brand-glow)", color: "var(--brand-light)", borderRadius: 100, marginLeft: 6}}>NEW</span></Link>
-              <Link href="/pricing" style={{ fontSize: 14, color: "var(--text-secondary)", textDecoration: "none", transition: "color 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.color = "var(--brand-light)"} onMouseLeave={(e) => e.currentTarget.style.color = "var(--text-secondary)"}>Pricing</Link>
+              <Link href="/chat" style={{ fontSize: 14, color: "var(--text-secondary)", textDecoration: "none", transition: "color 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.color = "var(--brand-light)"} onMouseLeave={(e) => e.currentTarget.style.color = "var(--text-secondary)"}>Free Tier</Link>
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -625,7 +629,7 @@ export default function HomePage() {
               <Link href="#features" style={{ fontSize: 14, color: "var(--text-secondary)", textDecoration: "none", transition: "color 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.color = "var(--brand-light)"} onMouseLeave={(e) => e.currentTarget.style.color = "var(--text-secondary)"}>Documentation</Link>
               <Link href="/privacy" style={{ fontSize: 14, color: "var(--text-secondary)", textDecoration: "none", transition: "color 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.color = "var(--brand-light)"} onMouseLeave={(e) => e.currentTarget.style.color = "var(--text-secondary)"}>Privacy Policy</Link>
               <Link href="/disclaimer" style={{ fontSize: 14, color: "var(--text-secondary)", textDecoration: "none", transition: "color 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.color = "var(--brand-light)"} onMouseLeave={(e) => e.currentTarget.style.color = "var(--text-secondary)"}>API Disclaimer</Link>
-              <Link href="/terms" style={{ fontSize: 14, color: "var(--text-secondary)", textDecoration: "none", transition: "color 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.color = "var(--brand-light)"} onMouseLeave={(e) => e.currentTarget.style.color = "var(--text-secondary)"}>Terms of Service</Link>
+              <Link href="/privacy" style={{ fontSize: 14, color: "var(--text-secondary)", textDecoration: "none", transition: "color 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.color = "var(--brand-light)"} onMouseLeave={(e) => e.currentTarget.style.color = "var(--text-secondary)"}>Terms of Service</Link>
             </div>
 
             {/* Newsletter Column */}

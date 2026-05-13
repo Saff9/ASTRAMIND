@@ -1,19 +1,18 @@
 import json
-from typing import AsyncIterator, Optional
+from typing import AsyncIterator, Dict, List, Optional
 
 import httpx
 
 from app.providers.base import AIProvider
 from core.errors import AppError
+from core.system_prompt import get_system_prompt
 
 
 class CloudflareWorkersAIProvider(AIProvider):
     """
     Cloudflare Workers AI provider.
 
-    Cloudflare's Workers AI API is not OpenAI Chat Completions-compatible.
-    For compatibility with the rest of this backend, we return a single
-    OpenAI-style delta chunk (no true token streaming).
+    Returns OpenAI-style delta chunks for compatibility with the rest of this backend.
     """
 
     name = "cloudflare"
@@ -23,8 +22,13 @@ class CloudflareWorkersAIProvider(AIProvider):
         self.api_token = api_token
         self._client = http_client
 
-    async def stream(self, prompt: str, model: str, api_key: str = "") -> AsyncIterator[str]:
-        # api_key parameter is unused; Cloudflare uses api_token configured in settings.
+    async def stream(
+        self,
+        prompt: str,
+        model: str,
+        api_key: str = "",
+        messages: Optional[List[Dict[str, str]]] = None,
+    ) -> AsyncIterator[str]:
         if not self.account_id or not self.api_token:
             raise AppError(400, "Cloudflare Workers AI not configured (account id / api token missing)")
         if not prompt or not isinstance(prompt, str):
@@ -37,9 +41,19 @@ class CloudflareWorkersAIProvider(AIProvider):
             "Authorization": f"Bearer {self.api_token}",
             "Content-Type": "application/json",
         }
-        payload = {"messages": [{"role": "user", "content": prompt}]}
 
-        timeout = httpx.Timeout(30.0, connect=5.0)
+        api_messages: List[Dict[str, str]] = [{"role": "system", "content": get_system_prompt()}]
+        if messages:
+            for m in messages[-50:]:
+                role = m.get("role", "user")
+                content = m.get("content", "")
+                if role in ("user", "assistant") and content:
+                    api_messages.append({"role": role, "content": content})
+        api_messages.append({"role": "user", "content": prompt})
+
+        payload = {"messages": api_messages}
+
+        timeout = httpx.Timeout(120.0, connect=10.0)
 
         try:
             if self._client is None:
@@ -76,4 +90,3 @@ class CloudflareWorkersAIProvider(AIProvider):
             raise AppError(504, "Cloudflare Workers AI request timeout - please try again")
         except httpx.NetworkError:
             raise AppError(503, "Network error communicating with Cloudflare Workers AI")
-

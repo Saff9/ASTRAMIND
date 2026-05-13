@@ -84,6 +84,8 @@ export default function ChatPage() {
   const [messages, setMessages]   = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchingWeb, setSearchingWeb] = useState(false);
+  const [agentMode, setAgentMode] = useState(false);
+  const [researchMode, setResearchMode] = useState(false);
   const [modelId, setModelId]     = useState("gpt-4.5");
   const [sidebarOpen, setSidebarOpen]   = useState(true);
   const [isMobile, setIsMobile]         = useState(false);
@@ -173,17 +175,24 @@ export default function ChatPage() {
         if (!cid) {
           cid = crypto.randomUUID();
           setCurrentSessionId(cid);
+          // Generate a better title: first user message, up to 40 chars
+          const firstUserMsg = messages.find(m => m.role === "user")?.content || "";
+          const title = firstUserMsg.slice(0, 40) + (firstUserMsg.length > 40 ? "…" : "") || "New chat";
           updated.unshift({
             id: cid,
-            title: messages.find(m => m.role === "user")?.content.slice(0, 30) + "..." || "New Chat",
+            title,
             updatedAt: Date.now(),
             messages
           });
         } else {
           const idx = updated.findIndex(s => s.id === cid);
           if (idx >= 0) {
+            // Refresh title from latest user message
+            const firstUserMsg = messages.find(m => m.role === "user")?.content || "";
+            const title = firstUserMsg.slice(0, 40) + (firstUserMsg.length > 40 ? "…" : "") || "Chat";
             updated[idx].messages = messages;
             updated[idx].updatedAt = Date.now();
+            updated[idx].title = title;
             const [moved] = updated.splice(idx, 1);
             updated.unshift(moved);
           } else {
@@ -195,6 +204,15 @@ export default function ChatPage() {
       });
     }
   }, [messages, session]);
+
+  useEffect(() => {
+    try {
+      setAgentMode(localStorage.getItem("astramind-agent-mode") === "true");
+      setResearchMode(localStorage.getItem("astramind-research-mode") === "true");
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -209,6 +227,24 @@ export default function ChatPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  const setAgentModePersist = useCallback((v: boolean) => {
+    setAgentMode(v);
+    try {
+      localStorage.setItem("astramind-agent-mode", v ? "true" : "false");
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const setResearchModePersist = useCallback((v: boolean) => {
+    setResearchMode(v);
+    try {
+      localStorage.setItem("astramind-research-mode", v ? "true" : "false");
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const stopResponse = useCallback(() => {
     abortControllerRef.current?.abort();
@@ -240,7 +276,7 @@ export default function ChatPage() {
     // ── DuckDuckGo auto-search ──────────────────────────────────────────────
     let webSources: Array<{ title: string; url: string; snippet?: string }> = [];
     let enrichedPrompt = text;
-    if (detectSearchIntent(text)) {
+    if (!researchMode && detectSearchIntent(text)) {
       try {
         setSearchingWeb(true);
         const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://astramind-reer.onrender.com";
@@ -319,6 +355,8 @@ export default function ChatPage() {
           model: selectedModel.tier || "fast",
           stream: true,
           messages: history.length > 0 ? history : undefined,
+          agent_mode: agentMode,
+          research_mode: researchMode,
         }),
       });
 
@@ -405,13 +443,17 @@ export default function ChatPage() {
       abortControllerRef.current = null;
       setIsLoading(false);
     }
-  }, [isLoading, selectedModel, session, messages]);
+  }, [isLoading, selectedModel, session, messages, agentMode, researchMode]);
 
-  const startNewChat = () => {
+  const startNewChat = useCallback(() => {
+    // Abort any in-progress stream
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    setIsLoading(false);
     setMessages([]);
     setCurrentSessionId(null);
     if (isMobile) setSidebarOpen(false);
-  };
+  }, [isMobile]);
 
   const loadSession = (id: string) => {
     const s = sessions.find((s) => s.id === id);
@@ -704,7 +746,8 @@ export default function ChatPage() {
             )}
 
             <button
-              onClick={() => setMessages([])}
+              onClick={startNewChat}
+              title="New chat"
               style={{ padding: 7, borderRadius: 8, background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", display: "flex" }}
               onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-2)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-primary)"; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-muted)"; }}
@@ -889,31 +932,22 @@ export default function ChatPage() {
         {/* Composer area */}
         <div className="mobile-p-sm" style={{ flexShrink: 0, padding: "12px 24px 16px", background: "var(--bg-primary)" }}>
           <div style={{ maxWidth: 760, margin: "0 auto" }}>
-            {/* Web search indicator */}
             {searchingWeb && (
-              <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center", marginBottom: 8, padding: "6px 16px", borderRadius: 20, background: "rgba(212,118,59,0.08)", border: "1px solid rgba(212,118,59,0.2)", width: "fit-content", margin: "0 auto 8px" }}>
-                <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--brand)", animation: "thinking 1s ease-in-out infinite" }} />
+              <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center", marginBottom: 8, padding: "5px 14px", borderRadius: 20, background: "rgba(242,169,59,0.08)", border: "1px solid rgba(242,169,59,0.2)", width: "fit-content", margin: "0 auto 8px" }}>
+                <div style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--brand)", animation: "thinking 1s ease-in-out infinite" }} />
                 <span style={{ fontSize: 12, color: "var(--brand-light)", fontWeight: 600 }}>🔍 Searching the web…</span>
               </div>
             )}
-            {/* Stop button — shown while loading */}
-            {isLoading && (
-              <div style={{ textAlign: "center", marginBottom: 8 }}>
-                <button
-                  onClick={stopResponse}
-                  style={{
-                    padding: "6px 18px", borderRadius: 20, fontSize: 12, fontWeight: 600,
-                    background: "rgba(255,80,80,0.1)", border: "1px solid rgba(255,80,80,0.3)",
-                    color: "#ff5050", cursor: "pointer", transition: "all 0.2s ease",
-                  }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,80,80,0.2)"; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,80,80,0.1)"; }}
-                >
-                  ⏹ Stop generating
-                </button>
-              </div>
-            )}
-            <ChatInput onSend={handleSend} isLoading={isLoading} />
+            <ChatInput
+              onSend={handleSend}
+              onStop={stopResponse}
+              isLoading={isLoading}
+              model={selectedModel.tier}
+              agentMode={agentMode}
+              researchMode={researchMode}
+              onAgentModeChange={setAgentModePersist}
+              onResearchModeChange={setResearchModePersist}
+            />
             <p style={{ textAlign: "center", fontSize: 11, color: "var(--text-muted)", marginTop: 8 }}>
               AI can make mistakes. Verify important information. ·{" "}
               <a href="/disclaimer" style={{ color: "var(--text-muted)", textDecoration: "underline", textUnderlineOffset: 2 }}>API Disclaimer</a>

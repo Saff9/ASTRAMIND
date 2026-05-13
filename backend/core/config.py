@@ -203,6 +203,35 @@ class Settings(BaseSettings):
     # ===== FEATURE FLAGS =====
     ENABLE_WEB_SEARCH: bool = Field(default=True)
     ENABLE_IMAGE_GENERATION: bool = Field(default=False)
+    ENABLE_DEEP_RESEARCH: bool = Field(
+        default=True,
+        description="Multi-query DuckDuckGo bundle (Perplexity-style grounding)",
+    )
+    ENABLE_AGENT_TOOLS: bool = Field(
+        default=True,
+        description="Sandbox file + CLI + structured tool orchestration",
+    )
+
+    # ===== AGENT / SANDBOX =====
+    AGENT_MAX_STEPS: int = Field(default=6, ge=1, le=20)
+    AGENT_PLANNER_MODEL: str = Field(
+        default="smart",
+        description="Model tier alias for tool-planning passes (fast|balanced|smart)",
+    )
+    SANDBOX_ROOT: Optional[str] = Field(
+        default=None,
+        description="Optional absolute path for per-user workspaces (defaults to TEMP/astramind_workspace)",
+    )
+    SANDBOX_USER_SALT: str = Field(
+        default="",
+        description="Optional salt hashed into workspace folder names",
+    )
+    SANDBOX_MAX_FILE_BYTES: int = Field(default=2_000_000)
+    SANDBOX_COMMAND_TIMEOUT_SECONDS: float = Field(default=45.0, ge=1.0, le=600.0)
+    SANDBOX_ALLOWED_BINARIES: str = Field(
+        default="python,py,pip,pip3,npm,npx,node,git,dotnet,rustc,cargo",
+        description="Comma-separated executable basenames allowed in run_terminal",
+    )
 
     # ===== MONITORING / NOISE CONTROL =====
     # When false, alert logs are suppressed (still tracked internally).

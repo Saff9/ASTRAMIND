@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, Compass, Clock, Search, ExternalLink } from "lucide-react";
+import { ArrowLeft, Compass, Clock, Search, ExternalLink, RefreshCw, TrendingUp, Zap, Brain, Globe } from "lucide-react";
 import { AstraIcon } from "@/components/common/ProviderIcons";
 
 interface NewsItem {
@@ -15,223 +15,317 @@ interface NewsItem {
   published_at: string;
 }
 
-export default function DiscoverPage() {
-  const [news, setNews] = useState<NewsItem[]>([]);
-  const [loading, setLoading] = useState(true);
+const CATEGORIES = ["All", "Models", "Research", "Tools", "Companies"];
 
-  useEffect(() => {
-    // In production, fetch from /api/v1/discover/feed
-    // For now, if the backend isn't up, we fallback to mock data
-    fetch("http://localhost:8000/api/v1/discover/feed", {
-      headers: { "Authorization": "Bearer mock-token-123" }
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.items && data.items.length > 0) {
-          setNews(data.items);
-        } else {
-          // Fallback mocked data if scraping failed
-          setNews(getMockNews());
-        }
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.log("Discover backend sync failed, using fallback UI", err);
-        setNews(getMockNews());
-        setLoading(false);
-      });
-  }, []);
+const CATEGORY_QUERIES: Record<string, string> = {
+  All: "",
+  Models: "language model",
+  Research: "research paper",
+  Tools: "AI tool developer",
+  Companies: "OpenAI Anthropic Google Meta",
+};
 
-  return (
-    <div style={{ minHeight: "100vh", background: "var(--bg-primary)", color: "var(--text-primary)" }}>
-      
-      {/* HEADER */}
-      <header style={{
-        position: "sticky", top: 0, zIndex: 50,
-        background: "rgba(26,22,18,0.85)", backdropFilter: "blur(20px)",
-        borderBottom: "1px solid var(--border-subtle)", padding: "12px 24px"
-      }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <Link href="/chat">
-              <button style={{
-                padding: "8px 12px", borderRadius: 10, background: "var(--surface-2)", border: "1px solid var(--border-default)",
-                color: "var(--text-secondary)", cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
-                transition: "all 0.2s"
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text-primary)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-secondary)"; }}>
-                <ArrowLeft size={16} /> Chat
-              </button>
-            </Link>
-            
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg,var(--brand),var(--brand-light))", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <AstraIcon size={16} />
-              </div>
-              <span style={{ fontWeight: 700, fontSize: 16, letterSpacing: "-0.01em" }}>Discover</span>
-            </div>
-          </div>
-
-          <div style={{ display: "flex", gap: 12 }}>
-            <div style={{
-              display: "flex", alignItems: "center", gap: 8, background: "var(--surface-2)",
-              padding: "6px 14px", borderRadius: 100, border: "1px solid var(--border-subtle)",
-              width: 260
-            }}>
-              <Search size={14} color="var(--text-muted)" />
-              <input 
-                type="text" 
-                placeholder="Search topics..." 
-                style={{ background: "transparent", border: "none", color: "var(--text-primary)", fontSize: 13, outline: "none", width: "100%" }}
-              />
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* HERO SECTION */}
-      <section style={{ maxWidth: 1200, margin: "0 auto", padding: "60px 24px 40px", textAlign: "left" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-          <Compass size={32} color="var(--brand-light)" />
-          <h1 style={{ fontSize: "2.8rem", fontWeight: 800, fontFamily: "var(--font-syne, 'Syne'), sans-serif", letterSpacing: "-0.03em" }}>
-            Top Stories
-          </h1>
-        </div>
-        <p style={{ fontSize: 16, color: "var(--text-secondary)", maxWidth: 600 }}>
-          The latest advancements in AI, machine learning, and tech infrastructure, curated by ASTRAMIND.
-        </p>
-      </section>
-
-      {/* GRID */}
-      <section style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px 80px" }}>
-        {loading ? (
-          <div style={{ display: "flex", justifyContent: "center", padding: 100 }}>
-             <p style={{ color: "var(--text-muted)", fontSize: 15 }}>Loading latest feed...</p>
-          </div>
-        ) : (
-          <div style={{
-            display: "grid", 
-            gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", 
-            gap: 24 
-          }}>
-            {news.map((item) => (
-              <a 
-                href={item.source_url} 
-                target="_blank" 
-                rel="noreferrer"
-                key={item.id} 
-                style={{
-                  display: "flex", flexDirection: "column",
-                  background: "var(--surface-1)", border: "1px solid var(--border-subtle)",
-                  borderRadius: 20, overflow: "hidden", textDecoration: "none",
-                  transition: "all 0.3s cubic-bezier(0.16,1,0.3,1)",
-                }}
-                onMouseEnter={(e) => { 
-                  e.currentTarget.style.transform = "translateY(-4px)";
-                  e.currentTarget.style.borderColor = "var(--border-strong)";
-                  e.currentTarget.style.boxShadow = "0 12px 30px rgba(0,0,0,0.3)";
-                }}
-                onMouseLeave={(e) => { 
-                  e.currentTarget.style.transform = "";
-                  e.currentTarget.style.borderColor = "var(--border-subtle)";
-                  e.currentTarget.style.boxShadow = "none";
-                }}
-              >
-                {/* Cover Image */}
-                <div style={{ 
-                  height: 180, width: "100%", 
-                  background: `url(${item.image_url}) center/cover no-repeat`,
-                  backgroundColor: "var(--surface-2)",
-                  borderBottom: "1px solid var(--border-subtle)"
-                }} />
-                
-                {/* Content */}
-                <div style={{ padding: 20, display: "flex", flexDirection: "column", flex: 1 }}>
-                  {/* Meta tag */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img 
-                      src={`https://www.google.com/s2/favicons?domain=${new URL(item.source_url).hostname}&sz=32`} 
-                      style={{ width: 14, height: 14, borderRadius: "50%" }} 
-                      alt="" 
-                    />
-                    <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)" }}>{item.source_name}</span>
-                    <span style={{ fontSize: 12, color: "var(--border-strong)" }}>•</span>
-                    <span style={{ fontSize: 12, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 4 }}>
-                      <Clock size={12} /> {formatTimeAgo(item.published_at)}
-                    </span>
-                  </div>
-                  
-                  {/* Title & Summary */}
-                  <h3 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8, lineHeight: 1.35, letterSpacing: "-0.01em" }}>
-                    {item.title}
-                  </h3>
-                  <p style={{ fontSize: 14, color: "var(--text-muted)", lineHeight: 1.6, flex: 1, marginBottom: 16 }}>
-                    {item.summary}
-                  </p>
-
-                  <div style={{ display: "flex", alignItems: "center", color: "var(--brand-light)", fontSize: 13, fontWeight: 600, gap: 4 }}>
-                    Read article <ExternalLink size={14} />
-                  </div>
-                </div>
-              </a>
-            ))}
-          </div>
-        )}
-      </section>
-
-    </div>
-  );
-}
-
-// ─── Helpers ────────────────────────────────────────────────────────
 function formatTimeAgo(dateString: string) {
   const diff = Date.now() - new Date(dateString).getTime();
-  const hours = Math.floor(diff / (1000 * 60 * 60));
-  if (hours < 1) return "Just now";
+  const mins = Math.floor(diff / 60000);
+  if (mins < 2) return "Just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
   if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
   return `${days}d ago`;
 }
 
-function getMockNews(): NewsItem[] {
-  return [
-    {
-      id: 1,
-      title: "Anthropic releases Claude 3.5 Haiku, beating GPT-4o Mini in latency",
-      summary: "The latest highly efficient model from Anthropic achieves sub-second TTFT while retaining impressive coding capabilities.",
-      source_name: "TechWeekly",
-      source_url: "https://anthropic.com",
-      image_url: "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&w=600&q=80",
-      published_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
-    },
-    {
-      id: 2,
-      title: "DeepSeek-V3 Open Source Model Challenges Proprietary Giants",
-      summary: "A new MoE model offers compelling performance on math and reasoning benchmarks, reshaping the competitive landscape.",
-      source_name: "AI Insights",
-      source_url: "https://deepseek.com",
-      image_url: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=600&q=80",
-      published_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString()
-    },
-    {
-      id: 3,
-      title: "OpenAI Previews 'o1' Reasoning Protocol",
-      summary: "New paradigm allows models to 'think' systematically before generating output, massively reducing logical hallucination.",
-      source_name: "The Verge AI",
-      source_url: "https://openai.com",
-      image_url: "https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=600&q=80",
-      published_at: new Date(Date.now() - 18 * 60 * 60 * 1000).toISOString()
-    },
-    {
-      id: 4,
-      title: "Next.js 15 Introduced with Experimental React Native Port",
-      summary: "Vercel pushes boundaries by allowing universal App Router across web, iOS, and Android seamlessly.",
-      source_name: "Vercel Blog",
-      source_url: "https://nextjs.org",
-      image_url: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=600&q=80",
-      published_at: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
+function getDomainFavicon(url: string): string {
+  try {
+    const { hostname } = new URL(url);
+    return `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
+  } catch {
+    return "";
+  }
+}
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
+
+export default function DiscoverPage() {
+  const [news, setNews] = useState<NewsItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [category, setCategory] = useState("All");
+  const [search, setSearch] = useState("");
+  const [error, setError] = useState(false);
+  const [source, setSource] = useState<"live" | "fallback">("live");
+
+  const fetchNews = useCallback(async (showRefresh = false) => {
+    if (showRefresh) setRefreshing(true);
+    else setLoading(true);
+    setError(false);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/discover/feed`, {
+        cache: "no-store",
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      
+      if (data?.items?.length > 0) {
+        setNews(data.items);
+        setSource(data.source === "fallback" ? "fallback" : "live");
+      } else {
+        setError(true);
+      }
+    } catch (err) {
+      console.warn("Discover fetch failed:", err);
+      setError(true);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-  ];
+  }, []);
+
+  useEffect(() => { fetchNews(); }, [fetchNews]);
+
+  // Filter news
+  const filtered = news.filter(item => {
+    const matchSearch = !search ||
+      item.title.toLowerCase().includes(search.toLowerCase()) ||
+      item.summary?.toLowerCase().includes(search.toLowerCase());
+    const matchCategory = category === "All" ||
+      item.title.toLowerCase().includes(CATEGORY_QUERIES[category]?.toLowerCase() || "") ||
+      item.summary?.toLowerCase().includes(CATEGORY_QUERIES[category]?.toLowerCase() || "");
+    return matchSearch && matchCategory;
+  });
+
+  const featured = filtered[0];
+  const rest = filtered.slice(1);
+
+  return (
+    <div style={{ minHeight: "100vh", background: "var(--bg-primary)", color: "var(--text-primary)" }}>
+
+      {/* ═══ STICKY HEADER ═══ */}
+      <header style={{
+        position: "sticky", top: 0, zIndex: 50,
+        background: "rgba(18,14,10,0.92)", backdropFilter: "blur(20px)",
+        borderBottom: "1px solid var(--border-subtle)", padding: "0 24px",
+      }}>
+        <div style={{ maxWidth: 1280, margin: "0 auto", height: 60, display: "flex", alignItems: "center", gap: 16 }}>
+          <Link href="/chat">
+            <button style={{
+              padding: "7px 14px", borderRadius: 10, background: "var(--surface-2)",
+              border: "1px solid var(--border-default)", color: "var(--text-secondary)",
+              cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 13,
+              fontWeight: 500, transition: "all 0.2s",
+            }}
+            onMouseEnter={e => e.currentTarget.style.color = "var(--text-primary)"}
+            onMouseLeave={e => e.currentTarget.style.color = "var(--text-secondary)"}>
+              <ArrowLeft size={14} /> Back
+            </button>
+          </Link>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ width: 30, height: 30, borderRadius: 9, background: "linear-gradient(135deg,var(--brand),var(--brand-light))", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <AstraIcon size={17} />
+            </div>
+            <span style={{ fontWeight: 700, fontSize: 17, letterSpacing: "-0.01em" }}>Discover</span>
+            {source === "live" && (
+              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", padding: "3px 8px", borderRadius: 100, background: "rgba(34,197,94,0.15)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.3)" }}>
+                ● LIVE
+              </span>
+            )}
+          </div>
+
+          <div style={{ flex: 1 }} />
+
+          {/* Search */}
+          <div style={{
+            display: "flex", alignItems: "center", gap: 8,
+            background: "var(--surface-2)", padding: "7px 14px",
+            borderRadius: 100, border: "1px solid var(--border-subtle)", width: 240,
+            transition: "border-color 0.2s",
+          }}>
+            <Search size={13} color="var(--text-muted)" />
+            <input
+              type="text"
+              placeholder="Search AI news..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{ background: "transparent", border: "none", color: "var(--text-primary)", fontSize: 13, outline: "none", width: "100%" }}
+            />
+          </div>
+
+          <button onClick={() => fetchNews(true)} disabled={refreshing} style={{
+            padding: "7px 14px", borderRadius: 10, background: "var(--surface-2)",
+            border: "1px solid var(--border-default)", color: "var(--text-secondary)",
+            cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 13,
+            transition: "all 0.2s", opacity: refreshing ? 0.5 : 1,
+          }}>
+            <RefreshCw size={13} style={{ animation: refreshing ? "spin 1s linear infinite" : "none" }} />
+            Refresh
+          </button>
+        </div>
+      </header>
+
+      {/* ═══ HERO ═══ */}
+      <section style={{ maxWidth: 1280, margin: "0 auto", padding: "48px 24px 32px" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 24 }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+              <Compass size={28} color="var(--brand-light)" />
+              <h1 style={{ fontSize: "2.4rem", fontWeight: 900, fontFamily: "var(--font-syne, Syne), sans-serif", letterSpacing: "-0.04em" }}>
+                AI Intelligence Feed
+              </h1>
+            </div>
+            <p style={{ fontSize: 15, color: "var(--text-secondary)", maxWidth: 560, lineHeight: 1.6 }}>
+              Live AI & tech news curated by AstraMind — updated every 30 minutes from across the web.
+            </p>
+          </div>
+
+          {/* Stats bar */}
+          <div style={{ display: "flex", gap: 20 }}>
+            {[
+              { icon: <TrendingUp size={14} />, label: "Stories", value: filtered.length.toString() },
+              { icon: <Zap size={14} />, label: "Updated", value: "30m" },
+              { icon: <Globe size={14} />, label: "Sources", value: "Live" },
+              { icon: <Brain size={14} />, label: "AI Focus", value: "100%" },
+            ].map(s => (
+              <div key={s.label} style={{ textAlign: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--brand-light)", justifyContent: "center", marginBottom: 2 }}>
+                  {s.icon}
+                  <span style={{ fontSize: 16, fontWeight: 800 }}>{s.value}</span>
+                </div>
+                <div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Category chips */}
+        <div style={{ display: "flex", gap: 8, marginTop: 28, flexWrap: "wrap" }}>
+          {CATEGORIES.map(cat => (
+            <button key={cat} onClick={() => setCategory(cat)} style={{
+              padding: "6px 16px", borderRadius: 100, fontSize: 13, fontWeight: 600,
+              cursor: "pointer", transition: "all 0.2s", border: "1px solid",
+              borderColor: category === cat ? "var(--brand)" : "var(--border-subtle)",
+              background: category === cat ? "rgba(242,169,59,0.15)" : "var(--surface-1)",
+              color: category === cat ? "var(--brand-light)" : "var(--text-secondary)",
+            }}>
+              {cat}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* ═══ CONTENT ═══ */}
+      <section style={{ maxWidth: 1280, margin: "0 auto", padding: "0 24px 80px" }}>
+        {loading ? (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 20 }}>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} style={{ background: "var(--surface-1)", border: "1px solid var(--border-subtle)", borderRadius: 20, overflow: "hidden" }}>
+                <div style={{ height: 180, background: "var(--surface-2)", animation: "pulse 1.5s ease-in-out infinite" }} />
+                <div style={{ padding: 20 }}>
+                  <div style={{ height: 12, background: "var(--surface-2)", borderRadius: 6, marginBottom: 12, width: "60%", animation: "pulse 1.5s ease-in-out infinite" }} />
+                  <div style={{ height: 18, background: "var(--surface-2)", borderRadius: 6, marginBottom: 8, animation: "pulse 1.5s ease-in-out infinite" }} />
+                  <div style={{ height: 14, background: "var(--surface-2)", borderRadius: 6, width: "80%", animation: "pulse 1.5s ease-in-out infinite" }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : error ? (
+          <div style={{ textAlign: "center", padding: "80px 0" }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>📡</div>
+            <h3 style={{ fontSize: "1.2rem", fontWeight: 700, marginBottom: 8 }}>Unable to Load Live News</h3>
+            <p style={{ color: "var(--text-muted)", marginBottom: 24 }}>Backend may be offline. Try again later.</p>
+            <button onClick={() => fetchNews()} style={{ padding: "10px 24px", borderRadius: 12, background: "linear-gradient(135deg,var(--brand),var(--brand-light))", color: "#1a1410", fontWeight: 700, fontSize: 14, cursor: "pointer", border: "none" }}>
+              Retry
+            </button>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "80px 0", color: "var(--text-muted)" }}>
+            <div style={{ fontSize: 40, marginBottom: 16 }}>🔍</div>
+            <p>No stories match your search.</p>
+          </div>
+        ) : (
+          <>
+            {/* Featured Card */}
+            {featured && (
+              <a href={featured.source_url} target="_blank" rel="noreferrer" style={{ display: "block", textDecoration: "none", marginBottom: 28 }}>
+                <div style={{
+                  display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0,
+                  background: "var(--surface-1)", border: "1px solid var(--border-subtle)",
+                  borderRadius: 24, overflow: "hidden", transition: "all 0.3s ease",
+                  minHeight: 300,
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--brand)"; (e.currentTarget as HTMLDivElement).style.transform = "translateY(-3px)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "0 16px 50px rgba(0,0,0,0.4)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border-subtle)"; (e.currentTarget as HTMLDivElement).style.transform = ""; (e.currentTarget as HTMLDivElement).style.boxShadow = "none"; }}>
+                  <div style={{
+                    background: `url(${featured.image_url}) center/cover no-repeat`,
+                    backgroundColor: "var(--surface-2)", minHeight: 300,
+                  }} />
+                  <div style={{ padding: 40, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                    <div>
+                      <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", padding: "4px 10px", borderRadius: 100, background: "rgba(242,169,59,0.15)", color: "var(--brand-light)", border: "1px solid rgba(242,169,59,0.3)" }}>
+                        ⭐ Featured
+                      </span>
+                      <h2 style={{ fontSize: "1.6rem", fontWeight: 800, letterSpacing: "-0.02em", marginTop: 16, marginBottom: 12, lineHeight: 1.3 }}>{featured.title}</h2>
+                      <p style={{ fontSize: 15, color: "var(--text-secondary)", lineHeight: 1.65 }}>{featured.summary}</p>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 24 }}>
+                      {featured.source_url && <img src={getDomainFavicon(featured.source_url)} style={{ width: 16, height: 16, borderRadius: "50%" }} alt="" />}
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-secondary)" }}>{featured.source_name}</span>
+                      <span style={{ color: "var(--border-strong)" }}>•</span>
+                      <span style={{ fontSize: 12, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 4 }}>
+                        <Clock size={11} /> {formatTimeAgo(featured.published_at)}
+                      </span>
+                      <div style={{ flex: 1 }} />
+                      <span style={{ color: "var(--brand-light)", fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
+                        Read <ExternalLink size={12} />
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </a>
+            )}
+
+            {/* Grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: 20 }}>
+              {rest.map(item => (
+                <a href={item.source_url} target="_blank" rel="noreferrer" key={item.id}
+                  style={{ display: "flex", flexDirection: "column", background: "var(--surface-1)", border: "1px solid var(--border-subtle)", borderRadius: 20, overflow: "hidden", textDecoration: "none", transition: "all 0.3s cubic-bezier(0.16,1,0.3,1)" }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-5px)"; e.currentTarget.style.borderColor = "var(--border-strong)"; e.currentTarget.style.boxShadow = "0 12px 30px rgba(0,0,0,0.3)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.borderColor = "var(--border-subtle)"; e.currentTarget.style.boxShadow = "none"; }}>
+                  <div style={{
+                    height: 170, width: "100%",
+                    background: `url(${item.image_url}) center/cover no-repeat`,
+                    backgroundColor: "var(--surface-2)",
+                    borderBottom: "1px solid var(--border-subtle)",
+                  }} />
+                  <div style={{ padding: 20, display: "flex", flexDirection: "column", flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                      {item.source_url && <img src={getDomainFavicon(item.source_url)} style={{ width: 14, height: 14, borderRadius: "50%" }} alt="" />}
+                      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)" }}>{item.source_name}</span>
+                      <span style={{ fontSize: 12, color: "var(--border-strong)" }}>•</span>
+                      <span style={{ fontSize: 12, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 3 }}>
+                        <Clock size={11} /> {formatTimeAgo(item.published_at)}
+                      </span>
+                    </div>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8, lineHeight: 1.35, letterSpacing: "-0.01em" }}>{item.title}</h3>
+                    <p style={{ fontSize: 13, color: "var(--text-muted)", lineHeight: 1.6, flex: 1, marginBottom: 14 }}>{item.summary}</p>
+                    <div style={{ display: "flex", alignItems: "center", color: "var(--brand-light)", fontSize: 13, fontWeight: 600, gap: 4 }}>
+                      Read article <ExternalLink size={12} />
+                    </div>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </>
+        )}
+      </section>
+
+      <style>{`
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
+    </div>
+  );
 }

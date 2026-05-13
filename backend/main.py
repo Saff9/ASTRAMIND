@@ -44,10 +44,9 @@ from services.provider_monitor import start_provider_monitor, stop_provider_moni
 from core.monitoring import MonitoringMiddleware, stop_monitoring
 
 import logging
-import os
 import httpx
-import functools
 import asyncio
+import functools
 try:
     from opentelemetry import trace
     from opentelemetry.sdk.resources import Resource
@@ -116,8 +115,6 @@ async def lifespan(app: FastAPI):
                                 fcntl.flock(lock_f.fileno(), fcntl.LOCK_UN)
 
                     # Run the migration in a thread pool (blocking lock is OK at startup)
-                    import asyncio
-                    import functools
                     loop = asyncio.get_running_loop()
                     await loop.run_in_executor(
                         None, functools.partial(_upgrade_with_process_lock, alembic_cfg)
@@ -144,8 +141,8 @@ async def lifespan(app: FastAPI):
                 read=settings.OUTBOUND_HTTP_READ_TIMEOUT_SECONDS,
             ),
             limits=httpx.Limits(
-                max_connections=settings.OUTBOUND_HTTP_MAX_CONNECTIONS,
-                max_keepalive_connections=settings.OUTBOUND_HTTP_MAX_KEEPALIVE,
+                max_connections=min(settings.OUTBOUND_HTTP_MAX_CONNECTIONS, 50),  # Capped for Render free tier
+                max_keepalive_connections=min(settings.OUTBOUND_HTTP_MAX_KEEPALIVE, 20),
             ),
         )
         logger.info("[OK] Shared HTTP client initialized")

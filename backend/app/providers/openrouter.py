@@ -1,7 +1,7 @@
 # backend/app/providers/openrouter.py
 
 import httpx
-from typing import AsyncIterator
+from typing import AsyncIterator, Dict, List, Optional
 
 from app.providers.base import AIProvider
 from core.errors import AppError
@@ -12,7 +12,6 @@ class OpenRouterProvider(AIProvider):
     name = "openrouter"
 
     def __init__(self, http_client: httpx.AsyncClient | None = None):
-        # Optional shared client for connection pooling (recommended in production).
         self._client = http_client
 
     async def stream(
@@ -20,10 +19,19 @@ class OpenRouterProvider(AIProvider):
         prompt: str,
         model: str,
         api_key: str,
+        messages: Optional[List[Dict[str, str]]] = None,
     ) -> AsyncIterator[str]:
 
-        # Get system prompt for AI identity
         system_prompt = get_system_prompt()
+
+        msg_list = [{"role": "system", "content": system_prompt}]
+        if messages:
+            for m in messages[-50:]:
+                role = m.get("role", "user")
+                content = m.get("content", "")
+                if role in ("user", "assistant") and content:
+                    msg_list.append({"role": role, "content": content})
+        msg_list.append({"role": "user", "content": prompt})
 
         headers = {
             "Authorization": f"Bearer {api_key}",
@@ -32,14 +40,11 @@ class OpenRouterProvider(AIProvider):
 
         payload = {
             "model": model,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt}
-            ],
+            "messages": msg_list,
             "stream": True,
         }
 
-        timeout = httpx.Timeout(30.0, connect=5.0)
+        timeout = httpx.Timeout(120.0, connect=10.0)
         url = "https://openrouter.ai/api/v1/chat/completions"
 
         try:

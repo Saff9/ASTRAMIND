@@ -1,11 +1,34 @@
 import json
-from typing import AsyncIterator
+import logging
+from typing import AsyncIterator, Dict, List, Optional
 
 import httpx
 
 from app.providers.base import AIProvider
 from core.errors import AppError
 from core.system_prompt import get_system_prompt
+
+logger = logging.getLogger(__name__)
+
+
+def _build_anthropic_messages(
+    prompt: str,
+    messages: Optional[List[Dict[str, str]]],
+) -> List[Dict[str, str]]:
+    """Build Anthropic Messages API `messages` list (must start with a user turn)."""
+    out: List[Dict[str, str]] = []
+    if messages:
+        for m in messages[-50:]:
+            role = m.get("role", "user")
+            content = (m.get("content") or "").strip()
+            if role in ("user", "assistant") and content:
+                out.append({"role": role, "content": content})
+    out.append({"role": "user", "content": prompt})
+    while out and out[0]["role"] != "user":
+        out.pop(0)
+    if not out:
+        out = [{"role": "user", "content": prompt}]
+    return out
 
 
 class AnthropicProvider(AIProvider):
@@ -19,7 +42,13 @@ class AnthropicProvider(AIProvider):
     def __init__(self, http_client: httpx.AsyncClient | None = None):
         self._client = http_client
 
-    async def stream(self, prompt: str, model: str, api_key: str) -> AsyncIterator[str]:
+    async def stream(
+        self,
+        prompt: str,
+        model: str,
+        api_key: str,
+        messages: Optional[List[Dict[str, str]]] = None,
+    ) -> AsyncIterator[str]:
         if not api_key or not api_key.strip():
             raise AppError(400, "Anthropic API key is required")
         if not prompt or not isinstance(prompt, str):
@@ -27,8 +56,8 @@ class AnthropicProvider(AIProvider):
         if not model:
             model = "claude-3-5-sonnet-20241022"
 
-        # Get system prompt for AI identity
         system_prompt = get_system_prompt()
+        anthropic_messages = _build_anthropic_messages(prompt, messages)
 
         url = "https://api.anthropic.com/v1/messages"
 
@@ -41,12 +70,12 @@ class AnthropicProvider(AIProvider):
         payload = {
             "model": model,
             "system": system_prompt,
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": anthropic_messages,
             "stream": True,
-            "max_tokens": 4096,
+            "max_tokens": 8192,
         }
 
-        timeout = httpx.Timeout(30.0, connect=5.0)
+        timeout = httpx.Timeout(120.0, connect=10.0)
 
         try:
             if self._client is None:
@@ -83,10 +112,6 @@ async def _raise_for_status(response: httpx.Response) -> None:
 
 
 async def _iterate_anthropic_sse(response: httpx.Response) -> AsyncIterator[str]:
-    """
-    Iterate over Anthropic SSE events with robust error handling.
-    Handles malformed JSON, incomplete chunks, and network issues gracefully.
-    """
     async for line in response.aiter_lines():
         if not line:
             continue
@@ -114,11 +139,8 @@ async def _iterate_anthropic_sse(response: httpx.Response) -> AsyncIterator[str]
                     ensure_ascii=False,
                 )
         except json.JSONDecodeError as e:
-            # Log and skip malformed JSON
-            logger = logging.getLogger(__name__)
-            logger.debug(f"Skipping malformed JSON from Anthropic: {data[:100]}... Error: {e}")
+            logger.debug("Skipping malformed JSON from Anthropic: %s... Error: %s", data[:100], e)
             continue
         except Exception as e:
-            # Catch any other errors and continue streaming
-            logging.getLogger(__name__).debug(f"Error processing Anthropic SSE event: {e}")
+            logger.debug("Error processing Anthropic SSE event: %s", e)
             continue

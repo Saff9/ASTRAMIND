@@ -180,20 +180,20 @@ def validate_prompt_security(prompt: str) -> Dict[str, Any]:
     if not prompt or len(prompt.strip()) == 0:
         raise HTTPException(status_code=400, detail="Prompt cannot be empty")
 
-    # Length limits (8000 chars - AI models handle this fine)
-    if len(prompt) > 8000:
-        raise HTTPException(status_code=400, detail="Prompt too long (max 8000 characters)")
+    # Match ChatRequest max_length of 32768 characters
+    if len(prompt) > 32768:
+        raise HTTPException(status_code=400, detail="Prompt too long (max 32768 characters)")
 
-    # Check for actual prompt injection patterns (must be deliberate override attempts)
-    # These are tight patterns that match actual injection attacks, not educational queries
+    # Check for prompt injection — tight patterns targeting actual attacks only
+    # These must be deliberate override attempts, not educational/research queries
     injection_patterns = [
-        r'ignore\s+(all\s+)?previous\s+instructions',
-        r'you\s+are\s+not\s+bound\s+by\s+(any\s+)?rules',
-        r'override\s+(your\s+)?safety\s+settings',
-        r'\bjailbreak\b',
-        r'\bdan\s+mode\b',
-        r'disregard\s+(all\s+)?previous\s+(system\s+)?prompt',
-        r'act\s+as\s+(if\s+you\s+are\s+)?an?\s+uncensored',
+        r'ignore\s+all\s+previous\s+instructions\s+and',
+        r'you\s+are\s+no\s+longer\s+(an?\s+)?AI',
+        r'override\s+your\s+safety\s+settings\s+(now|immediately)',
+        r'\bDAN\s+mode\s+enabled\b',
+        r'disregard\s+all\s+previous\s+system\s+prompts?\s+and\s+act',
+        r'act\s+as\s+an?\s+uncensored\s+(AI|assistant|version)',
+        r'pretend\s+you\s+have\s+no\s+(rules|restrictions|guidelines)\s+and',
     ]
 
     for pattern in injection_patterns:

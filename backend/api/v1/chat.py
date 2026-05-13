@@ -13,13 +13,13 @@ from typing import Literal, Dict, List, Optional
 from core.enhanced_security import (
     get_current_user_secure,
     validate_prompt_security,
-    validate_model_access,
-    log_security_event
+    log_security_event,
 )
-from core.astramind_ai_personality import AstraMindPersonalityEngine
 from app.db.session import get_db
 from services.ai_router import AIRouter
 from services.stream import stream_response
+from core.agent_skills import build_agent_system_suffix
+from core.system_prompt import system_suffix_stack
 from services.models import resolve_model
 from services.prompts import sanitize_prompt
 from core.config import settings
@@ -170,6 +170,14 @@ class ChatRequest(BaseModel):
         default=None,
         description="Conversation history (last N turns, optional)",
         max_length=120,
+    )
+    agent_mode: bool = Field(
+        default=False,
+        description="Enable sandbox tools (files, md→html, restricted CLI) via orchestrator",
+    )
+    research_mode: bool = Field(
+        default=False,
+        description="Multi-query web research bundle (Perplexity-style grounding)",
     )
 
     @field_validator("prompt")
@@ -342,8 +350,31 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
             f"[request_id: {request_id}]"
         )
         
-        # ── WEB SEARCH INTEGRATION ────────────────────────────────────
-        if getattr(settings, "ENABLE_WEB_SEARCH", False):
+        # ── HISTORY (shared by agent + providers) ───────────────────────────
+        history_msgs = [
+            {"role": m.role, "content": m.content}
+            for m in (payload.messages or [])[-50:]
+            if m.role in ("user", "assistant") and m.content
+        ]
+
+        # ── DEEP RESEARCH (Perplexity-style multi-query) ─────────────────────
+        if (
+            payload.research_mode
+            and getattr(settings, "ENABLE_DEEP_RESEARCH", True)
+            and getattr(settings, "ENABLE_WEB_SEARCH", False)
+        ):
+            try:
+                from services.research_service import deep_research
+
+                logger.info(f"Deep research bundle for user {user_email} [request_id: {request_id}]")
+                dr = await deep_research(safe_prompt)
+                if dr:
+                    safe_prompt = f"{safe_prompt}\n\n{dr}"
+            except Exception as e:
+                logger.error(f"Deep research failed: {e}")
+
+        # ── LIGHT WEB SEARCH (single-pass DDG) ───────────────────────────────
+        if getattr(settings, "ENABLE_WEB_SEARCH", False) and not payload.research_mode:
             search_keywords = ["who", "what", "where", "when", "why", "how", "latest", "news", "current", "today", "now", "price", "stock", "weather"]
             if any(kw in safe_prompt.lower() for kw in search_keywords) and len(safe_prompt) > 5:
                 try:
@@ -355,34 +386,52 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
                 except Exception as e:
                     logger.error(f"Web search integration failed: {e}")
 
+        # ── AGENT TOOLS (sandbox orchestration) ──────────────────────────────
+        if payload.agent_mode and getattr(settings, "ENABLE_AGENT_TOOLS", True):
+            try:
+                from services.agent_orchestrator import run_agent_phase
+
+                agent_block = await run_agent_phase(
+                    router=ai_router,
+                    user_goal=safe_prompt,
+                    history=history_msgs or None,
+                    model_tier=payload.model,
+                    preferred_provider=provider,
+                    user_email=user_email,
+                    request_id=request_id,
+                )
+                if agent_block:
+                    safe_prompt = f"{safe_prompt}\n\n{agent_block}"
+            except Exception as e:
+                logger.error(f"Agent orchestration failed: {e}", exc_info=True)
+
+        agent_system_suffix = build_agent_system_suffix(safe_prompt, payload.model)
+
         # ── NON-STREAMING PATH (stream=false) ─────────────────────────────────
         if not payload.stream:
             # Build conversation history for the provider
-            history = [
-                {"role": m.role, "content": m.content}
-                for m in (payload.messages or [])[-50:]
-                if m.role in ("user", "assistant") and m.content
-            ]
+            history = history_msgs
 
             async def execute_ai_json():
                 chunks: List[str] = []
-                async for chunk in ai_router.stream_with_fallback(
-                    prompt=safe_prompt,
-                    model=payload.model,  # The tier string (e.g. 'balanced')
-                    preferred_provider=provider,
-                    messages=history or None,
-                ):
-                    try:
-                        parsed = json.loads(chunk)
-                        choices = parsed.get("choices", [])
-                        content = ""
-                        if choices:
-                            content = choices[0].get("delta", {}).get("content", "") or ""
-                        if content:
-                            chunks.append(content)
-                    except (json.JSONDecodeError, IndexError, AttributeError, TypeError):
-                        if chunk and chunk.strip():
-                            chunks.append(chunk)
+                with system_suffix_stack(agent_system_suffix):
+                    async for chunk in ai_router.stream_with_fallback(
+                        prompt=safe_prompt,
+                        model=payload.model,  # The tier string (e.g. 'balanced')
+                        preferred_provider=provider,
+                        messages=history or None,
+                    ):
+                        try:
+                            parsed = json.loads(chunk)
+                            choices = parsed.get("choices", [])
+                            content = ""
+                            if choices:
+                                content = choices[0].get("delta", {}).get("content", "") or ""
+                            if content:
+                                chunks.append(content)
+                        except (json.JSONDecodeError, IndexError, AttributeError, TypeError):
+                            if chunk and chunk.strip():
+                                chunks.append(chunk)
                 full_text = "".join(chunks)
                 return JSONResponse(content={
                     "response": full_text,
@@ -414,11 +463,7 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
         # ── STREAMING PATH (stream=true, SSE) ─────────────────────────────────
         # Note: Frontend history array logic has not been requested for SSE yet, 
         # but passing it here for consistency if frontend sends it.
-        history_sse = [
-            {"role": m.role, "content": m.content}
-            for m in (payload.messages or [])[-50:]
-            if m.role in ("user", "assistant") and m.content
-        ]
+        history_sse = history_msgs
         
         base_stream_generator = ai_router.stream_with_fallback(
             prompt=safe_prompt,
@@ -428,7 +473,10 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
         )
 
         async def execute_ai_stream():
-            return stream_response(base_stream_generator)
+            return stream_response(
+                base_stream_generator,
+                system_suffix=agent_system_suffix,
+            )
 
         async def fallback_sse():
             async def fallback_generator():
@@ -571,6 +619,8 @@ async def list_models(
             "local_detection": True,
             "auto_fallback": True,
             "health_monitoring": True,
+            "agent_tools": getattr(settings, "ENABLE_AGENT_TOOLS", True),
+            "deep_research": getattr(settings, "ENABLE_DEEP_RESEARCH", True),
         }
     }
 
