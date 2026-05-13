@@ -1,4 +1,4 @@
-# 🚀 ASTRAMIND - Production Deployment Guide (v1.1.5)
+# 🚀 ASTRAMIND - Production Deployment Guide (v1.2.0)
 
 This guide provides the official instructions for deploying the ASTRAMIND platform in a production environment.
 
@@ -7,10 +7,10 @@ This guide provides the official instructions for deploying the ASTRAMIND platfo
 ## 📋 System Architecture
 
 *   **Backend**: Python 3.13 / FastAPI (Web Service)
-*   **Frontend**: Next.js 14 (Static Site or Managed Next.js)
+*   **Frontend**: Next.js 15 (Static Site or Managed Next.js)
 *   **Database**: PostgreSQL (Neon, Supabase, or AWS RDS)
-*   **AI Orchestration**: Multi-provider AIRouter with Circuit Breakers
-*   **Security**: Zero-Trust architecture with IP-based rate limiting and JWT
+*   **AI Orchestration**: Multi-provider AIRouter with 9 Agentic Skills
+*   **Security**: Zero-Trust architecture with IP-based rate limiting
 
 ---
 
@@ -25,7 +25,7 @@ Connect your repository to [Render](https://render.com) and create a new **Web S
 *   **Root Directory**: `backend`
 *   **Build Command**: `pip install -r requirements.txt`
 *   **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-*   **Plan**: Pro or higher (recommended for 2GB+ RAM)
+*   **Plan**: Free Tier compatible (512MB RAM) thanks to v1.2.0 memory optimizations.
 
 ### 2. Environment Variables
 
@@ -37,28 +37,28 @@ Set the following variables in the Render Dashboard:
 | `LOG_LEVEL` | `INFO` |
 | `DATABASE_URL` | PostgreSQL connection string (`postgresql+asyncpg://...`) |
 | `JWT_SECRET` | Strong secret key (min 32 chars) |
-| `ALLOWED_ORIGINS` | Comma-separated frontend URLs (e.g., `https://astramind.vercel.app`) |
-| `GROQ_API_KEYS` | Comma-separated API keys for Groq |
-| `OPENROUTER_API_KEYS` | Comma-separated API keys for OpenRouter |
-| `GOOGLE_AI_STUDIO_API_KEYS` | Comma-separated API keys for Gemini |
+| `ALLOWED_ORIGINS` | Comma-separated frontend URLs (e.g., `https://your-frontend.vercel.app`) |
+| `GROQ_API_KEYS` | Comma-separated API keys for Groq (Primary Fast) |
+| `OPENROUTER_API_KEYS` | Comma-separated API keys for OpenRouter (DeepSeek R1 Smart) |
+| `CEREBRAS_API_KEYS` | Comma-separated API keys for Cerebras |
 
 ### 3. Health & Readiness
 *   **Health Check Path**: `/api/v1/health`
-*   **Readiness Path**: `/api/v1/ready`
+*   **Stability Score Path**: `/api/v1/stability`
 
 ---
 
-## 🎨 Frontend Deployment (Vercel or Render)
+## 🎨 Frontend Deployment (Vercel)
 
 ### 1. Build Configuration
 *   **Framework**: Next.js
 *   **Root Directory**: `frontend`
 *   **Build Command**: `npm run build`
-*   **Output Directory**: `.next` (or `out` for static exports)
+*   **Output Directory**: `.next`
 
 ### 2. Environment Variables
-*   **`NEXT_PUBLIC_API_URL`**: Your backend URL (e.g., `https://astramind-backend.onrender.com`)
-*   **`NEXT_PUBLIC_APP_VERSION`**: `1.1.5`
+*   **`NEXT_PUBLIC_API_URL`**: Your backend URL (e.g., `https://astramind-backend.onrender.com`). **CRITICAL: App will not work without this.**
+*   **`NEXT_PUBLIC_APP_VERSION`**: `1.2.0`
 
 ---
 
@@ -70,28 +70,26 @@ Ensure your database (e.g., Neon or Supabase) accepts connections from your back
 ### 2. Rate Limiting
 Production limits are enforced at two levels:
 *   **Application Level**: 60 requests/min per IP (configurable in `config.py`)
-*   **User Level**: Daily quotas based on account tier (Guest: 70, User: 50, Premium: 200).
+*   **User Level**: Daily quotas based on account tier.
 
 ---
 
 ## 🔍 Monitoring & Stability
 
-### 1. Stability Engine
-The backend includes a `StabilityEngine` that monitors error rates and manages circuit breakers.
-*   **Status Endpoint**: `/api/v1/stability` provides a real-time stability score and health metrics.
+### 1. Lightweight Monitor
+The backend includes a highly optimized O(1) memory monitor that tracks CPU, RAM, and error rates without crashing constrained containers.
 
 ### 2. Logging
-Logs are structured as JSON for production. Monitor Render logs for:
+Monitor Render logs for:
 *   `Circuit Breaker state changed`
 *   `Rate limit exceeded`
-*   `Quota enforcement`
 
 ---
 
 ## 🔄 Scaling Strategy
 
-1.  **Vertical Scaling**: Start with 1GB-2GB RAM. If memory usage exceeds 80%, upgrade to the next tier.
-2.  **Horizontal Scaling**: Render supports multiple instances. The system is stateless and supports horizontal scaling out of the box, provided `DATABASE_POOL_SIZE` is adjusted accordingly (default: 20).
+1.  **Vertical Scaling**: 512MB RAM is sufficient for standard workloads. If concurrent users exceed 500+, upgrade to 1GB+.
+2.  **Horizontal Scaling**: Render supports multiple instances. The system is stateless (chat memory is on the client) and supports horizontal scaling out of the box, provided `DATABASE_POOL_SIZE` is adjusted accordingly (default: 20).
 
 ---
 
@@ -99,4 +97,4 @@ Logs are structured as JSON for production. Monitor Render logs for:
 
 *   **Database Error**: Ensure the URL uses the `+asyncpg` driver for SQLAlchemy.
 *   **CORS Issues**: Cross-check `ALLOWED_ORIGINS` in backend config with the actual frontend URL.
-*   **Provider Failures**: Check `/api/v1/stability` to see if a specific AI provider's circuit breaker is open.
+*   **Discover Page Blank**: Ensure `NEXT_PUBLIC_API_URL` is set in Vercel.

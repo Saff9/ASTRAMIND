@@ -4,53 +4,41 @@ All notable changes to AstraMind are documented here. This project adheres to [S
 
 ---
 
-## [1.1.5] - 2026-04-21
+## [1.2.0] - 2026-05-13
 
-### 🎯 Documentation Overhaul & Production Sync
+### 🎯 Production-Grade Overhaul & Agentic AI
 #### Added
-- **Consolidated Documentation**: Merged 30+ redundant files into 8 core "Source of Truth" documents:
-  - `README.md`: The official entry point.
-  - `DEPLOYMENT.md`: Official deployment instructions (Render/Python/Next.js).
-  - `ARCHITECTURE.md`: High-level system design and scalability roadmap.
-  - `SECURITY.md`: Comprehensive security audit and defensive architecture.
-  - `PERSONALITY.md`: Technical guide to the Advanced Personality Engine.
-  - `QUALITY_ASSURANCE.md`: Testing, readiness, and performance metrics.
-  - `AUDIT_LOGS.md`: Historical record of logic and security audits.
-  - `ENVIRONMENT.md`: Configuration reference for all service variables.
+- **World-Class Agentic Skills**: Introduced 9 specialized skill modules (`Code Interpreter`, `Research`, `Math Reasoning`, `Data Analyst`, `System Architect`, `Security Auditor`, `Planner`, `Content Writer`, `Self-Refine`) with regex-based auto-detection in `agent_skills.py`.
+- **Live Discovery Feed**: Perplexity-style real-time news via DuckDuckGo API with parallel topic fetching and 30-minute in-memory caching.
+- **Premium UI Enhancements**:
+  - Hardware-accelerated message slide-in animations.
+  - Interactive "Thinking" state glows and pulsing micro-animations.
+  - Separated persistent memory for each chat session stored locally with auto-generated titles.
+- **DeepSeek R1 Tier**: Implemented a highly capable "Smart" tier using DeepSeek R1 via OpenRouter for free, advanced reasoning.
+- **Pricing Page**: Added a transparent pricing and API limit communication page.
+
 #### Fixed
-- **Doc-Code Synchronization**: Updated all documentation to accurately reflect the v1.1.5 codebase (FastAPI backend, Next.js frontend).
-- **Aspirational Claims**: Removed inaccurate performance claims (e.g., "1M concurrent users proven") and replaced them with factual "Scalability Roadmap" targets.
+- **Memory Leaks & OOM Crashes**: Completely rewrote `monitoring.py` from 670 to 140 lines. Replaced unbounded memory dictionaries with `collections.deque(maxlen=200)` and 60-second lazy snapshots, preventing Render Free Tier crashes.
+- **JSON Stream Corruption**: Removed `bleach.clean()` from the chat streaming path which was previously corrupting AI response chunks silently.
+- **ChatInput Bugs**: Fixed SSR mismatches with `isMobile` detection, corrected input border glows, and integrated the "Stop" button natively into the toolbar.
+- **Session Memory Conflicts**: Fixed the "New Chat" bug where clearing the UI didn't reset the session ID, causing messages to bleed into old conversations.
+- **Token Limits**: Raised security validator prompt limits from 8k to 32k to match actual model capabilities.
+
+#### Removed
+- **Dead Code (~120KB)**: Deleted deprecated security modules (`advanced_security.py`, `production_security.py`, `performance_testing.py`, `scalability_optimization.py`, `advanced_personality_engine.py`, `file_security.py`) and old adapters to drastically simplify the architecture.
+
+---
+
+## [1.1.5] - 2026-04-21
+### 🎯 Documentation Overhaul & Production Sync
+- **Consolidated Documentation**: Merged 30+ redundant files into 8 core "Source of Truth" documents.
 
 ---
 
 ## [1.1.4] - 2026-01-25
-
 ### 🎯 Quality, Stability & Security Hardening
-#### Added
-- **Enhanced Error Handling**: Structured error types with proper codes and async propagation.
-- **Advanced Rate Limiting**: Memory-optimized sliding window implementation with automatic cleanup.
-- **Provider Error Recovery**: Improved fallback logic with detailed circuit breaker tracking.
-- **Structured Logging**: Added request context, user IDs, and rotation (10MB/5 backups).
-#### Fixed
-- **Atomic Quota System**: Resolved race conditions in user quota increments using DB-level atomic updates.
-- **Type Safety**: Removed all `@ts-nocheck` directives; achieved 99%+ TypeScript coverage.
-- **Memory Management**: Fixed leaks in the internal rate limiter.
-
----
-
-## [1.1.3] - 2026-01-22
-#### Added
-- **Multi-Provider AI Router**: Support for Groq, OpenRouter, Anthropic, and Gemini fallbacks.
-- **CORS Hardening**: Strict origin validation for production endpoints.
-- **Circuit Breaker System**: Initial implementation of the Stability Engine.
-
----
-
-## [1.1.0] - 2026-01-15
-#### Added
-- **Core Chat Engine**: FastAPI-based backend with SSE streaming support.
-- **Identity Layer**: Supabase integration for user authentication.
-- **Personality Layer**: Initial AstraMind-themed system prompt injection.
+- **Enhanced Error Handling** and Advanced Rate Limiting.
+- **Atomic Quota System**: Resolved race conditions.
 
 ---
 
@@ -58,4 +46,5 @@ All notable changes to AstraMind are documented here. This project adheres to [S
 - 🚀 **Added** New features
 - 🔧 **Changed** Updates to existing features
 - 🐛 **Fixed** Bug fixes
+- 🗑️ **Removed** Code deletions
 - 🔒 **Security** Vulnerability patches
