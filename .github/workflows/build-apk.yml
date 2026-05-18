@@ -69,12 +69,26 @@ jobs:
           sdkmanager "build-tools;34.0.0" "platforms;android-34"
 
       # ────────────────────────────────────────────────────
-      # 6. Generate TWA project from our PWA manifest
+      # 6. Configure Bubblewrap CLI (prevents interactive prompts)
+      # ────────────────────────────────────────────────────
+      - name: Configure Bubblewrap CLI
+        run: |
+          mkdir -p ~/.bubblewrap
+          cat <<EOF > ~/.bubblewrap/config.json
+          {
+            "jdkPath": "$JAVA_HOME_17_X64",
+            "androidSdkPath": "$ANDROID_HOME"
+          }
+          EOF
+          cat ~/.bubblewrap/config.json
+
+      # ────────────────────────────────────────────────────
+      # 7. Generate TWA project from our PWA manifest
       # ────────────────────────────────────────────────────
       - name: Initialize TWA project from manifest
         run: |
           mkdir -p twa-build && cd twa-build
-          bubblewrap init \
+          yes | bubblewrap init \
             --manifest="${{ env.APP_URL }}/manifest.json" \
             --directory=. \
             --packageId="${{ env.APP_PACKAGE_NAME }}" \
@@ -101,12 +115,12 @@ jobs:
             --targetSdkVersion=34
 
       # ────────────────────────────────────────────────────
-      # 7. Build the APK (debug, no signing required for testing)
+      # 8. Build the APK
       # ────────────────────────────────────────────────────
       - name: Build TWA APK
         working-directory: twa-build
         run: |
-          bubblewrap build --skipPwaValidation
+          yes | bubblewrap build --skipPwaValidation
 
       # ────────────────────────────────────────────────────
       # 8. Rename APK with version
