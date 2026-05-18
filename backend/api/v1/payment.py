@@ -1,4 +1,10 @@
-import razorpay
+try:
+    import razorpay as _razorpay_lib
+    HAS_RAZORPAY = True
+except ImportError:
+    _razorpay_lib = None  # type: ignore
+    HAS_RAZORPAY = False
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,8 +38,8 @@ async def create_order(
     user_email = auth_data["email"]
     amount_paise = payload.amount * 100
 
-    if not settings.RAZORPAY_KEY_ID or not settings.RAZORPAY_KEY_SECRET:
-        logger.warning("Razorpay keys not configured. Creating simulation order.")
+    if not HAS_RAZORPAY or not settings.RAZORPAY_KEY_ID or not settings.RAZORPAY_KEY_SECRET:
+        logger.warning("Razorpay not configured. Creating simulation order.")
         return {
             "order_id": f"order_sim_{int(time.time())}",
             "amount": amount_paise,
@@ -43,7 +49,7 @@ async def create_order(
         }
 
     try:
-        client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+        client = _razorpay_lib.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
         order_data = {
             "amount": amount_paise,
             "currency": payload.currency,
@@ -89,7 +95,7 @@ async def verify_payment(
         is_valid = True
     else:
         try:
-            client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+            client = _razorpay_lib.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
             params_dict = {
                 'razorpay_order_id': payload.razorpay_order_id,
                 'razorpay_payment_id': payload.razorpay_payment_id,
