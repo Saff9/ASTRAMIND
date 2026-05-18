@@ -130,7 +130,8 @@ jobs:
           BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD || 'astramind2024secure' }}
           BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD || 'astramind2024secure' }}
         run: |
-          bubblewrap build --skipPwaValidation
+          yes | bubblewrap update
+          yes | bubblewrap build --skipPwaValidation
 
       # ────────────────────────────────────────────────────
       # 8. Rename APK with version
