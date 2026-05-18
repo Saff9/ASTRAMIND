@@ -83,44 +83,54 @@ jobs:
           cat ~/.bubblewrap/config.json
 
       # ────────────────────────────────────────────────────
-      # 7. Generate TWA project from our PWA manifest
+      # 7. Generate Keystore & TWA Manifest directly (100% Non-Interactive)
       # ────────────────────────────────────────────────────
-      - name: Initialize TWA project from manifest
+      - name: Generate Keystore & TWA Manifest
         run: |
           mkdir -p twa-build && cd twa-build
-          yes | bubblewrap init \
-            --manifest="${{ env.APP_URL }}/manifest.json" \
-            --directory=. \
-            --packageId="${{ env.APP_PACKAGE_NAME }}" \
-            --name="${{ env.APP_NAME }}" \
-            --launcherName="${{ env.APP_NAME }}" \
-            --display="standalone" \
-            --orientation="portrait" \
-            --themeColor="#e8a030" \
-            --backgroundColor="#1a1612" \
-            --startUrl="${{ env.APP_URL }}/chat" \
-            --iconUrl="${{ env.APP_URL }}/icon-512.png" \
-            --maskableIconUrl="${{ env.APP_URL }}/icon-512.png" \
-            --appVersionCode="${{ env.APP_VERSION_CODE }}" \
-            --appVersion="${{ env.APP_VERSION_NAME }}" \
-            --signingKeyPath="./key.jks" \
-            --signingKeyAlias="astramind" \
-            --signingKeyFullName="ASTRAMIND App" \
-            --signingKeyOrganization="ASTRAMIND" \
-            --signingKeyOrganizationalUnit="Engineering" \
-            --signingKeyCountry="IN" \
-            --signingKeyPassword="${{ secrets.KEYSTORE_PASSWORD || 'astramind2024secure' }}" \
-            --keyStorePassword="${{ secrets.KEYSTORE_PASSWORD || 'astramind2024secure' }}" \
-            --minSdkVersion=24 \
-            --targetSdkVersion=34
+          
+          # 1. Generate Keystore via keytool
+          keytool -genkeypair -v -keystore key.jks -alias astramind -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=ASTRAMIND App, OU=Engineering, O=ASTRAMIND, C=IN" \
+            -storepass "${{ secrets.KEYSTORE_PASSWORD || 'astramind2024secure' }}" \
+            -keypass "${{ secrets.KEYSTORE_PASSWORD || 'astramind2024secure' }}"
+
+          # 2. Create twa-manifest.json directly
+          cat <<EOF > twa-manifest.json
+          {
+            "packageId": "${{ env.APP_PACKAGE_NAME }}",
+            "host": "astramind-lake.vercel.app",
+            "name": "${{ env.APP_NAME }}",
+            "launcherName": "${{ env.APP_NAME }}",
+            "display": "standalone",
+            "themeColor": "#e8a030",
+            "navigationColor": "#1a1612",
+            "backgroundColor": "#1a1612",
+            "enableNotifications": true,
+            "startUrl": "/chat",
+            "iconUrl": "${{ env.APP_URL }}/icon-512.png",
+            "maskableIconUrl": "${{ env.APP_URL }}/icon-512.png",
+            "appVersionCode": ${{ env.APP_VERSION_CODE }},
+            "appVersionName": "${{ env.APP_VERSION_NAME }}",
+            "signingKey": {
+              "path": "./key.jks",
+              "alias": "astramind"
+            },
+            "alphaDependencies": false
+          }
+          EOF
+          cat twa-manifest.json
 
       # ────────────────────────────────────────────────────
       # 8. Build the APK
       # ────────────────────────────────────────────────────
       - name: Build TWA APK
         working-directory: twa-build
+        env:
+          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD || 'astramind2024secure' }}
+          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD || 'astramind2024secure' }}
         run: |
-          yes | bubblewrap build --skipPwaValidation
+          bubblewrap build --skipPwaValidation
 
       # ────────────────────────────────────────────────────
       # 8. Rename APK with version
