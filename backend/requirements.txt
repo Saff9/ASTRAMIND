@@ -1,65 +1,74 @@
-# ASTRAMIND Backend - Production Requirements (Render-safe)
+# ============================================================
+# ASTRAMIND Backend — Production Requirements (Render-safe)
+# ============================================================
+# ACTIVE = actually imported in source code
+# COMMENTED = not currently imported / optional / heavy
+# ============================================================
+
 # ── Core Framework ───────────────────────────────────────────
-fastapi>=0.111
-uvicorn[standard]>=0.30
-gunicorn>=21.2.0
-python-dotenv>=1.0.0
+fastapi>=0.111                  # ACTIVE: main framework
+uvicorn[standard]>=0.30         # ACTIVE: ASGI server
+gunicorn>=21.2.0                # ACTIVE: production WSGI/ASGI runner
+python-dotenv>=1.0.0            # ACTIVE: .env loading
 
 # ── Data Validation & Settings ───────────────────────────────
-pydantic>=2.7
-pydantic[email]>=2.7
-pydantic-settings>=2.2
+pydantic>=2.7                   # ACTIVE: all models
+pydantic[email]>=2.7            # ACTIVE: email validation
+pydantic-settings>=2.2          # ACTIVE: Settings class
 
 # ── Authentication & Security ────────────────────────────────
-python-jose[cryptography]>=3.3.0
-passlib[bcrypt]>=1.7.4
-pyjwt>=2.8.0
-bcrypt>=4.1.3
-cryptography>=43.0.0
-email-validator>=2.2.0
+python-jose[cryptography]>=3.3.0  # ACTIVE: JWT decode
+passlib[bcrypt]>=1.7.4            # ACTIVE: password hashing
+pyjwt>=2.8.0                      # ACTIVE: JWT encoding
+bcrypt>=4.1.3                     # ACTIVE: bcrypt hashing
+cryptography>=43.0.0              # ACTIVE: Fernet encryption vault
+email-validator>=2.2.0            # ACTIVE: pydantic email fields
 
 # ── Database & ORM ───────────────────────────────────────────
-sqlalchemy>=2.0
-asyncpg>=0.29
-aiosqlite>=0.20.0
-psycopg[binary]>=3.1
-sqlalchemy-utils>=0.41.1
-alembic>=1.12.1
+sqlalchemy>=2.0                # ACTIVE: ORM + queries
+asyncpg>=0.29                  # ACTIVE: async PostgreSQL driver
+aiosqlite>=0.20.0              # ACTIVE: async SQLite fallback (dev)
+alembic>=1.12.1                # ACTIVE: migrations on startup
+# psycopg[binary]>=3.1         # NOT USED: asyncpg handles all PG connections
+# sqlalchemy-utils>=0.41.1     # NOT USED: no sqlalchemy-utils imports found
 
 # ── HTTP & Networking ────────────────────────────────────────
-httpx>=0.27.0
-aiohttp>=3.9
-requests>=2.31.0
+httpx>=0.27.0                  # ACTIVE: shared HTTP client + providers
+aiohttp>=3.9                   # ACTIVE: model_provider.py + ollama.py
+requests>=2.31.0               # ACTIVE: razorpay SDK dependency
 
 # ── Web Parsing & Content ────────────────────────────────────
-beautifulsoup4>=4.12.3
-lxml>=5.2.1
-python-multipart>=0.0.9
-bleach>=6.1.0
-markdown>=3.6
-duckduckgo-search>=6.0.0
+beautifulsoup4>=4.12.3         # ACTIVE: web_search result parsing
+lxml>=5.2.1                    # ACTIVE: bs4 fast parser backend
+python-multipart>=0.0.9        # ACTIVE: FastAPI file upload support
+bleach>=6.1.0                  # ACTIVE: tool_executor.py HTML sanitization
+markdown>=3.6                  # ACTIVE: markdown rendering service
+duckduckgo-search>=6.0.0       # ACTIVE: web_search.py (DDGS)
 
 # ── Payment ──────────────────────────────────────────────────
-razorpay>=1.4.2
+razorpay>=1.4.2                # ACTIVE: payment.py (lazy-imported, safe if absent)
 
-# ── Utilities ────────────────────────────────────────────────
-psutil>=5.9.0
-filetype>=1.2.0
-cachetools>=5.3.3
-anyio>=4.0.0
-orjson>=3.10.0
-python-decouple>=3.8.0
-click>=8.1.7
+# ── Monitoring & Observability ───────────────────────────────
+prometheus-client>=0.20.0      # ACTIVE: /metrics endpoint (graceful fallback if missing)
+sentry-sdk>=2.0.0              # ACTIVE: error reporting (optional but installed)
+# loguru>=0.7.2                # NOT USED: no loguru imports — standard logging used throughout
+# python-decouple>=3.8.0       # NOT USED: pydantic-settings used instead
+
+# ── Optional Tracing (all imports are guarded try/except) ────
+opentelemetry-sdk>=1.26.0                       # ACTIVE: main.py (guarded try/except)
+opentelemetry-exporter-otlp>=1.26.0             # ACTIVE: main.py (guarded try/except)
+opentelemetry-instrumentation-fastapi>=0.47b0   # ACTIVE: main.py (guarded try/except)
 
 # ── Rate Limiting ────────────────────────────────────────────
-slowapi>=0.1.8
+redis>=5.0.1                   # ACTIVE: rate_limit.py (guarded, optional Redis backend)
+# slowapi>=0.1.8               # NOT USED: custom RateLimitMiddleware used — no slowapi imports
 
-# ── Monitoring & Logging ─────────────────────────────────────
-prometheus-client>=0.20.0
-sentry-sdk>=2.0.0
-loguru>=0.7.2
-
-# ── Optional Tracing (graceful fallback if unavailable) ──────
-opentelemetry-sdk>=1.26.0
-opentelemetry-exporter-otlp>=1.26.0
-opentelemetry-instrumentation-fastapi>=0.47b0
+# ── System & Utilities ───────────────────────────────────────
+psutil>=5.9.0                  # ACTIVE: monitoring.py + stability_engine.py (guarded)
+filetype>=1.2.0                # ACTIVE: file type detection in sandbox tools
+# cachetools>=5.3.3            # NOT USED: no cachetools imports found
+# anyio>=4.0.0                 # NOT USED: pulled in transitively by httpx/fastapi, not imported directly
+# orjson>=3.10.0               # ACTIVE: FastAPI ORJSONResponse — keep
+orjson>=3.10.0                 # ACTIVE: default_response_class=ORJSONResponse in main.py
+# click>=8.1.7                 # NOT USED directly: pulled in by typer
+typer>=0.12.0                  # ACTIVE: CLI commands (cli/ directory)
