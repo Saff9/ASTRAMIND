@@ -3,7 +3,7 @@ AstraMind Elite Expert Skills Registry & Rich Built-in Tools Suite.
 Provides top-tier GitHub-inspired expert personas and specialized capabilities.
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 ELITE_GITHUB_SKILLS = {
     "scraper": {
@@ -60,3 +60,46 @@ RICH_BUILTIN_TOOLS = {
         "handler": lambda args: f"[Edu Helper] Created comprehensive study guide for '{args.get('subject', 'Quantum Physics')}' featuring 5 core principles, 10 flashcard questions, and real-world analogies."
     }
 }
+
+
+# ── Keyword → skill ID mapping for auto-detection ──────────────────────────
+_SKILL_KEYWORDS: Dict[str, list] = {
+    "fingpt_stock":    ["stock", "market", "ticker", "rsi", "macd", "equity", "p/e", "bullish", "bearish", "invest", "trading", "shares", "crypto"],
+    "content_creator": ["blog", "seo", "article", "viral", "content", "copywriting", "headline", "social media", "post", "hook"],
+    "edu_helper":      ["explain", "teach", "learn", "tutorial", "concept", "study", "homework", "university", "exam", "quiz", "course"],
+    "devin_code":      ["code", "debug", "program", "function", "class", "api", "backend", "frontend", "deploy", "docker", "python", "typescript"],
+    "scraper":         ["scrape", "extract", "parse", "crawl", "html", "dom", "xpath", "css selector", "web data"],
+    "memgpt":          ["remember", "recall", "context", "memory", "history", "previous", "last time", "keep track"],
+}
+
+
+def build_agent_system_suffix(prompt: str, model_tier: str = "fast") -> str:
+    """
+    Builds an optional system-prompt suffix by auto-detecting which elite skill
+    persona is most relevant to the current prompt. Returns an empty string if
+    no skill matches (zero overhead for casual queries).
+
+    Called by chat.py and injected into every provider call via system_suffix_stack.
+    """
+    if not prompt:
+        return ""
+
+    prompt_lower = prompt.lower()
+    matched_skill: Optional[str] = None
+
+    for skill_id, keywords in _SKILL_KEYWORDS.items():
+        if any(kw in prompt_lower for kw in keywords):
+            matched_skill = skill_id
+            break  # first match wins — ordered by priority above
+
+    if matched_skill and matched_skill in ELITE_GITHUB_SKILLS:
+        return ELITE_GITHUB_SKILLS[matched_skill]["prompt_modifier"]
+
+    return ""
+
+
+__all__ = [
+    "ELITE_GITHUB_SKILLS",
+    "RICH_BUILTIN_TOOLS",
+    "build_agent_system_suffix",
+]

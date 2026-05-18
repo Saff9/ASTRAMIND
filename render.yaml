@@ -4,8 +4,8 @@ services:
     runtime: python
     rootDir: backend
     buildCommand: pip install -r requirements.txt
-    # Multi-worker ASGI (see backend/gunicorn_conf.py); raises throughput and isolates slow requests
-    startCommand: gunicorn -c gunicorn_conf.py main:app
+    # Use uvicorn directly — no separate gunicorn_conf.py dependency
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1
     envVars:
       - key: ENV
         value: production
@@ -14,13 +14,14 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: ALLOWED_ORIGINS
-        value: https://astramind.vercel.app
+        value: https://astramind-lake.vercel.app,https://astramind-reer.onrender.com
+      - key: PORT
+        value: "10000"
+      - key: DISABLE_BACKGROUND_TASKS
+        value: "0"
       # SSE/chat streams can exceed default 60s worker timeout
       - key: GUNICORN_TIMEOUT
         value: "300"
-      # Tune per instance RAM/CPU in Render dashboard (default in gunicorn_conf uses CPU count)
-      - key: WEB_CONCURRENCY
-        value: "2"
       # Add your AI provider keys in Render dashboard:
       # GROQ_API_KEYS, ANTHROPIC_API_KEYS, GOOGLE_AI_STUDIO_API_KEYS, etc.
     healthCheckPath: /api/v1/health
