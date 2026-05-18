@@ -42,6 +42,10 @@ export default function ChatInput({
   useEffect(() => {
     const ta = textareaRef.current;
     if (!ta) return;
+    if (!input) {
+      ta.style.height = "24px";
+      return;
+    }
     ta.style.height = "24px";
     ta.style.height = `${Math.min(ta.scrollHeight, 200)}px`;
   }, [input]);

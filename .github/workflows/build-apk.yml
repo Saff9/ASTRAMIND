@@ -1,0 +1,167 @@
+name: Build Android APK (TWA)
+
+# Trigger: every push to main, or manual trigger
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/build-apk.yml'
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag (e.g. v2.0.3)'
+        required: false
+        default: 'latest'
+
+env:
+  # ── Update these to match your production URL ──
+  APP_URL: https://astramind-lake.vercel.app
+  APP_PACKAGE_NAME: app.astramind.chat
+  APP_NAME: ASTRAMIND
+  APP_VERSION_CODE: ${{ github.run_number }}
+  APP_VERSION_NAME: 2.0.${{ github.run_number }}
+
+jobs:
+  build-twa-apk:
+    name: Build TWA APK via Bubblewrap
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      # ────────────────────────────────────────────────────
+      # 1. Checkout code
+      # ────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ────────────────────────────────────────────────────
+      # 2. Set up Java 17 (required by Android build tools)
+      # ────────────────────────────────────────────────────
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # ────────────────────────────────────────────────────
+      # 3. Set up Node.js 20
+      # ────────────────────────────────────────────────────
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # ────────────────────────────────────────────────────
+      # 4. Install Bubblewrap CLI (Google's official PWA→APK tool)
+      # ────────────────────────────────────────────────────
+      - name: Install Bubblewrap CLI
+        run: npm install -g @bubblewrap/cli@latest
+
+      # ────────────────────────────────────────────────────
+      # 5. Set up Android SDK via sdkmanager
+      # ────────────────────────────────────────────────────
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android Build Tools
+        run: |
+          sdkmanager "build-tools;34.0.0" "platforms;android-34"
+
+      # ────────────────────────────────────────────────────
+      # 6. Generate TWA project from our PWA manifest
+      # ────────────────────────────────────────────────────
+      - name: Initialize TWA project from manifest
+        run: |
+          mkdir -p twa-build && cd twa-build
+          bubblewrap init \
+            --manifest="${{ env.APP_URL }}/manifest.json" \
+            --directory=. \
+            --packageId="${{ env.APP_PACKAGE_NAME }}" \
+            --name="${{ env.APP_NAME }}" \
+            --launcherName="${{ env.APP_NAME }}" \
+            --display="standalone" \
+            --orientation="portrait" \
+            --themeColor="#e8a030" \
+            --backgroundColor="#1a1612" \
+            --startUrl="${{ env.APP_URL }}/chat" \
+            --iconUrl="${{ env.APP_URL }}/icon-512.png" \
+            --maskableIconUrl="${{ env.APP_URL }}/icon-512.png" \
+            --appVersionCode="${{ env.APP_VERSION_CODE }}" \
+            --appVersion="${{ env.APP_VERSION_NAME }}" \
+            --signingKeyPath="./key.jks" \
+            --signingKeyAlias="astramind" \
+            --signingKeyFullName="ASTRAMIND App" \
+            --signingKeyOrganization="ASTRAMIND" \
+            --signingKeyOrganizationalUnit="Engineering" \
+            --signingKeyCountry="IN" \
+            --signingKeyPassword="${{ secrets.KEYSTORE_PASSWORD || 'astramind2024secure' }}" \
+            --keyStorePassword="${{ secrets.KEYSTORE_PASSWORD || 'astramind2024secure' }}" \
+            --minSdkVersion=24 \
+            --targetSdkVersion=34
+
+      # ────────────────────────────────────────────────────
+      # 7. Build the APK (debug, no signing required for testing)
+      # ────────────────────────────────────────────────────
+      - name: Build TWA APK
+        working-directory: twa-build
+        run: |
+          bubblewrap build --skipPwaValidation
+
+      # ────────────────────────────────────────────────────
+      # 8. Rename APK with version
+      # ────────────────────────────────────────────────────
+      - name: Rename APK artifact
+        run: |
+          mkdir -p dist
+          APK_FILE=$(find twa-build -name "*.apk" | head -n 1)
+          echo "Found APK: $APK_FILE"
+          cp "$APK_FILE" "dist/ASTRAMIND-v${{ env.APP_VERSION_NAME }}.apk"
+          ls -lh dist/
+
+      # ────────────────────────────────────────────────────
+      # 9. Upload APK as GitHub artifact (available for 90 days)
+      # ────────────────────────────────────────────────────
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ASTRAMIND-APK-v${{ env.APP_VERSION_NAME }}
+          path: dist/ASTRAMIND-v${{ env.APP_VERSION_NAME }}.apk
+          retention-days: 90
+
+      # ────────────────────────────────────────────────────
+      # 10. Create GitHub Release with APK attached
+      # ────────────────────────────────────────────────────
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.APP_VERSION_NAME }}
+          name: "ASTRAMIND v${{ env.APP_VERSION_NAME }}"
+          body: |
+            ## 🚀 ASTRAMIND Android App v${{ env.APP_VERSION_NAME }}
+
+            ### Installation
+            1. Download `ASTRAMIND-v${{ env.APP_VERSION_NAME }}.apk` below
+            2. On your Android device: **Settings → Security → Install unknown apps → Allow**
+            3. Open the downloaded APK and tap **Install**
+            4. Launch ASTRAMIND from your home screen
+
+            ### What's Included
+            - ✅ Full AI chat (Groq, Claude, Gemini, DeepSeek, GPT-4.5)
+            - ✅ Agent Mode with tool calling (Premium)
+            - ✅ Real-time web search
+            - ✅ Expert Skills & ACP webhooks
+            - ✅ Offline-capable PWA shell
+
+            ### Requirements
+            - Android 7.0+ (API 24+)
+            - Internet connection required
+
+            ---
+            *Contact: saffanakbar942@gmail.com | Also available as a web app at ${{ env.APP_URL }}*
+          files: dist/ASTRAMIND-v${{ env.APP_VERSION_NAME }}.apk
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,28 +1,85 @@
 {
-  "name": "ASTRAMIND",
+  "name": "ASTRAMIND — AI Orchestration",
   "short_name": "ASTRAMIND",
-  "description": "Route your prompts to 10+ AI providers. Fast, smart, always on.",
-  "start_url": "/",
+  "description": "Chat with GPT-4.5, Claude 3.7, Gemini, DeepSeek and 10+ AI models. Agent Mode, real-time web search, expert skills — all in one app.",
+  "version": "2.0.3",
+  "start_url": "/chat",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "background_color": "#1a1612",
   "theme_color": "#e8a030",
   "orientation": "portrait-primary",
+  "lang": "en-IN",
+  "dir": "ltr",
+  "categories": ["productivity", "utilities", "ai", "education"],
+  "screenshots": [
+    {
+      "src": "/images/screenshot-mobile.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "ASTRAMIND Chat Interface on Mobile"
+    },
+    {
+      "src": "/images/screenshot-desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "ASTRAMIND Chat Interface on Desktop"
+    }
+  ],
   "icons": [
     {
-      "src": "/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
-  ]
+  ],
+  "shortcuts": [
+    {
+      "name": "Start Chatting",
+      "short_name": "Chat",
+      "description": "Open the AI chat interface",
+      "url": "/chat",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Upgrade to Premium",
+      "short_name": "Premium",
+      "description": "View pricing and upgrade your plan",
+      "url": "/pricing",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "share_target": {
+    "action": "/chat",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "prompt",
+      "url": "url"
+    }
+  },
+  "related_applications": [],
+  "prefer_related_applications": false
 }

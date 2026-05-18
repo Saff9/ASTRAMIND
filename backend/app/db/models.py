@@ -61,11 +61,17 @@ class User(Base):
         comment="Date when daily quota was last reset",
     )
 
-    # Admin Status
+    # Admin & Premium Status
     is_admin: Mapped[bool] = mapped_column(
         Boolean,
         default=False,
         nullable=False,
+    )
+    is_premium: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+        comment="Premium status via Razorpay subscription",
     )
 
     # Timestamps

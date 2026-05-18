@@ -322,9 +322,10 @@ app.include_router(auth.router, prefix="/api/v1", tags=["auth"])
 app.include_router(admin.router, prefix="/api/v1", tags=["admin"])
 app.include_router(web_search.router, prefix="/api/v1", tags=["search"])
 
-from api.v1 import user, discover
+from api.v1 import user, discover, payment
 app.include_router(user.router, prefix="/api/v1/user", tags=["user"])
 app.include_router(discover.router, prefix="/api/v1/discover", tags=["discover"])
+app.include_router(payment.router, prefix="/api/v1/payment", tags=["payment"])
 
 # ===== HEALTH ENDPOINTS =====
 

@@ -7,6 +7,7 @@ import Script from "next/script";
 import "./globals.css";
 import AppProviders from "@/components/AppProviders";
 import InstallPrompt from "@/components/common/InstallPrompt";
+import UpdateBanner from "@/components/common/UpdateBanner";
 
 const syne = Syne({ variable: "--font-syne", subsets: ["latin"], weight: ["400", "500", "600", "700", "800"], display: "optional", preload: false });
 const dmSans = DM_Sans({ variable: "--font-dm", subsets: ["latin"], weight: ["300", "400", "500", "600"], display: "optional", preload: false });
@@ -87,19 +88,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         style={{ minHeight: "100%", WebkitFontSmoothing: "antialiased", MozOsxFontSmoothing: "grayscale" }}
         suppressHydrationWarning
       >
-        <Script id="register-sw" strategy="afterInteractive">
-          {`
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js');
-                });
-              }
-            `}
-        </Script>
         <Script id="json-ld" type="application/ld+json" strategy="beforeInteractive">
           {JSON.stringify(jsonLd)}
         </Script>
         <AppProviders>
+          <UpdateBanner />
           {children}
           <InstallPrompt />
         </AppProviders>

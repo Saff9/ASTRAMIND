@@ -42,15 +42,20 @@ async def get_current_user(
             logger.info(f"Creating new user: {email}")
             user = User(
                 id=user_id,
+                auth_id=email,
                 email=email,
                 daily_quota=settings.USER_DAILY_QUOTA,
                 daily_used=0,
                 last_reset=date.today(),
+                is_premium=False,
             )
             db.add(user)
             await db.flush()
             await db.commit()
         else:
+            if getattr(user, 'is_premium', False) and user.daily_quota < settings.PREMIUM_DAILY_QUOTA:
+                user.daily_quota = settings.PREMIUM_DAILY_QUOTA
+                await db.commit()
             if user.email != email:
                 logger.warning(
                     f"Email mismatch for user {user_id}: "

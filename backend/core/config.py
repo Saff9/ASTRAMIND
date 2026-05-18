@@ -147,25 +147,30 @@ class Settings(BaseSettings):
         description="Comma-separated allowed origins",
     )
 
-    # ===== RATE LIMITING =====
+    # ===== RATE LIMITING & MONETIZATION =====
     RATE_LIMIT_PER_MINUTE: int = Field(default=60)
     RATE_LIMIT_WINDOW_SECONDS: int = Field(default=60)
     USER_DAILY_QUOTA: int = Field(
-        default=50,
-        description="Default daily request quota per user"
+        default=30,
+        description="Default daily request quota per free user"
     )
     ADMIN_DAILY_QUOTA: int = Field(
         default=500,
         description="Daily request quota for admin users"
     )
     PREMIUM_DAILY_QUOTA: int = Field(
-        default=200,
+        default=300,
         description="Daily request quota for premium users"
     )
     ENABLE_QUOTA_TIERS: bool = Field(
         default=True,
         description="Enable quota tiers based on user role"
     )
+    RAZORPAY_KEY_ID: Optional[str] = Field(default=None, description="Razorpay API Key ID")
+    RAZORPAY_KEY_SECRET: Optional[str] = Field(default=None, description="Razorpay API Key Secret")
+    TOR_PROXY_URL: Optional[str] = Field(default="socks5://127.0.0.1:9050", description="SOCKS5 Tor Proxy URL")
+    SECURE_HTTPS_PROXY: Optional[str] = Field(default=None, description="Rotating HTTPS Forward Proxy URL")
+    ENABLE_TOR_ISOLATION: bool = Field(default=True, description="Route ACP webhooks and research via Tor")
 
     # ===== DATABASE POOLING =====
     DATABASE_POOL_SIZE: int = Field(default=20)

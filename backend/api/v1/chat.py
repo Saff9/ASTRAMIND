@@ -179,6 +179,14 @@ class ChatRequest(BaseModel):
         default=False,
         description="Multi-query web research bundle (Perplexity-style grounding)",
     )
+    custom_skills: Optional[str] = Field(
+        default=None,
+        description="Custom prompt skills / expert personas from frontend settings",
+    )
+    acp_tools: Optional[str] = Field(
+        default=None,
+        description="Outbound MCP/ACP tool webhook URLs from frontend settings",
+    )
 
     @field_validator("prompt")
     @classmethod
@@ -328,7 +336,8 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
     if user_email and not user_email.endswith("@astramind.local"):
         # Logged-in user
         key = f"user:{user_email}"
-        allowed, rem = _check_and_increment(key, _DAILY_LIMIT_USER)
+        limit = orm_user.daily_quota if orm_user else _DAILY_LIMIT_USER
+        allowed, rem = _check_and_increment(key, limit)
         if not allowed:
             raise HTTPException(status_code=429, detail="Daily rate limit exceeded. Try again tomorrow.")
     else:
@@ -349,6 +358,13 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
             f"provider={provider}, model={payload.model}, prompt_len={len(payload.prompt)} "
             f"[request_id: {request_id}]"
         )
+        
+        if payload.custom_skills:
+            logger.info(f"Applying custom expert skills for user {user_email}")
+            safe_prompt = f"{safe_prompt}\n\n[Custom Expert Persona & Skills]\n{payload.custom_skills}"
+
+        if payload.acp_tools:
+            logger.info(f"Configuring ACP webhooks: {payload.acp_tools} for user {user_email}")
         
         # ── HISTORY (shared by agent + providers) ───────────────────────────
         history_msgs = [
@@ -386,24 +402,30 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
                 except Exception as e:
                     logger.error(f"Web search integration failed: {e}")
 
-        # ── AGENT TOOLS (sandbox orchestration) ──────────────────────────────
-        if payload.agent_mode and getattr(settings, "ENABLE_AGENT_TOOLS", True):
-            try:
-                from services.agent_orchestrator import run_agent_phase
+        # ── AGENT TOOLS (sandbox orchestration) — PREMIUM ONLY ──────────────
+        orm_user = auth_data.get("user", {}).get("orm_user") if isinstance(auth_data.get("user"), dict) else None
+        is_premium = getattr(orm_user, "is_premium", False) if orm_user else False
 
-                agent_block = await run_agent_phase(
-                    router=ai_router,
-                    user_goal=safe_prompt,
-                    history=history_msgs or None,
-                    model_tier=payload.model,
-                    preferred_provider=provider,
-                    user_email=user_email,
-                    request_id=request_id,
-                )
-                if agent_block:
-                    safe_prompt = f"{safe_prompt}\n\n{agent_block}"
-            except Exception as e:
-                logger.error(f"Agent orchestration failed: {e}", exc_info=True)
+        if payload.agent_mode:
+            if not is_premium:
+                logger.info(f"Agent mode blocked for free user {user_email} — premium required")
+                safe_prompt = safe_prompt  # passthrough without agent tools
+            elif getattr(settings, "ENABLE_AGENT_TOOLS", True):
+                try:
+                    from services.agent_orchestrator import run_agent_phase
+                    agent_block = await run_agent_phase(
+                        router=ai_router,
+                        user_goal=safe_prompt,
+                        history=history_msgs or None,
+                        model_tier=payload.model,
+                        preferred_provider=provider,
+                        user_email=user_email,
+                        request_id=request_id,
+                    )
+                    if agent_block:
+                        safe_prompt = f"{safe_prompt}\n\n{agent_block}"
+                except Exception as e:
+                    logger.error(f"Agent orchestration failed: {e}", exc_info=True)
 
         agent_system_suffix = build_agent_system_suffix(safe_prompt, payload.model)
 

@@ -113,6 +113,8 @@ MODEL_CONFIGS: Dict[str, Dict] = {
 # Mapping for specific model names → tier
 MODEL_MAPPING: Dict[str, str] = {
     # Smart / Reasoning tier
+    "gpt-4.5":                 "smart",
+    "claude-3-7-sonnet":       "smart",
     "gpt-4o":                  "smart",
     "gpt-4":                   "smart",
     "gpt-4-turbo":             "smart",

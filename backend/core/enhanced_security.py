@@ -61,11 +61,9 @@ async def verify_neon_session(token: str) -> Optional[Dict[str, Any]]:
                 }
                 
                 # --- AUTO-SYNC TO USERS TABLE ---
-                # FIX: use correct column name 'auth_id' not 'user_id'
-                # FIX: removed 'is_active' column which doesn't exist on User model
                 sync_query = text("""
-                    INSERT INTO users (auth_id, email, daily_quota, daily_used, last_reset)
-                    VALUES (:uid, :email, 100, 0, CURRENT_DATE)
+                    INSERT INTO users (auth_id, email, daily_quota, daily_used, last_reset, is_premium)
+                    VALUES (:uid, :email, 30, 0, CURRENT_DATE, false)
                     ON CONFLICT (email) DO NOTHING
                 """)
                 await db.execute(sync_query, {"uid": row.user_id, "email": row.email})
@@ -110,7 +108,7 @@ async def verify_jwt_comprehensive(request: Request) -> Dict[str, Any]:
             # Fallback to Neon Session check before giving up
             neon_user = await verify_neon_session(token)
             if neon_user:
-                user_id = neon_user["user_id"]
+                user_id = str(neon_user["user_id"])
                 email = neon_user["email"]
             else:
                 logger.debug(f"Auth failed (JWT & Neon): {e}. Falling back to guest.")
@@ -125,20 +123,34 @@ async def verify_jwt_comprehensive(request: Request) -> Dict[str, Any]:
         user_id = f"guest_{client_ip.replace('.', '_')}"
         email   = f"{user_id}@astramind.local"
         
-    # --- AUTO-SYNC IDENTITIES (User OR Guest) ---
-    # FIX: removed 'is_active' column which doesn't exist on User model
+    # --- AUTO-SYNC IDENTITIES & FETCH ORM USER ---
+    orm_user_obj = None
+    daily_quota = 30
+    daily_used = 0
+    is_premium = False
+
     if async_session_maker:
         try:
             async with async_session_maker() as db:
                 sync_query = text("""
-                    INSERT INTO users (auth_id, email, daily_quota, daily_used, last_reset)
-                    VALUES (:aid, :email, 50, 0, CURRENT_DATE)
+                    INSERT INTO users (auth_id, email, daily_quota, daily_used, last_reset, is_premium)
+                    VALUES (:aid, :email, 30, 0, CURRENT_DATE, false)
                     ON CONFLICT (auth_id) DO NOTHING
                 """)
                 await db.execute(sync_query, {"aid": user_id, "email": email})
                 await db.commit()
+
+                from app.db.models import User
+                from sqlalchemy import select
+                stmt = select(User).where(User.auth_id == user_id)
+                res = await db.execute(stmt)
+                orm_user_obj = res.scalar_one_or_none()
+                if orm_user_obj:
+                    daily_quota = orm_user_obj.daily_quota
+                    daily_used = orm_user_obj.daily_used
+                    is_premium = getattr(orm_user_obj, 'is_premium', False)
         except Exception as e:
-            logger.debug(f"Identity auto-sync failed: {e}")
+            logger.debug(f"Identity auto-sync/fetch failed: {e}")
 
     now_utc = datetime.now(tz=timezone.utc)
 
@@ -152,10 +164,11 @@ async def verify_jwt_comprehensive(request: Request) -> Dict[str, Any]:
         "is_active":    True,
         "banned_until": None,
         "is_admin":     False,
-        "daily_quota":  100,
-        "daily_used":   0,
+        "is_premium":   is_premium,
+        "daily_quota":  daily_quota,
+        "daily_used":   daily_used,
         "last_reset":   now_utc,
-        "orm_user":     None,
+        "orm_user":     orm_user_obj,
     }
 
     return {

@@ -61,40 +61,43 @@ class ModelRouter:
 
     async def get_best_provider(self, model_id: str) -> ModelProvider:
         """
-        Get the best available provider for a model.
-        Prioritizes local models, falls back safely to remote.
+        Get the best available provider for a model tier.
+        Prioritizes local models, then tier-specific preferred providers.
         """
         # Always check local first if available
         if await self._check_local_availability():
             return ModelProvider.LOCAL
 
-        # Check cached health for remote providers
-        healthy_providers = await self._get_healthy_providers()
-
-        # Priority order for fallback
-        priority = [
-            ModelProvider.GROQ,
-            ModelProvider.OPENROUTER,
-            ModelProvider.TOGETHER,
-            ModelProvider.MISTRAL,
-            ModelProvider.CEREBRAS,
-            ModelProvider.SILICONFLOW,
-            ModelProvider.ALIBABA_BAILIAN,
-            ModelProvider.DEEPSEEK,
-            ModelProvider.XAI,
-            ModelProvider.ANTHROPIC,
-            ModelProvider.COHERE,
-            ModelProvider.AI21,
-            ModelProvider.NOVITA,
-            ModelProvider.SAMBANOVA,
-            ModelProvider.OPENAI,
-        ]
+        # Get preferred providers for this tier from MODEL_CONFIGS
+        try:
+            from services.models import MODEL_CONFIGS
+            config = MODEL_CONFIGS.get(model_id.lower().strip())
+            if config and "preferred_providers" in config:
+                priority = config["preferred_providers"]
+            else:
+                priority = [
+                    ModelProvider.GROQ,
+                    ModelProvider.OPENROUTER,
+                    ModelProvider.CEREBRAS,
+                    ModelProvider.TOGETHER,
+                    ModelProvider.DEEPSEEK,
+                    ModelProvider.ANTHROPIC,
+                    ModelProvider.OPENAI,
+                ]
+        except Exception:
+            priority = [
+                ModelProvider.GROQ,
+                ModelProvider.OPENROUTER,
+                ModelProvider.CEREBRAS,
+                ModelProvider.TOGETHER,
+            ]
 
         for provider in priority:
-            if provider in healthy_providers:
+            if await self._check_provider_health(provider):
                 return provider
 
-        # Ultimate fallback - use first available
+        # Ultimate fallback - use first available healthy provider
+        healthy_providers = await self._get_healthy_providers()
         if healthy_providers:
             return healthy_providers[0]
 
@@ -165,57 +168,50 @@ class ModelRouter:
         return healthy
 
     async def _check_provider_health(self, provider: ModelProvider) -> bool:
-        """Check health of a remote provider."""
+        """Instant O(1) health check based on API key availability."""
         now = time.time()
         if provider in self.health_cache:
             cached = self.health_cache[provider]
             if (now - cached.last_checked) < self.cache_timeout:
                 return cached.healthy and cached.error_count < self.max_errors
 
-        try:
-            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=self.request_timeout)) as session:
-                start_time = time.time()
+        # Check key availability
+        has_key = False
+        if provider == ModelProvider.LOCAL:
+            has_key = True
+        elif provider == ModelProvider.GROQ:
+            has_key = bool(settings.groq_api_keys)
+        elif provider == ModelProvider.OPENROUTER:
+            has_key = bool(settings.openrouter_api_keys)
+        elif provider == ModelProvider.TOGETHER:
+            has_key = bool(settings.together_api_keys)
+        elif provider == ModelProvider.MISTRAL:
+            has_key = bool(settings.mistral_api_keys)
+        elif provider == ModelProvider.CEREBRAS:
+            has_key = bool(settings.cerebras_api_keys)
+        elif provider == ModelProvider.SILICONFLOW:
+            has_key = bool(settings.siliconflow_api_keys)
+        elif provider == ModelProvider.ALIBABA_BAILIAN:
+            has_key = bool(settings.alibaba_bailian_api_keys)
+        elif provider == ModelProvider.DEEPSEEK:
+            has_key = bool(settings.deepseek_api_keys)
+        elif provider == ModelProvider.XAI:
+            has_key = bool(settings.xai_api_keys)
+        elif provider == ModelProvider.ANTHROPIC:
+            has_key = bool(settings.anthropic_api_keys)
+        elif provider == ModelProvider.COHERE:
+            has_key = bool(settings.cohere_api_keys)
+        elif provider == ModelProvider.AI21:
+            has_key = bool(settings.ai21_api_keys)
+        elif provider == ModelProvider.NOVITA:
+            has_key = bool(settings.novita_api_keys)
+        elif provider == ModelProvider.SAMBANOVA:
+            has_key = bool(settings.sambanova_api_keys)
+        elif provider == ModelProvider.OPENAI:
+            has_key = bool(settings.OPENAI_API_KEY)
 
-                # Provider-specific health checks
-                if provider == ModelProvider.GROQ:
-                    await self._test_groq_health(session)
-                elif provider == ModelProvider.OPENROUTER:
-                    await self._test_openrouter_health(session)
-                elif provider == ModelProvider.TOGETHER:
-                    await self._test_openai_compatible_health(session, settings.TOGETHER_BASE_URL, settings.together_api_keys)
-                elif provider == ModelProvider.MISTRAL:
-                    await self._test_openai_compatible_health(session, settings.MISTRAL_BASE_URL, settings.mistral_api_keys)
-                elif provider == ModelProvider.CEREBRAS:
-                    await self._test_openai_compatible_health(session, settings.CEREBRAS_BASE_URL, settings.cerebras_api_keys)
-                elif provider == ModelProvider.SILICONFLOW:
-                    await self._test_openai_compatible_health(session, settings.SILICONFLOW_BASE_URL, settings.siliconflow_api_keys)
-                elif provider == ModelProvider.ALIBABA_BAILIAN:
-                    await self._test_openai_compatible_health(session, settings.ALIBABA_BAILIAN_BASE_URL, settings.alibaba_bailian_api_keys)
-                elif provider == ModelProvider.DEEPSEEK:
-                    await self._test_openai_compatible_health(session, settings.DEEPSEEK_BASE_URL, settings.deepseek_api_keys)
-                elif provider == ModelProvider.XAI:
-                    await self._test_openai_compatible_health(session, settings.XAI_BASE_URL, settings.xai_api_keys)
-                elif provider == ModelProvider.ANTHROPIC:
-                    await self._test_anthropic_health(session)
-                elif provider == ModelProvider.COHERE:
-                    await self._test_openai_compatible_health(session, settings.COHERE_BASE_URL, settings.cohere_api_keys)
-                elif provider == ModelProvider.AI21:
-                    await self._test_openai_compatible_health(session, settings.AI21_BASE_URL, settings.ai21_api_keys)
-                elif provider == ModelProvider.NOVITA:
-                    await self._test_openai_compatible_health(session, settings.NOVITA_BASE_URL, settings.novita_api_keys)
-                elif provider == ModelProvider.SAMBANOVA:
-                    await self._test_openai_compatible_health(session, settings.SAMBANOVA_BASE_URL, settings.sambanova_api_keys)
-                elif provider == ModelProvider.OPENAI:
-                    await self._test_openai_health(session)
-
-                latency = (time.time() - start_time) * 1000
-                self._update_health(provider, True, latency)
-                return True
-
-        except Exception as e:
-            logger.debug(f"Provider {provider.value} health check failed: {e}")
-            self._update_health(provider, False)
-            return False
+        self._update_health(provider, has_key, 50.0 if has_key else None)
+        return has_key
 
     async def _test_groq_health(self, session: aiohttp.ClientSession) -> None:
         """Test Groq API health."""

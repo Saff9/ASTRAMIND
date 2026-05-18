@@ -346,6 +346,13 @@ export default function ChatPage() {
         .slice(-100)  // Increase historical context depth
         .map((m) => ({ role: m.role, content: m.content }));
 
+      let custom_skills = undefined;
+      let acp_tools = undefined;
+      if (typeof window !== "undefined") {
+        custom_skills = localStorage.getItem("astramind_custom_skills") || undefined;
+        acp_tools = localStorage.getItem("astramind_acp_tools") || undefined;
+      }
+
       const response = await fetch(`${apiBase}/api/v1/chat`, {
         method: "POST",
         headers,
@@ -357,6 +364,8 @@ export default function ChatPage() {
           messages: history.length > 0 ? history : undefined,
           agent_mode: agentMode,
           research_mode: researchMode,
+          custom_skills,
+          acp_tools,
         }),
       });
 

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Zap, Shield, GitBranch, Globe,
-  Sparkles, ArrowRight, Code2, Search, Lightbulb, MessageSquare, ChevronRight,
+  Sparkles, ArrowRight, Code2, Search, Lightbulb, MessageSquare, ChevronRight, Download, Smartphone,
 } from "lucide-react";
 import { GroqLogoIcon, OpenAIIcon, ClaudeIcon, GeminiIcon, DeepSeekIcon, MistralIcon } from "@/components/common/ProviderIcons";
 import { AstraIcon } from "@/components/common/ProviderIcons";
@@ -132,6 +132,12 @@ export default function HomePage() {
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             {!isSignedIn ? (
               <>
+                <Link href="/download" style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--text-muted)", textDecoration: "none", padding: "8px 14px", border: "1px solid var(--border-subtle)", borderRadius: 10, transition: "all 0.2s" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text-primary)"; e.currentTarget.style.borderColor = "var(--border-default)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-muted)"; e.currentTarget.style.borderColor = "var(--border-subtle)"; }}
+                >
+                  <Download size={13} /> App
+                </Link>
                 <button onClick={() => router.push("/signin")} style={{
                   background: "transparent", border: "1px solid var(--border-default)",
                   color: "var(--text-secondary)", padding: "8px 18px", borderRadius: 10,
@@ -288,7 +294,13 @@ export default function HomePage() {
               </button>
             </Link>
           </div>
-          <p style={{ fontSize: 12, color: "var(--text-muted)" }}>No credit card required · Free quota daily · Enterprise plans available</p>
+          <p style={{ fontSize: 12, color: "var(--text-muted)" }}>No credit card required · 30 free requests/day · Upgrade anytime for ₹149</p>
+          <Link href="/download" style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 16, fontSize: 13, color: "var(--text-muted)", textDecoration: "none", border: "1px solid var(--border-subtle)", borderRadius: 100, padding: "6px 16px" }}
+            onMouseEnter={(e) => e.currentTarget.style.borderColor = "var(--border-strong)"}
+            onMouseLeave={(e) => e.currentTarget.style.borderColor = "var(--border-subtle)"}
+          >
+            <Smartphone size={13} /> Download Android App
+          </Link>
         </div>
       </section>
 
@@ -513,38 +525,39 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ═══ SUPPORT US ═══ */}
+      {/* ═══ PREMIUM UPGRADE CTA ═══ */}
       <section style={{ maxWidth: 860, margin: "0 auto", padding: "64px 24px", position: "relative", zIndex: 1 }}>
-        <div style={{ background: "linear-gradient(135deg, rgba(212,118,59,0.1), rgba(139,122,252,0.08))", border: "1px solid rgba(212,118,59,0.25)", borderRadius: 32, padding: "56px 48px", textAlign: "center" }}>
-          <div style={{ fontSize: 40, marginBottom: 16 }}>❤️</div>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 20, background: "rgba(212,118,59,0.12)", border: "1px solid rgba(212,118,59,0.25)", borderRadius: 100, padding: "5px 16px" }}>
+        <div style={{ background: "linear-gradient(135deg, rgba(242,169,59,0.1), rgba(139,122,252,0.06))", border: "1px solid rgba(242,169,59,0.28)", borderRadius: 32, padding: "56px 48px", textAlign: "center" }}>
+          <div style={{ fontSize: 40, marginBottom: 16 }}>⚡</div>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 20, background: "rgba(242,169,59,0.12)", border: "1px solid rgba(242,169,59,0.25)", borderRadius: 100, padding: "5px 16px" }}>
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--brand-light)", display: "inline-block" }} />
-            <span style={{ fontSize: 11, fontWeight: 700, color: "var(--brand-light)", letterSpacing: "0.08em", textTransform: "uppercase" }}>Community Supported</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "var(--brand-light)", letterSpacing: "0.08em", textTransform: "uppercase" }}>Premium — ₹149/month</span>
           </div>
           <h2 style={{ fontSize: "clamp(1.6rem,4vw,2.2rem)", fontWeight: 800, letterSpacing: "-0.03em", marginBottom: 16, fontFamily: DISPLAY_FONT }}>
-            Help us run our <span style={{ background: "linear-gradient(135deg,var(--brand),var(--brand-light))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>own AI models</span>
+            Unlock <span style={{ background: "linear-gradient(135deg,var(--brand),var(--brand-light))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>Agent Mode & Expert Skills</span>
           </h2>
-          <p style={{ fontSize: "1rem", color: "var(--text-secondary)", lineHeight: 1.75, maxWidth: 540, margin: "0 auto 16px", fontFamily: PAGE_FONT }}>
-            We currently pay third-party API costs so you can use ASTRAMIND completely free.
-            Your support helps us self-host open-source models — giving you <strong style={{ color: "var(--text-primary)" }}>faster, more private AI with zero rate limits</strong>.
+          <p style={{ fontSize: "1rem", color: "var(--text-secondary)", lineHeight: 1.75, maxWidth: 560, margin: "0 auto 16px", fontFamily: PAGE_FONT }}>
+            Free users get basic chat. Premium gives you an <strong style={{ color: "var(--text-primary)" }}>autonomous AI that can run code, search the web, analyze stocks, plan trips, and call your own tools</strong> — all in a single response.
           </p>
-          <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 32 }}>No subscription required. Even $1 helps keep the lights on. 💡</p>
+          <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 32 }}>300 requests/day · All flagship models · Agent Mode · Expert Skills · Questions? <a href="mailto:saffanakbar942@gmail.com" style={{ color: "#f2a93b" }}>saffanakbar942@gmail.com</a></p>
           <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
-            <a href="https://ko-fi.com" target="_blank" rel="noopener noreferrer" style={{
-              display: "inline-flex", alignItems: "center", gap: 10, padding: "14px 32px", borderRadius: 14,
-              background: "linear-gradient(135deg,var(--brand),var(--brand-light))", color: "var(--bg-primary)",
-              fontWeight: 700, fontSize: 15, textDecoration: "none", boxShadow: "0 4px 20px var(--brand-glow)", transition: "all 0.2s",
-            }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 8px 30px var(--brand-glow)"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.transform = ""; (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 4px 20px var(--brand-glow)"; }}
-            >
-              ☕ Support on Ko-fi
-            </a>
+            <Link href="/pricing">
+              <button style={{
+                display: "inline-flex", alignItems: "center", gap: 10, padding: "14px 32px", borderRadius: 14,
+                background: "linear-gradient(135deg,var(--brand),var(--brand-light))", color: "var(--bg-primary)",
+                fontWeight: 700, fontSize: 15, border: "none", cursor: "pointer", boxShadow: "0 4px 20px var(--brand-glow)", transition: "all 0.2s",
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 8px 30px var(--brand-glow)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = ""; (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 4px 20px var(--brand-glow)"; }}
+              >
+                🚀 Upgrade to Premium
+              </button>
+            </Link>
             <Link href="/chat">
               <button style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "14px 28px", borderRadius: 14, background: "transparent", border: "1px solid var(--border-strong)", color: "var(--text-secondary)", fontSize: 15, fontWeight: 500, cursor: "pointer", transition: "all 0.2s" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--text-primary)"; (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-2)"; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--text-secondary)"; (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
-              >Continue for Free</button>
+              >Try free first</button>
             </Link>
           </div>
         </div>
@@ -621,7 +634,7 @@ export default function HomePage() {
               <h4 style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", marginBottom: 4 }}>Product</h4>
               <Link href="/chat" style={{ fontSize: 14, color: "var(--text-secondary)", textDecoration: "none", transition: "color 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.color = "var(--brand-light)"} onMouseLeave={(e) => e.currentTarget.style.color = "var(--text-secondary)"}>Chat Engine</Link>
               <Link href="/discover" style={{ fontSize: 14, color: "var(--text-secondary)", textDecoration: "none", transition: "color 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.color = "var(--brand-light)"} onMouseLeave={(e) => e.currentTarget.style.color = "var(--text-secondary)"}>Discover <span style={{fontSize: 10, padding: "2px 6px", background: "var(--brand-glow)", color: "var(--brand-light)", borderRadius: 100, marginLeft: 6}}>NEW</span></Link>
-              <Link href="/chat" style={{ fontSize: 14, color: "var(--text-secondary)", textDecoration: "none", transition: "color 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.color = "var(--brand-light)"} onMouseLeave={(e) => e.currentTarget.style.color = "var(--text-secondary)"}>Free Tier</Link>
+              <Link href="/pricing" style={{ fontSize: 14, color: "var(--text-secondary)", textDecoration: "none", transition: "color 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.color = "var(--brand-light)"} onMouseLeave={(e) => e.currentTarget.style.color = "var(--text-secondary)"}>Pricing <span style={{fontSize: 10, padding: "2px 6px", background: "rgba(242,169,59,0.15)", color: "#f2a93b", borderRadius: 100, marginLeft: 6}}>₹149</span></Link>
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -663,7 +676,7 @@ export default function HomePage() {
           </div>
 
           <div className="mobile-col mobile-gap-sm" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 32, borderTop: "1px solid var(--border-subtle)" }}>
-            <p style={{ fontSize: 13, color: "var(--text-muted)" }}>© 2026 ASTRAMIND INC. All rights reserved.</p>
+            <p style={{ fontSize: 13, color: "var(--text-muted)" }}>© 2026 ASTRAMIND. Contact: <a href="mailto:saffanakbar942@gmail.com" style={{ color: "var(--brand-light)", textDecoration: "none" }}>saffanakbar942@gmail.com</a></p>
             <div style={{ display: "flex", gap: 20 }}>
               {["Twitter", "GitHub", "Discord"].map(social => (
                 <span key={social} style={{ fontSize: 13, color: "var(--text-muted)", cursor: "pointer", transition: "color 0.2s" }}

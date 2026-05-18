@@ -38,6 +38,7 @@ const SECTIONS = [
   { id: "appearance",     label: "Appearance",    icon: Palette },
   { id: "interface",      label: "Interface",      icon: Monitor },
   { id: "ai",             label: "AI Behavior",    icon: Cpu },
+  { id: "skills",         label: "Skills & ACP",   icon: Cpu },
   { id: "notifications",  label: "Notifications",  icon: Bell },
   { id: "privacy",        label: "Privacy & Data", icon: Shield },
   { id: "account",        label: "Account",        icon: User },
@@ -91,6 +92,32 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
   const [notifUpdate, setNotifUpdate]   = useState(true);
   const [analytics, setAnalytics]       = useState(false);
   const [saveHistory, setSaveHistory]   = useState(true);
+
+  const [customSkills, setCustomSkills] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("astramind_custom_skills") || "";
+    }
+    return "";
+  });
+
+  const [acpTools, setAcpTools] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("astramind_acp_tools") || "";
+    }
+    return "";
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("astramind_custom_skills", customSkills);
+    }
+  }, [customSkills]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("astramind_acp_tools", acpTools);
+    }
+  }, [acpTools]);
 
   if (!open) return null;
 
@@ -344,6 +371,53 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
             fontFamily: "inherit", outline: "none", marginTop: 8, lineHeight: 1.6,
           }}
         />
+      </div>
+    );
+
+    // ── SKILLS & ACP ───────────────────────────────────────────────
+    if (section === "skills") return (
+      <div>
+        <SectionTitle>Custom Expert Skills (GitHub Inspired)</SectionTitle>
+        <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "4px 0 12px", lineHeight: 1.5 }}>
+          Define custom prompt modifiers and expert personas. These are automatically attached to your AI requests for specialized reasoning tasks.
+        </p>
+        <textarea
+          value={customSkills}
+          onChange={(e) => setCustomSkills(e.target.value)}
+          placeholder="e.g., [FinGPT Stock Analyzer] Always format financial data in Markdown tables with P/E ratios and moving averages..."
+          style={{
+            width: "100%", minHeight: 120, resize: "vertical",
+            background: "var(--surface-2)", border: "1px solid var(--border-default)",
+            borderRadius: 12, padding: "14px", fontSize: 13, color: "var(--text-primary)",
+            fontFamily: "var(--font-mono, monospace)", outline: "none", lineHeight: 1.6,
+          }}
+        />
+
+        <SectionTitle>Model Context Protocol (MCP / ACP Webhooks)</SectionTitle>
+        <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "4px 0 12px", lineHeight: 1.5 }}>
+          Configure outbound tool webhooks. Premium users get Tor SOCKS5 proxy isolation (127.0.0.1:9050) and HMAC-SHA256 signature verification.
+        </p>
+        <textarea
+          value={acpTools}
+          onChange={(e) => setAcpTools(e.target.value)}
+          placeholder="e.g., https://my-internal-tool.local/webhook (Endpoints will be securely called via Tor proxy if Premium is active)"
+          style={{
+            width: "100%", minHeight: 100, resize: "vertical",
+            background: "var(--surface-2)", border: "1px solid var(--border-default)",
+            borderRadius: 12, padding: "14px", fontSize: 13, color: "var(--text-primary)",
+            fontFamily: "var(--font-mono, monospace)", outline: "none", lineHeight: 1.6,
+          }}
+        />
+
+        <div style={{ marginTop: 24, padding: 16, background: "rgba(242,169,59,0.1)", borderRadius: 14, border: "1px solid rgba(242,169,59,0.25)", display: "flex", alignItems: "flex-start", gap: 12 }}>
+          <Shield style={{ width: 20, height: 20, color: "#f2a93b", flexShrink: 0, marginTop: 2 }} />
+          <div>
+            <h4 style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 4 }}>Enterprise Security & Tor Isolation</h4>
+            <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.5 }}>
+              All ACP webhook communications are routed through an encrypted Tor circuit to ensure absolute zero-leakage privacy for enterprise workflows.
+            </p>
+          </div>
+        </div>
       </div>
     );
 
