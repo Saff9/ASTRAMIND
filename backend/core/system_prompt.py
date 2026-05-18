@@ -103,8 +103,12 @@ _cv_system_suffix: ContextVar[str] = ContextVar("_cv_system_suffix", default="")
 
 
 def get_system_prompt() -> str:
-    """Return the full system prompt (base + optional per-request suffix)."""
-    base = SYSTEM_PROMPT.strip()
+    """Return the full system prompt (base + optional per-request suffix + dynamic date/time)."""
+    import datetime
+    now_str = datetime.datetime.now().strftime("%A, %B %d, %Y, %I:%M %p").strip()
+    date_context = f"═══════════════════════════════════════════════════════════════\nCURRENT DATE & TIME\n═══════════════════════════════════════════════════════════════\nThe current date and time is: {now_str}. Always use this as your internal reference for 'today', 'now', or current time calculations."
+    
+    base = f"{SYSTEM_PROMPT.strip()}\n\n{date_context}"
     extra = _cv_system_suffix.get()
     if not extra:
         return base

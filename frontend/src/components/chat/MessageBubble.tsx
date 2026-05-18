@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Copy, Check, RotateCcw, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Copy, Check, RotateCcw, ThumbsUp, ThumbsDown, Volume2, VolumeX } from "lucide-react";
 import { AstraIcon } from "@/components/common/ProviderIcons";
 import { HTMLPreview } from "./HTMLPreview";
 
@@ -202,6 +202,75 @@ const markdownComponents = {
 // ─── MessageBubble ───────────────────────────────────────────────────────────
 export default function MessageBubble({ role, content, timestamp, loading, sources }: MessageBubbleProps) {
   const isUser = role === "user";
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  const handlePlayVoice = () => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    
+    if (isPlaying) {
+      window.speechSynthesis.cancel();
+      setIsPlaying(false);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+
+    const cleanText = content
+      .replace(/```[\s\S]*?```/g, "")
+      .replace(/[#*`_~>]/g, "")
+      .trim();
+
+    if (!cleanText) return;
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    const prefGender = localStorage.getItem("astramind_voice_gender") || "female";
+    
+    const setVoiceAndSpeak = () => {
+      const voices = window.speechSynthesis.getVoices();
+      let selectedVoice = voices.find(v => {
+        const name = v.name.toLowerCase();
+        const isNatural = name.includes("natural") || name.includes("online") || name.includes("premium") || name.includes("google") || name.includes("microsoft");
+        if (prefGender === "male") {
+          return isNatural && (name.includes("male") || name.includes("david") || name.includes("guy") || name.includes("william") || name.includes("brian"));
+        } else {
+          return isNatural && (name.includes("female") || name.includes("zira") || name.includes("hazel") || name.includes("samantha") || name.includes("jenny"));
+        }
+      });
+
+      if (!selectedVoice) {
+        selectedVoice = voices.find(v => {
+          const name = v.name.toLowerCase();
+          if (prefGender === "male") {
+            return name.includes("male") || name.includes("david") || name.includes("guy");
+          } else {
+            return name.includes("female") || name.includes("zira") || name.includes("samantha") || name.includes("jenny");
+          }
+        });
+      }
+
+      if (selectedVoice) {
+        utterance.voice = selectedVoice;
+      }
+
+      utterance.pitch = prefGender === "male" ? 0.95 : 1.05;
+      utterance.rate = 1.02;
+
+      utterance.onstart = () => setIsPlaying(true);
+      utterance.onend = () => setIsPlaying(false);
+      utterance.onerror = () => setIsPlaying(false);
+
+      window.speechSynthesis.speak(utterance);
+    };
+
+    if (window.speechSynthesis.getVoices().length === 0) {
+      window.speechSynthesis.onvoiceschanged = () => {
+        setVoiceAndSpeak();
+        window.speechSynthesis.onvoiceschanged = null;
+      };
+    } else {
+      setVoiceAndSpeak();
+    }
+  };
 
   if (isUser) {
     return (
@@ -276,6 +345,21 @@ export default function MessageBubble({ role, content, timestamp, loading, sourc
             {/* Action row */}
             <div style={{ display: "flex", alignItems: "center", gap: 2, marginTop: 10 }}>
               <CopyBtn text={content} />
+              <button 
+                onClick={handlePlayVoice} 
+                title={isPlaying ? "Stop voice" : "Read aloud (TTS)"} 
+                style={{ 
+                  padding: "5px 8px", borderRadius: 7, background: isPlaying ? "var(--brand-glow)" : "transparent", 
+                  border: "none", color: isPlaying ? "var(--brand-light)" : "var(--text-muted)", 
+                  cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 600,
+                  transition: "all 0.15s ease" 
+                }}
+                onMouseEnter={(e) => { if (!isPlaying) e.currentTarget.style.color = "var(--text-primary)"; }}
+                onMouseLeave={(e) => { if (!isPlaying) e.currentTarget.style.color = "var(--text-muted)"; }}
+              >
+                {isPlaying ? <VolumeX style={{ width: 13, height: 13 }} /> : <Volume2 style={{ width: 13, height: 13 }} />}
+                {isPlaying ? "Stop" : "Listen"}
+              </button>
               <button title="Regenerate" style={{ padding: 5, borderRadius: 7, background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", display: "flex" }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-primary)")}
                 onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}>

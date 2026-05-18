@@ -107,6 +107,13 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
     return "";
   });
 
+  const [voiceGender, setVoiceGender] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("astramind_voice_gender") || "female";
+    }
+    return "female";
+  });
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem("astramind_custom_skills", customSkills);
@@ -118,6 +125,12 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
       localStorage.setItem("astramind_acp_tools", acpTools);
     }
   }, [acpTools]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("astramind_voice_gender", voiceGender);
+    }
+  }, [voiceGender]);
 
   if (!open) return null;
 
@@ -300,6 +313,28 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
             <Toggle value={sounds} onChange={setSounds} />
           </div>
         </Row>
+        <SectionTitle>AI Voice Preference (Text-to-Speech)</SectionTitle>
+        <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "4px 0 10px" }}>
+          Choose the default voice gender used when reading AI responses aloud.
+        </p>
+        <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
+          {["female", "male"].map(gender => {
+            const active = voiceGender === gender;
+            return (
+              <button key={gender} onClick={() => setVoiceGender(gender)} style={{
+                flex: 1, padding: "12px", borderRadius: 12,
+                border: `1.5px solid ${active ? "var(--brand)" : "var(--border-default)"}`,
+                background: active ? "var(--brand-glow)" : "var(--surface-2)",
+                color: active ? "var(--brand-light)" : "var(--text-secondary)",
+                cursor: "pointer", fontSize: 13, fontWeight: active ? 700 : 500,
+                textTransform: "capitalize", transition: "all 0.2s ease",
+                boxShadow: active ? "0 0 0 3px rgba(232,160,48,0.12)" : "none",
+              }}>
+                {gender === "female" ? "👩 Female Voice (Default)" : "👨 Male Voice"}
+              </button>
+            );
+          })}
+        </div>
         <Row label="Show message timestamps"><Toggle value={true} onChange={() => {}} /></Row>
         <Row label="Auto-scroll to latest"><Toggle value={true} onChange={() => {}} /></Row>
         <Row label="Haptic feedback (Vibration)" sub="Vibrate device when AI starts responding">
