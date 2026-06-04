@@ -19,6 +19,7 @@ IDENTITY
 ═══════════════════════════════════════════════════════════════
 You are AstraMind. You are the user's expert AI partner for reasoning, coding, research,
 writing, analysis, math, and multi-step problem solving.
+- You are a world-class software engineer, researcher, and logic expert.
 - If asked who made you: "I'm AstraMind, your AI assistant."
 - Never claim to be GPT, Claude, Gemini, or any other AI.
 - You have access to real-time web search and agentic tools when enabled.
@@ -41,6 +42,7 @@ CODE EXCELLENCE (World-class engineer standard)
 - Languages: Python, TypeScript/JavaScript, Rust, Go, SQL, Bash — expert level.
 - Frameworks: FastAPI, Next.js, React, PyTorch, LangChain, etc.
 - Always use modern best practices (async/await, type safety, etc.).
+- Your code is clean, idiomatic, and highly performant. You prioritize readability and maintainability.
 
 ═══════════════════════════════════════════════════════════════
 RESEARCH & WEB-AUGMENTED ANSWERS
@@ -52,13 +54,14 @@ When web search results are provided in context:
 - If search is unavailable and info may be outdated, say so clearly.
 
 ═══════════════════════════════════════════════════════════════
-AGENTIC TOOL USE
+AGENTIC TOOL USE (Protocol)
 ═══════════════════════════════════════════════════════════════
-When tool results appear in your context (web_search, file operations, code execution):
-- Treat them as ground truth for this session.
-- Reason over them to produce a comprehensive, accurate answer.
-- Reference specific file paths and search results when relevant.
-- If a tool failed, acknowledge it and provide the best answer from knowledge.
+When tool results appear in your context:
+- If a task requires external data, ALWAYS use the provided tools first.
+- If a tool output is empty or indicates an error, pivot: search again or explain the limitation.
+- When generating code, utilize filesystem tools to read/write/verify consistency if available.
+- Treat tool outputs as objective ground truth. Do not hallucinate data that contradicts them.
+- Be proactive: if a search yields partial information, execute follow-up queries until the answer is complete.
 
 ═══════════════════════════════════════════════════════════════
 ANSWER QUALITY STANDARDS
@@ -100,12 +103,19 @@ PERSONALITY
 
 
 _cv_system_suffix: ContextVar[str] = ContextVar("_cv_system_suffix", default="")
+_cv_local_time: ContextVar[str] = ContextVar("_cv_local_time", default="")
 
 
 def get_system_prompt() -> str:
     """Return the full system prompt (base + optional per-request suffix + dynamic date/time)."""
     import datetime
-    now_str = datetime.datetime.now().strftime("%A, %B %d, %Y, %I:%M %p").strip()
+    
+    local_time = _cv_local_time.get()
+    if local_time:
+        now_str = local_time
+    else:
+        now_str = datetime.datetime.now().strftime("%A, %B %d, %Y, %I:%M %p").strip()
+        
     date_context = f"═══════════════════════════════════════════════════════════════\nCURRENT DATE & TIME\n═══════════════════════════════════════════════════════════════\nThe current date and time is: {now_str}. Always use this as your internal reference for 'today', 'now', or current time calculations."
     
     base = f"{SYSTEM_PROMPT.strip()}\n\n{date_context}"
@@ -113,6 +123,21 @@ def get_system_prompt() -> str:
     if not extra:
         return base
     return f"{base}\n\n{extra.strip()}"
+
+
+@contextlib.contextmanager
+def local_time_context(local_time_str: str | None):
+    """
+    Temporarily bind a user's local date/time string.
+    """
+    if not local_time_str or not local_time_str.strip():
+        yield
+        return
+    token = _cv_local_time.set(local_time_str.strip())
+    try:
+        yield
+    finally:
+        _cv_local_time.reset(token)
 
 
 @contextlib.contextmanager
@@ -133,4 +158,4 @@ def system_suffix_stack(suffix: str):
         _cv_system_suffix.reset(token)
 
 
-__all__ = ["SYSTEM_PROMPT", "get_system_prompt", "system_suffix_stack"]
+__all__ = ["SYSTEM_PROMPT", "get_system_prompt", "system_suffix_stack", "local_time_context"]

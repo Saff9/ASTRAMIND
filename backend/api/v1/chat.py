@@ -19,7 +19,7 @@ from app.db.session import get_db
 from services.ai_router import AIRouter
 from services.stream import stream_response
 from core.agent_skills import build_agent_system_suffix
-from core.system_prompt import system_suffix_stack
+from core.system_prompt import system_suffix_stack, local_time_context
 from services.models import resolve_model
 from services.prompts import sanitize_prompt
 from core.config import settings
@@ -186,6 +186,14 @@ class ChatRequest(BaseModel):
     acp_tools: Optional[str] = Field(
         default=None,
         description="Outbound MCP/ACP tool webhook URLs from frontend settings",
+    )
+    timezone: Optional[str] = Field(
+        default=None,
+        description="User's local timezone (e.g. Asia/Kolkata)",
+    )
+    local_time: Optional[str] = Field(
+        default=None,
+        description="User's local time string",
     )
 
     @field_validator("prompt")
@@ -436,24 +444,25 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
 
             async def execute_ai_json():
                 chunks: List[str] = []
-                with system_suffix_stack(agent_system_suffix):
-                    async for chunk in ai_router.stream_with_fallback(
-                        prompt=safe_prompt,
-                        model=payload.model,  # The tier string (e.g. 'balanced')
-                        preferred_provider=provider,
-                        messages=history or None,
-                    ):
-                        try:
-                            parsed = json.loads(chunk)
-                            choices = parsed.get("choices", [])
-                            content = ""
-                            if choices:
-                                content = choices[0].get("delta", {}).get("content", "") or ""
-                            if content:
-                                chunks.append(content)
-                        except (json.JSONDecodeError, IndexError, AttributeError, TypeError):
-                            if chunk and chunk.strip():
-                                chunks.append(chunk)
+                with local_time_context(payload.local_time):
+                    with system_suffix_stack(agent_system_suffix):
+                        async for chunk in ai_router.stream_with_fallback(
+                            prompt=safe_prompt,
+                            model=payload.model,  # The tier string (e.g. 'balanced')
+                            preferred_provider=provider,
+                            messages=history or None,
+                        ):
+                            try:
+                                parsed = json.loads(chunk)
+                                choices = parsed.get("choices", [])
+                                content = ""
+                                if choices:
+                                    content = choices[0].get("delta", {}).get("content", "") or ""
+                                if content:
+                                    chunks.append(content)
+                            except (json.JSONDecodeError, IndexError, AttributeError, TypeError):
+                                if chunk and chunk.strip():
+                                    chunks.append(chunk)
                 full_text = "".join(chunks)
                 return JSONResponse(content={
                     "response": full_text,
@@ -498,6 +507,7 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
             return stream_response(
                 base_stream_generator,
                 system_suffix=agent_system_suffix,
+                local_time=payload.local_time,
             )
 
         async def fallback_sse():
@@ -689,3 +699,184 @@ def _generate_stability_recommendations(health_status: Dict, error_summary: Dict
         recommendations.append("System is operating normally with good stability")
 
     return recommendations
+
+
+# ===== AGENT STREAMING ENDPOINT =====
+
+@router.post(
+    "/agent/stream",
+    summary="Agentic streaming chat — tool events + AI response in one SSE stream",
+    description=(
+        "Premium endpoint. Runs the ReAct agent loop and streams structured events:\n"
+        "- thinking: agent reasoning step\n"
+        "- tool_start: tool about to execute\n"
+        "- tool_result: tool execution output\n"
+        "- text: AI response chunk\n"
+        "- done: stream complete\n"
+        "- error: something failed\n"
+    ),
+)
+async def agent_stream(
+    request: Request,
+    payload: ChatRequest,
+    background_tasks: BackgroundTasks,
+    auth_data: dict = Depends(get_current_user_secure),
+    db: AsyncSession = Depends(get_db),
+    ai_router: AIRouter = Depends(get_ai_router),
+):
+    """
+    Unified streaming endpoint for agentic mode.
+    Sends a single SSE stream with interleaved tool events and AI text.
+    """
+    request_id = getattr(request.state, "request_id", "unknown")
+    user = auth_data["user"]
+    user_id = auth_data["user_id"]
+    user_email = auth_data["email"]
+
+    if not user:
+        raise HTTPException(status_code=401, detail="User not authenticated")
+
+    # Security pipeline (same as /chat)
+    try:
+        security_result = validate_prompt_security(payload.prompt)
+        safe_prompt = security_result["sanitized"]
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Prompt validation failed")
+
+    filter_result = content_filter.filter_content(safe_prompt)
+    if filter_result.blocked:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "Content policy violation", "reasons": filter_result.reasons[:2]},
+        )
+    safe_prompt = filter_result.sanitized_content or safe_prompt
+
+    # Model resolution
+    try:
+        provider, real_model = await resolve_model(payload.model)
+    except KeyError:
+        raise HTTPException(status_code=400, detail=f"Invalid model: {payload.model}")
+
+    # Quota check
+    user_dict = user if isinstance(user, dict) else {}
+    orm_user = user_dict.get("orm_user") if user_dict else None
+
+    if db is not None and orm_user is not None:
+        quota_granted = await atomic_increment_quota(orm_user.id, db)
+        if not quota_granted:
+            raise HTTPException(
+                status_code=429,
+                detail={"error": "Daily quota exceeded", "limit": orm_user.daily_quota},
+            )
+
+    # In-memory rate limit
+    if user_email and not user_email.endswith("@astramind.local"):
+        key = f"user:{user_email}"
+        limit = orm_user.daily_quota if orm_user else _DAILY_LIMIT_USER
+        allowed, _ = _check_and_increment(key, limit)
+        if not allowed:
+            raise HTTPException(status_code=429, detail="Daily rate limit exceeded.")
+    else:
+        ip = _get_client_ip(request)
+        allowed, _ = _check_and_increment(f"ip:{ip}", _DAILY_LIMIT_IP)
+        if not allowed:
+            raise HTTPException(status_code=429, detail="Daily limit reached. Sign in for more.")
+
+    # History
+    history_msgs = [
+        {"role": m.role, "content": m.content}
+        for m in (payload.messages or [])[-50:]
+        if m.role in ("user", "assistant") and m.content
+    ]
+
+    agent_system_suffix = build_agent_system_suffix(safe_prompt, payload.model)
+
+    async def unified_agent_stream():
+        """
+        Yields SSE-formatted JSON events:
+        - Agent tool events (thinking / tool_start / tool_result)
+        - Final AI text chunks
+        - Done event
+        """
+        import json as _json
+
+        context_for_ai = ""
+        # Phase 1: Agent tool execution events
+        try:
+            from services.agent_orchestrator import run_agent_stream
+            async for event_str in run_agent_stream(
+                router=ai_router,
+                user_goal=safe_prompt,
+                history=history_msgs or None,
+                model_tier=payload.model,
+                preferred_provider=provider,
+                user_email=user_email,
+                request_id=request_id,
+            ):
+                try:
+                    event = _json.loads(event_str)
+                    if event.get("type") == "agent_done":
+                        context_for_ai = event.get("context", "")
+                    yield f"data: {event_str}\n\n"
+                except Exception:
+                    pass
+        except Exception as e:
+            logger.error(f"Agent stream failed: {e}", exc_info=True)
+            yield f"data: {_json.dumps({'type': 'error', 'message': f'Agent failed: {e}'})}\n\n"
+
+        # Phase 2: Final AI response
+        final_prompt = safe_prompt
+        if context_for_ai:
+            final_prompt = (
+                f"{safe_prompt}\n\n"
+                "### 🤖 AstraMind Agent Workspace\n"
+                "_Tool execution results (treat as ground truth):_\n\n"
+                f"{context_for_ai}\n\n"
+                "---\n"
+                "_Use the above context to give a comprehensive, accurate answer._"
+            )
+
+        try:
+            with local_time_context(payload.local_time):
+                with system_suffix_stack(agent_system_suffix):
+                    async for chunk in ai_router.stream_with_fallback(
+                        prompt=final_prompt,
+                        model=payload.model,
+                        preferred_provider=provider,
+                        messages=history_msgs,
+                    ):
+                        if not chunk or not chunk.strip():
+                            continue
+                        # Parse and re-emit as text event
+                        try:
+                            parsed = _json.loads(chunk)
+                            content = None
+                            if isinstance(parsed, dict):
+                                if "choices" in parsed and parsed["choices"]:
+                                    content = parsed["choices"][0].get("delta", {}).get("content")
+                                elif "content" in parsed:
+                                    content = parsed["content"]
+                            if content:
+                                yield f"data: {_json.dumps({'type': 'text', 'content': content})}\n\n"
+                        except (ValueError, KeyError):
+                            if chunk.strip():
+                                yield f"data: {_json.dumps({'type': 'text', 'content': chunk})}\n\n"
+        except Exception as e:
+            logger.error(f"AI response stream failed in agent endpoint: {e}", exc_info=True)
+            yield f"data: {_json.dumps({'type': 'error', 'message': 'AI response failed'})}\n\n"
+
+        # Done signal
+        yield f"data: {_json.dumps({'type': 'done'})}\n\n"
+
+    return StreamingResponse(
+        unified_agent_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+            "Content-Type": "text/event-stream; charset=utf-8",
+        },
+    )

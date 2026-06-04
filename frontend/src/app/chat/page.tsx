@@ -17,6 +17,8 @@ import {
 import { neonAuthClient } from "@/lib/auth-client";
 import { useSettings } from "@/lib/SettingsContext";
 
+import type { AgentEvent } from "@/components/chat/MessageBubble";
+
 interface Message {
   id: string;
   role: "user" | "assistant";
@@ -25,7 +27,9 @@ interface Message {
   model?: string;
   timestamp: Date;
   loading?: boolean;
+  streaming?: boolean;
   sources?: Array<{ title: string; url: string; snippet?: string }>;
+  agentEvents?: AgentEvent[];
 }
 
 interface ChatSession {
@@ -78,7 +82,7 @@ function detectSearchIntent(text: string): boolean {
 
 export default function ChatPage() {
   const { vibration } = useSettings();
-  const [session, setSession] = useState<{ user?: { email?: string; name?: string; image?: string }; accessToken?: string } | null | undefined>(undefined);
+  const [session, setSession] = useState<{ user?: { email?: string; name?: string; image?: string }; accessToken?: string } | null>(null);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [messages, setMessages]   = useState<Message[]>([]);
@@ -163,47 +167,47 @@ export default function ChatPage() {
     checkSession();
   }, [router]);
 
-  const currentSessionIdRef = useRef<string | null>(null);
-  useEffect(() => { currentSessionIdRef.current = currentSessionId; }, [currentSessionId]);
-
   useEffect(() => {
     const userEmail = session?.user?.email;
-    if (userEmail && messages.length > 0) {
-      let cid = currentSessionIdRef.current;
-      setSessions((prev) => {
-        let updated = [...prev];
-        if (!cid) {
-          cid = crypto.randomUUID();
-          setCurrentSessionId(cid);
-          // Generate a better title: first user message, up to 40 chars
+    if (!userEmail || messages.length === 0) return;
+
+    setSessions((prev) => {
+      let cid = currentSessionId;
+      const existingSession = prev.find(s => s.id === cid);
+      if (existingSession && JSON.stringify(existingSession.messages) === JSON.stringify(messages)) {
+        return prev;
+      }
+
+      let updated = [...prev];
+      if (!cid) {
+        cid = crypto.randomUUID();
+        const firstUserMsg = messages.find(m => m.role === "user")?.content || "";
+        const title = firstUserMsg.slice(0, 40) + (firstUserMsg.length > 40 ? "…" : "") || "New chat";
+        updated.unshift({
+          id: cid,
+          title,
+          updatedAt: Date.now(),
+          messages
+        });
+        setTimeout(() => setCurrentSessionId(cid), 0);
+      } else {
+        const idx = updated.findIndex(s => s.id === cid);
+        if (idx >= 0) {
           const firstUserMsg = messages.find(m => m.role === "user")?.content || "";
-          const title = firstUserMsg.slice(0, 40) + (firstUserMsg.length > 40 ? "…" : "") || "New chat";
-          updated.unshift({
-            id: cid,
-            title,
-            updatedAt: Date.now(),
-            messages
-          });
+          const title = firstUserMsg.slice(0, 40) + (firstUserMsg.length > 40 ? "…" : "") || "Chat";
+          updated[idx].messages = messages;
+          updated[idx].updatedAt = Date.now();
+          updated[idx].title = title;
+          const [moved] = updated.splice(idx, 1);
+          updated.unshift(moved);
         } else {
-          const idx = updated.findIndex(s => s.id === cid);
-          if (idx >= 0) {
-            // Refresh title from latest user message
-            const firstUserMsg = messages.find(m => m.role === "user")?.content || "";
-            const title = firstUserMsg.slice(0, 40) + (firstUserMsg.length > 40 ? "…" : "") || "Chat";
-            updated[idx].messages = messages;
-            updated[idx].updatedAt = Date.now();
-            updated[idx].title = title;
-            const [moved] = updated.splice(idx, 1);
-            updated.unshift(moved);
-          } else {
-             updated.unshift({ id: cid, title: "Chat", updatedAt: Date.now(), messages });
-          }
+          updated.unshift({ id: cid, title: "Chat", updatedAt: Date.now(), messages });
         }
-        localStorage.setItem(`chat_sessions_${userEmail}`, JSON.stringify(updated));
-        return updated;
-      });
-    }
-  }, [messages, session]);
+      }
+      localStorage.setItem(`chat_sessions_${userEmail}`, JSON.stringify(updated));
+      return updated;
+    });
+  }, [messages, currentSessionId, session]);
 
   useEffect(() => {
     try {
@@ -314,7 +318,6 @@ export default function ChatPage() {
     const loadingMsg: Message = { id: loadId, role: "assistant", content: "", loading: true, timestamp: new Date() };
 
     setMessages((prev) => [...prev, userMsg, loadingMsg]);
-    // Store sources to attach after streaming completes
     const pendingSources = webSources;
     setIsLoading(true);
 
@@ -323,50 +326,46 @@ export default function ChatPage() {
 
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://astramind-reer.onrender.com";
-
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      
-      // Try NextAuth token first, then fallback to Neon session ID
+
       let rawToken = (session as { accessToken?: string } | null)?.accessToken;
       if (!rawToken) {
         const neonSession = await neonAuthClient.getSession();
         rawToken = neonSession?.data?.session?.id;
       }
-      
       if (rawToken) headers["Authorization"] = `Bearer ${rawToken}`;
 
-      // Build conversation history from current messages (exclude loading and error messages)
       const history = messages
-        .filter((m) => 
-          !m.loading && 
-          (m.role === "user" || m.role === "assistant") && 
-          m.content && 
-          !m.content.startsWith("**Error:**")
-        )
-        .slice(-100)  // Increase historical context depth
+        .filter((m) => !m.loading && (m.role === "user" || m.role === "assistant") && m.content && !m.content.startsWith("**Error:**"))
+        .slice(-100)
         .map((m) => ({ role: m.role, content: m.content }));
 
-      let custom_skills = undefined;
-      let acp_tools = undefined;
+      let custom_skills: string | undefined;
+      let acp_tools: string | undefined;
       if (typeof window !== "undefined") {
         custom_skills = localStorage.getItem("astramind_custom_skills") || undefined;
         acp_tools = localStorage.getItem("astramind_acp_tools") || undefined;
       }
 
-      const response = await fetch(`${apiBase}/api/v1/chat`, {
-        method: "POST",
-        headers,
-        signal: controller.signal,
-        body: JSON.stringify({
-          prompt: enrichedPrompt,
-          model: selectedModel.tier || "fast",
-          stream: true,
-          messages: history.length > 0 ? history : undefined,
-          agent_mode: agentMode,
-          research_mode: researchMode,
-          custom_skills,
-          acp_tools,
-        }),
+      const requestBody = {
+        prompt: enrichedPrompt,
+        model: selectedModel.tier || "fast",
+        stream: true,
+        messages: history.length > 0 ? history : undefined,
+        agent_mode: agentMode,
+        research_mode: researchMode,
+        custom_skills,
+        acp_tools,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        local_time: new Date().toString(),
+      };
+
+      // Use the unified agent streaming endpoint when agent mode is on
+      const endpoint = agentMode ? `${apiBase}/api/v1/agent/stream` : `${apiBase}/api/v1/chat`;
+
+      const response = await fetch(endpoint, {
+        method: "POST", headers, signal: controller.signal,
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -375,84 +374,117 @@ export default function ChatPage() {
         throw new Error(detail);
       }
 
-      // ── STREAMING READER LOOP ────────────────────────────────────
       const reader = response.body?.getReader();
       if (!reader) throw new Error("No response stream available.");
-      
+
       const decoder = new TextDecoder();
       let streamedContent = "";
       let vibrationTriggered = false;
+      // Accumulated agent events for this message
+      const accumulatedAgentEvents: AgentEvent[] = [];
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        // Haptic feedback pulse on first response chunk
         if (!vibrationTriggered && vibration && typeof window !== "undefined" && window.navigator.vibrate) {
           try { window.navigator.vibrate(12); } catch { /* silent */ }
           vibrationTriggered = true;
         }
 
         const chunk = decoder.decode(value, { stream: true });
-        // Handle SSE data format: each line starts with "data: "
         const lines = chunk.split("\n");
         for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            try {
-              const str = line.slice(6).trim();
-              if (!str || str === "[DONE]") continue;
-              const parsed = JSON.parse(str);
+          if (!line.startsWith("data: ")) continue;
+          const str = line.slice(6).trim();
+          if (!str || str === "[DONE]") continue;
 
-              // Handle error payloads from backend stream.py
-              if (parsed.type === "error" || parsed.error) {
-                const errMsg = parsed.message || parsed.error || "Stream error occurred";
-                setMessages((prev) => prev.map((m) =>
-                  m.id === loadId ? { ...m, loading: false, content: `**Error:** ${errMsg}` } : m
-                ));
-                return;
-              }
+          try {
+            const parsed = JSON.parse(str);
 
-              // PRIMARY FORMAT: {"content": "...", "type": "text"}  ← backend stream.py output
-              // FALLBACK FORMAT: {"choices":[{"delta":{"content":"..."}}]}  ← raw OpenAI/Groq format
-              const delta: string =
-                (typeof parsed.content === "string" ? parsed.content : null) ??
-                (parsed.choices?.[0]?.delta?.content as string | undefined) ??
-                "";
-
-              if (delta) {
-                streamedContent += delta;
-                setMessages((prev) => prev.map((m) => 
-                  m.id === loadId ? { ...m, content: streamedContent, loading: false } : m
-                ));
-              }
-            } catch {
-              // Ignore partial JSON, keep-alive pings, or metadata lines
+            // Agent events — update the message's agentEvents list in real-time
+            if (parsed.type === "thinking" || parsed.type === "tool_start" || parsed.type === "tool_result") {
+              accumulatedAgentEvents.push(parsed as AgentEvent);
+              setMessages((prev) => prev.map((m) =>
+                m.id === loadId ? { ...m, loading: false, agentEvents: [...accumulatedAgentEvents] } : m
+              ));
+              continue;
             }
+
+            if (parsed.type === "agent_done") continue; // Internal signal, not shown
+
+            if (parsed.type === "done") break;
+
+            if (parsed.type === "error" || parsed.error) {
+              const errMsg = parsed.message || parsed.error || "Stream error";
+              setMessages((prev) => prev.map((m) =>
+                m.id === loadId ? { ...m, loading: false, streaming: false, content: `**Error:** ${errMsg}` } : m
+              ));
+              return;
+            }
+
+            // Text event from agent endpoint, or direct content from chat endpoint
+            const delta: string =
+              (parsed.type === "text" && typeof parsed.content === "string" ? parsed.content : null) ??
+              (typeof parsed.content === "string" && parsed.type !== "thinking" ? parsed.content : null) ??
+              (parsed.choices?.[0]?.delta?.content as string | undefined) ??
+              "";
+
+            if (delta) {
+              streamedContent += delta;
+              setMessages((prev) => prev.map((m) =>
+                m.id === loadId
+                  ? { ...m, content: streamedContent, loading: false, streaming: true, agentEvents: accumulatedAgentEvents.length > 0 ? [...accumulatedAgentEvents] : undefined }
+                  : m
+              ));
+            }
+          } catch {
+            // Ignore partial JSON, keep-alive pings
           }
         }
       }
 
-      // Stream complete — finalize loading state + attach sources
+      // Stream complete
       setMessages((prev) => prev.map((m) =>
         m.id === loadId
-          ? { ...m, loading: false, content: m.content || "_No response received._", sources: pendingSources.length > 0 ? pendingSources : undefined }
+          ? {
+              ...m,
+              loading: false,
+              streaming: false,
+              content: m.content || "_No response received._",
+              sources: pendingSources.length > 0 ? pendingSources : undefined,
+              agentEvents: accumulatedAgentEvents.length > 0 ? accumulatedAgentEvents : undefined,
+            }
           : m
       ));
     } catch (err: unknown) {
       const error = err as Error;
-      // Aborted = user clicked stop, don't show error
       if (error.name === "AbortError") return;
-      const errorMsg: Message = {
-        id: loadId, role: "assistant",
-        content: `**Error:** ${error.message || "Failed to fetch response."}`,
-        timestamp: new Date()
-      };
-      setMessages((prev) => prev.map((m) => (m.id === loadId ? errorMsg : m)));
+      setMessages((prev) => prev.map((m) =>
+        m.id === loadId ? { ...m, loading: false, streaming: false, content: `**Error:** ${error.message || "Failed to fetch."}` } : m
+      ));
     } finally {
       abortControllerRef.current = null;
       setIsLoading(false);
     }
-  }, [isLoading, selectedModel, session, messages, agentMode, researchMode]);
+  }, [isLoading, selectedModel, session, messages, agentMode, researchMode, vibration]);
+
+  // Must come after handleSend to avoid 'used before declaration' error
+  const handleRegenerate = useCallback(async () => {
+    const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
+    if (!lastUserMsg || isLoading) return;
+    const allIdxs = messages.map((m, i) => m.role === "user" ? i : -1).filter((i) => i >= 0);
+    const lastUserIdx = allIdxs.length > 0 ? allIdxs[allIdxs.length - 1] : -1;
+    if (lastUserIdx >= 0) {
+      setMessages((prev) => prev.slice(0, lastUserIdx));
+    }
+    await handleSend(lastUserMsg.content);
+  }, [messages, isLoading, handleSend]);
+
+  const handleFeedback = useCallback((messageId: string, type: "up" | "down") => {
+    // In production: POST to /api/v1/feedback
+    console.log(`Feedback ${type} for message ${messageId}`);
+  }, []);
 
   const startNewChat = useCallback(() => {
     // Abort any in-progress stream
@@ -477,8 +509,9 @@ export default function ChatPage() {
     e.stopPropagation();
     setSessions((prev) => {
       const updated = prev.filter((s) => s.id !== id);
-      if (session?.user?.email) {
-        localStorage.setItem(`chat_sessions_${session.user.email}`, JSON.stringify(updated));
+      const email = session?.user?.email;
+      if (email) {
+        localStorage.setItem(`chat_sessions_${email}`, JSON.stringify(updated));
       }
       return updated;
     });
@@ -930,7 +963,14 @@ export default function ChatPage() {
             <div style={{ maxWidth: 760, margin: "0 auto", padding: "32px 24px" }}>
               {messages.map((msg) => (
                 <div key={msg.id} style={{ marginBottom: 28 }}>
-                  <MessageBubble {...msg} sources={msg.sources} />
+                  <MessageBubble
+                    {...msg}
+                    sources={msg.sources}
+                    agentEvents={msg.agentEvents}
+                    streaming={msg.streaming}
+                    onRegenerate={msg.role === "assistant" && !msg.loading ? handleRegenerate : undefined}
+                    onFeedback={msg.role === "assistant" && !msg.loading ? (type) => handleFeedback(msg.id, type) : undefined}
+                  />
                 </div>
               ))}
               <div ref={messagesEndRef} />
@@ -971,7 +1011,19 @@ export default function ChatPage() {
       )}
 
       {/* Settings Modal */}
-      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <SettingsModal
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        onExportChat={exportChat}
+        onClearHistory={() => {
+          setMessages([]);
+          setSessions([]);
+          const email = session?.user?.email;
+          if (email) {
+            localStorage.removeItem(`chat_sessions_${email}`);
+          }
+        }}
+      />
     </div>
   );
 }

@@ -1,704 +1,591 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
-  X, Palette, Monitor, Cpu, Bell, Shield, User,
-  Keyboard, Check, ChevronRight, Moon, Sun, Zap,
-  Volume2, VolumeX, Eye, EyeOff, Trash2, Download,
+  X, Moon, Sun, Monitor, Check, Palette, Layout,
+  Brain, Shield, Bell, User, Keyboard, Download, Trash2,
+  LogOut, Cpu,
 } from "lucide-react";
-import { useSettings, FONT_CSS_VAR } from "@/lib/SettingsContext";
-import type { Theme, FontId } from "@/lib/SettingsContext";
 import { neonAuthClient } from "@/lib/auth-client";
-import { usePWA } from "@/lib/PWAContext";
+import { useRouter } from "next/navigation";
+import { useSettings } from "@/lib/SettingsContext";
 
 interface SettingsModalProps {
-  open: boolean;
+  isOpen: boolean;
   onClose: () => void;
+  onExportChat?: (format: 'json' | 'doc') => void;
+  onClearHistory?: () => void;
 }
 
-// ────────────────────────────────────────────────────────────────────
-// Font catalogue
-// ────────────────────────────────────────────────────────────────────
-const FONT_OPTIONS: { id: FontId; label: string; type: string; trait: string; preview: string }[] = [
-  { id: "dm",        label: "DM Sans",           type: "Sans-serif",  trait: "Friendly curves, highly readable at all sizes",       preview: "The quick brown fox jumps over the lazy dog" },
-  { id: "fira",      label: "Fira Code",          type: "Monospaced",  trait: "Programming ligatures, developer-friendly",            preview: "const x = (a, b) => a + b; // 0!=1" },
-  { id: "playfair",  label: "Playfair Display",   type: "Serif",       trait: "High contrast, elegant, editorial",                   preview: "Intelligence amplified beautifully" },
-  { id: "rajdhani",  label: "Rajdhani",           type: "Sans-serif",  trait: "Geometric, futuristic, highly legible",               preview: "ASTRAMIND · NEURAL INTERFACE · 2025" },
-  { id: "pacifico",  label: "Pacifico",           type: "Handwriting", trait: "Warm, personal, brush lettering",                     preview: "Hello from Astramind~" },
-  { id: "spacemono", label: "Space Mono",         type: "Monospaced",  trait: "Bold, rounded, nostalgic yet modern",                  preview: "> SYSTEM BOOT · 42 modules loaded_" },
-];
+// ─── Safe localStorage helpers ────────────────────────────────────────────────
+function lsGet(key: string, fallback = ""): string {
+  try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; }
+}
+function lsSet(key: string, val: string) {
+  try { localStorage.setItem(key, val); } catch { /* ignore */ }
+}
 
-const THEME_OPTIONS: { id: Theme; label: string; icon: React.ElementType }[] = [
-  { id: "dark",   label: "Dark",   icon: Moon },
-  { id: "system", label: "System", icon: Monitor },
-  { id: "light",  label: "Light",  icon: Sun },
-];
+// ─── Extracted sub-components ─────────────────────────────────────────────────
 
-const SECTIONS = [
-  { id: "appearance",     label: "Appearance",    icon: Palette },
-  { id: "interface",      label: "Interface",      icon: Monitor },
-  { id: "ai",             label: "AI Behavior",    icon: Cpu },
-  { id: "skills",         label: "Skills & ACP",   icon: Cpu },
-  { id: "notifications",  label: "Notifications",  icon: Bell },
-  { id: "privacy",        label: "Privacy & Data", icon: Shield },
-  { id: "account",        label: "Account",        icon: User },
-  { id: "shortcuts",      label: "Shortcuts",      icon: Keyboard },
-];
-
-const DENSITY_OPTIONS = ["Compact", "Default", "Comfortable"];
-
-const SHORTCUTS = [
-  { action: "New conversation",     keys: ["Ctrl", "Shift", "O"] },
-  { action: "Toggle sidebar",       keys: ["Ctrl", "\\"] },
-  { action: "Send message",         keys: ["Enter"] },
-  { action: "New line",             keys: ["Shift", "Enter"] },
-  { action: "Focus input",          keys: ["/"] },
-  { action: "Open settings",        keys: ["Ctrl", ","] },
-  { action: "Search conversations", keys: ["Ctrl", "K"] },
-  { action: "Copy last response",   keys: ["Ctrl", "Shift", "C"] },
-];
-
-// ────────────────────────────────────────────────────────────────────
-// Main component
-// ────────────────────────────────────────────────────────────────────
-export default function SettingsModal({ open, onClose }: SettingsModalProps) {
-  // Real context — reads and writes persist to localStorage + DOM
-  const { theme, font, vibration, setTheme, setFont, setVibration } = useSettings();
-  // Local session state
-  const [session, setSession] = useState<{ user?: { email?: string; name?: string } } | null | undefined>(undefined);
-  const user = session?.user;
-  const isSignedIn = !!user;
-
-  // Fetch session on mount
-  useEffect(() => {
-    async function fetchSession() {
-      const { data } = await neonAuthClient.getSession();
-      setSession(data ? { user: { email: data.user.email, name: data.user.name || undefined } } : null);
-    }
-    fetchSession();
-  }, []);
-  const { isInstallable, triggerInstall } = usePWA();
-
-  // Local-only UI state (not persisted globally)
-  const [section, setSection]           = useState("appearance");
-  const [density, setDensity]           = useState("Default");
-  const [fontSize, setFontSize]         = useState(14);
-  const [sounds, setSounds]             = useState(false);
-  const [streaming, setStreaming]       = useState(true);
-  const [markdown, setMarkdown]         = useState(true);
-  const [codeHighlight, setCodeHighlight] = useState(true);
-  const [responseLen, setResponseLen]   = useState("balanced");
-  const [notifChat, setNotifChat]       = useState(true);
-  const [notifUpdate, setNotifUpdate]   = useState(true);
-  const [analytics, setAnalytics]       = useState(false);
-  const [saveHistory, setSaveHistory]   = useState(true);
-
-  const [customSkills, setCustomSkills] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("astramind_custom_skills") || "";
-    }
-    return "";
-  });
-
-  const [acpTools, setAcpTools] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("astramind_acp_tools") || "";
-    }
-    return "";
-  });
-
-  const [voiceGender, setVoiceGender] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("astramind_voice_gender") || "female";
-    }
-    return "female";
-  });
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("astramind_custom_skills", customSkills);
-    }
-  }, [customSkills]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("astramind_acp_tools", acpTools);
-    }
-  }, [acpTools]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("astramind_voice_gender", voiceGender);
-    }
-  }, [voiceGender]);
-
-  if (!open) return null;
-
-  // ── Reusable sub-components ────────────────────────────────────
-  const Toggle = ({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) => (
+function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
+  return (
     <button
+      role="switch"
+      aria-checked={value}
       onClick={() => onChange(!value)}
       style={{
-        width: 40, height: 22, borderRadius: 11, border: "none", cursor: "pointer",
-        background: value ? "linear-gradient(135deg,var(--brand),var(--brand-light))" : "var(--surface-3)",
-        position: "relative", transition: "background 0.25s ease", flexShrink: 0,
-        boxShadow: value ? "0 0 10px var(--brand-glow)" : "none",
+        width: 42, height: 24, borderRadius: 12, border: "none", cursor: "pointer",
+        background: value ? "var(--brand)" : "var(--surface-3)",
+        position: "relative", transition: "background 0.2s ease", flexShrink: 0,
+        boxShadow: value ? "0 0 8px var(--brand-glow)" : "none",
       }}
     >
       <span style={{
-        position: "absolute", top: 3, left: value ? 21 : 3, width: 16, height: 16,
-        borderRadius: "50%", background: "#fff",
-        transition: "left 0.25s cubic-bezier(0.34,1.56,0.64,1)",
-        boxShadow: "0 1px 4px rgba(0,0,0,0.4)",
+        position: "absolute", top: 3, width: 18, height: 18, borderRadius: "50%",
+        background: "white", transition: "left 0.25s cubic-bezier(0.34,1.56,0.64,1)",
+        left: value ? 21 : 3,
+        boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
       }} />
     </button>
   );
+}
 
-  const Row = ({ label, sub, children }: { label: string; sub?: string; children: React.ReactNode }) => (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 0", borderBottom: "1px solid var(--border-subtle)" }}>
-      <div>
-        <p style={{ fontSize: 14, fontWeight: 500, color: "var(--text-primary)" }}>{label}</p>
-        {sub && <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>{sub}</p>}
+function Row({ label, subtitle, children }: { label: string; subtitle?: string; children: React.ReactNode }) {
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", justifyContent: "space-between",
+      padding: "11px 0", borderBottom: "1px solid var(--border-subtle)",
+      gap: 12,
+    }}>
+      <div style={{ flex: 1 }}>
+        <p style={{ fontSize: 14, fontWeight: 500, color: "var(--text-primary)", margin: 0 }}>{label}</p>
+        {subtitle && <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "2px 0 0" }}>{subtitle}</p>}
       </div>
       {children}
     </div>
   );
+}
 
-  const SectionTitle = ({ children }: { children: React.ReactNode }) => (
-    <h3 style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: 2, marginTop: 16 }}>
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <p style={{
+      fontSize: 10, fontWeight: 800, letterSpacing: "0.1em",
+      textTransform: "uppercase", color: "var(--text-muted)",
+      margin: "18px 0 8px",
+    }}>
       {children}
-    </h3>
+    </p>
   );
+}
 
-  // ── Section renderers ──────────────────────────────────────────
+const NAV_ITEMS = [
+  { id: "appearance", label: "Appearance", icon: Palette },
+  { id: "interface", label: "Interface", icon: Layout },
+  { id: "ai", label: "AI Behavior", icon: Brain },
+  { id: "skills", label: "Skills & ACP", icon: Cpu },
+  { id: "notifications", label: "Notifications", icon: Bell },
+  { id: "privacy", label: "Privacy & Data", icon: Shield },
+  { id: "account", label: "Account", icon: User },
+  { id: "shortcuts", label: "Shortcuts", icon: Keyboard },
+];
+
+const FONTS = [
+  { id: "dm-sans", label: "DM Sans", var: "'DM Sans', sans-serif" },
+  { id: "inter", label: "Inter", var: "'Inter', sans-serif" },
+  { id: "system", label: "System UI", var: "system-ui, sans-serif" },
+  { id: "mono", label: "Monospace", var: "'JetBrains Mono', monospace" },
+  { id: "serif", label: "Georgia", var: "Georgia, serif" },
+  { id: "nunito", label: "Nunito", var: "'Nunito', sans-serif" },
+];
+
+const SHORTCUTS = [
+  { keys: ["Ctrl", "K"], action: "Search conversations" },
+  { keys: ["Ctrl", "Shift", "N"], action: "New conversation" },
+  { keys: ["Enter"], action: "Send message" },
+  { keys: ["Shift", "Enter"], action: "New line in input" },
+  { keys: ["Esc"], action: "Close modal / stop stream" },
+  { keys: ["Ctrl", ","], action: "Open settings" },
+  { keys: ["Ctrl", "Shift", "D"], action: "Toggle dark / light mode" },
+  { keys: ["Ctrl", "E"], action: "Export conversation" },
+];
+
+export default function SettingsModal({ isOpen, onClose, onExportChat, onClearHistory }: SettingsModalProps) {
+  const router = useRouter();
+  const { theme, setTheme, font: globalFont, setFont: setGlobalFont } = useSettings();
+  const [section, setSection] = useState("appearance");
+  const [session, setSession] = useState<{ user?: { email?: string; name?: string } } | null>(null);
+  const [confirmClear, setConfirmClear] = useState(false);
+  const modalRef = React.useRef<HTMLDivElement>(null);
+
+  // Local font tracking (stored in localStorage, separate from FontId context type)
+  const [globalFont, setGlobalFontRaw] = React.useState(() => lsGet("astramind_ui_font", "dm-sans"));
+  const setGlobalFont = (f: string) => {
+    setGlobalFontRaw(f);
+    lsSet("astramind_ui_font", f);
+    // Apply CSS variable directly
+    const fontMap: Record<string, string> = {
+      "dm-sans": "'DM Sans', sans-serif",
+      "inter": "'Inter', sans-serif",
+      "system": "system-ui, sans-serif",
+      "mono": "'JetBrains Mono', monospace",
+      "serif": "Georgia, serif",
+      "nunito": "'Nunito', sans-serif",
+    };
+    if (typeof document !== "undefined") {
+      document.documentElement.style.setProperty("--ui-font", fontMap[f] || fontMap["dm-sans"]);
+    }
+  };
+
+  // ── Persisted settings ──────────────────────────────────────────────────────
+  const [density, setDensityRaw] = useState(() => lsGet("astramind_density", "default"));
+  const [fontSize, setFontSizeRaw] = useState(() => parseInt(lsGet("astramind_fontsize", "15")));
+  const [streaming, setStreamingRaw] = useState(() => lsGet("astramind_streaming", "true") === "true");
+  const [markdownEnabled, setMarkdownRaw] = useState(() => lsGet("astramind_markdown", "true") === "true");
+  const [codeHighlight, setCodeHighlightRaw] = useState(() => lsGet("astramind_codehighlight", "true") === "true");
+  const [sounds, setSoundsRaw] = useState(() => lsGet("astramind_sounds", "false") === "true");
+  const [voiceGender, setVoiceGenderRaw] = useState(() => lsGet("astramind_voice_gender", "female"));
+  const [responseLen, setResponseLenRaw] = useState(() => lsGet("astramind_response_len", "balanced"));
+  const [customSkills, setCustomSkillsRaw] = useState(() => lsGet("astramind_custom_skills", ""));
+  const [acpTools, setAcpToolsRaw] = useState(() => lsGet("astramind_acp_tools", ""));
+  const [notifChat, setNotifChatRaw] = useState(() => lsGet("astramind_notif_chat", "true") === "true");
+  const [notifUpdate, setNotifUpdateRaw] = useState(() => lsGet("astramind_notif_update", "true") === "true");
+  const [analytics, setAnalyticsRaw] = useState(() => lsGet("astramind_analytics", "true") === "true");
+  const [saveHistory, setSaveHistoryRaw] = useState(() => lsGet("astramind_save_history", "true") === "true");
+
+  // Persisted setters
+  const setDensity = (v: string) => { setDensityRaw(v); lsSet("astramind_density", v); };
+  const setFontSize = (v: number) => { setFontSizeRaw(v); lsSet("astramind_fontsize", String(v)); document.documentElement.style.fontSize = `${v}px`; };
+  const setStreaming = (v: boolean) => { setStreamingRaw(v); lsSet("astramind_streaming", String(v)); };
+  const setMarkdown = (v: boolean) => { setMarkdownRaw(v); lsSet("astramind_markdown", String(v)); };
+  const setCodeHighlight = (v: boolean) => { setCodeHighlightRaw(v); lsSet("astramind_codehighlight", String(v)); };
+  const setSounds = (v: boolean) => { setSoundsRaw(v); lsSet("astramind_sounds", String(v)); };
+  const setVoiceGender = (v: string) => { setVoiceGenderRaw(v); lsSet("astramind_voice_gender", v); };
+  const setResponseLen = (v: string) => { setResponseLenRaw(v); lsSet("astramind_response_len", v); };
+  const setCustomSkills = (v: string) => { setCustomSkillsRaw(v); lsSet("astramind_custom_skills", v); };
+  const setAcpTools = (v: string) => { setAcpToolsRaw(v); lsSet("astramind_acp_tools", v); };
+  const setNotifChat = (v: boolean) => { setNotifChatRaw(v); lsSet("astramind_notif_chat", String(v)); };
+  const setNotifUpdate = (v: boolean) => { setNotifUpdateRaw(v); lsSet("astramind_notif_update", String(v)); };
+  const setAnalytics = (v: boolean) => { setAnalyticsRaw(v); lsSet("astramind_analytics", String(v)); };
+  const setSaveHistory = (v: boolean) => { setSaveHistoryRaw(v); lsSet("astramind_save_history", String(v)); };
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+    neonAuthClient.getSession().then(({ data }) => {
+      if (data) setSession({ user: { email: data.user.email, name: data.user.name || undefined } });
+    }).catch(() => {});
+  }, [isOpen]);
+
+  // Focus trap
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const el = modalRef.current;
+    if (!el) return;
+    const focusable = el.querySelectorAll<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const handleTab = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      if (e.shiftKey) { if (document.activeElement === first) { e.preventDefault(); last?.focus(); } }
+      else { if (document.activeElement === last) { e.preventDefault(); first?.focus(); } }
+    };
+    const handleEsc = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handleTab);
+    document.addEventListener("keydown", handleEsc);
+    first?.focus();
+    return () => { document.removeEventListener("keydown", handleTab); document.removeEventListener("keydown", handleEsc); };
+  }, [isOpen, onClose]);
+
+  const handleSignOut = async () => {
+    await neonAuthClient.signOut();
+    router.push("/");
+  };
+
+  const handleExport = (format: 'json' | 'doc') => {
+    onExportChat?.(format);
+    onClose();
+  };
+
+  const handleClearHistory = () => {
+    if (!confirmClear) { setConfirmClear(true); return; }
+    onClearHistory?.();
+    setConfirmClear(false);
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
   const renderSection = () => {
-
-    // ── APPEARANCE ─────────────────────────────────────────────────
-    if (section === "appearance") return (
-      <div>
-        <SectionTitle>Theme</SectionTitle>
-        <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "4px 0 10px" }}>
-          Applies instantly and is saved for future sessions.
-        </p>
-        <div style={{ display: "flex", gap: 10, marginBottom: 28, flexWrap: "wrap" }}>
-          {THEME_OPTIONS.map(t => {
-            const TIcon = t.icon;
-            const active = theme === t.id;
-            return (
-              <button key={t.id} onClick={() => setTheme(t.id)} style={{
-                flex: 1, padding: "14px 8px", borderRadius: 12,
-                border: `1.5px solid ${active ? "var(--brand)" : "var(--border-default)"}`,
-                background: active ? "var(--brand-glow)" : "var(--surface-2)",
-                color: active ? "var(--brand-light)" : "var(--text-secondary)",
-                cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
-                transition: "all 0.2s ease",
-                boxShadow: active ? "0 0 0 3px rgba(232,160,48,0.12)" : "none",
-              }}>
-                <TIcon style={{ width: 20, height: 20 }} />
-                <span style={{ fontSize: 13, fontWeight: active ? 700 : 500 }}>{t.label}</span>
-                {active && (
-                  <span style={{ fontSize: 10, color: "var(--brand)", fontWeight: 700, letterSpacing: "0.06em" }}>
-                    ACTIVE
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        <SectionTitle>Interface Font</SectionTitle>
-        <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "4px 0 10px" }}>
-          Changes the font used across all text in the app — applied immediately.
-        </p>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {FONT_OPTIONS.map(f => {
-            const active = font === f.id;
-            return (
-              <button
-                key={f.id}
-                onClick={() => setFont(f.id)}
-                style={{
-                  display: "flex", gap: 14, alignItems: "flex-start",
-                  padding: "14px 16px", borderRadius: 14,
-                  border: `1.5px solid ${active ? "var(--brand)" : "var(--border-default)"}`,
-                  background: active ? "var(--brand-glow)" : "var(--surface-2)",
-                  cursor: "pointer", textAlign: "left", transition: "all 0.2s ease",
-                  boxShadow: active ? "0 0 0 3px rgba(232,160,48,0.1)" : "none",
-                }}
-              >
-                {/* Radio dot */}
-                <div style={{
-                  width: 18, height: 18, borderRadius: "50%", flexShrink: 0, marginTop: 2,
-                  border: `2px solid ${active ? "var(--brand)" : "var(--border-strong)"}`,
-                  background: active ? "var(--brand)" : "transparent",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  transition: "all 0.2s ease",
+    switch (section) {
+      case "appearance":
+        return (
+          <div>
+            <SectionTitle>Theme</SectionTitle>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 8 }}>
+              {(["dark", "system", "light"] as const).map((t) => (
+                <button key={t} onClick={() => setTheme(t)} style={{
+                  padding: "12px 8px", borderRadius: 12,
+                  border: `1.5px solid ${theme === t ? "var(--brand)" : "var(--border-default)"}`,
+                  background: theme === t ? "var(--brand-glow)" : "var(--surface-2)",
+                  cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+                  transition: "all 0.15s ease",
                 }}>
-                  {active && <Check style={{ width: 10, height: 10, color: "var(--bg-primary)" }} />}
-                </div>
+                  {t === "dark" ? <Moon style={{ width: 18, height: 18, color: theme === t ? "var(--brand)" : "var(--text-muted)" }} />
+                    : t === "system" ? <Monitor style={{ width: 18, height: 18, color: theme === t ? "var(--brand)" : "var(--text-muted)" }} />
+                    : <Sun style={{ width: 18, height: 18, color: theme === t ? "var(--brand)" : "var(--text-muted)" }} />}
+                  <span style={{ fontSize: 12, fontWeight: 600, color: theme === t ? "var(--brand)" : "var(--text-muted)", textTransform: "capitalize" }}>{t}</span>
+                  {theme === t && <Check style={{ width: 12, height: 12, color: "var(--brand)" }} />}
+                </button>
+              ))}
+            </div>
 
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
-                    <span style={{
-                      fontSize: 15, fontWeight: 700,
-                      color: active ? "var(--brand-light)" : "var(--text-primary)",
-                      fontFamily: FONT_CSS_VAR[f.id],
-                    }}>{f.label}</span>
-                    <span style={{
-                      fontSize: 10, fontWeight: 600, letterSpacing: "0.08em",
-                      padding: "1px 7px", borderRadius: 100,
-                      background: "var(--surface-3)", color: "var(--text-muted)",
-                    }}>{f.type}</span>
-                  </div>
-                  <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 6, lineHeight: 1.4 }}>
-                    {f.trait}
-                  </p>
-                  {/* Live preview rendered IN that font */}
-                  <p style={{
-                    fontSize: 13, fontFamily: FONT_CSS_VAR[f.id],
-                    color: active ? "var(--text-secondary)" : "var(--text-muted)",
-                    lineHeight: 1.5, overflow: "hidden",
-                    whiteSpace: "nowrap", textOverflow: "ellipsis",
-                    fontStyle: "italic",
-                  }}>{f.preview}</p>
-                </div>
-              </button>
-            );
-          })}
-        </div>
+            <SectionTitle>Font</SectionTitle>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 8 }}>
+              {FONTS.map((f) => (
+                <button key={f.id} onClick={() => setGlobalFont(f.id)} style={{
+                  padding: "10px 12px", borderRadius: 10,
+                  border: `1.5px solid ${globalFont === f.id ? "var(--brand)" : "var(--border-default)"}`,
+                  background: globalFont === f.id ? "var(--brand-glow)" : "var(--surface-2)",
+                  cursor: "pointer", textAlign: "left", transition: "all 0.15s ease",
+                }}>
+                  <span style={{ fontFamily: f.var, fontSize: 14, color: globalFont === f.id ? "var(--brand)" : "var(--text-primary)", fontWeight: 500 }}>{f.label}</span>
+                </button>
+              ))}
+            </div>
 
-        <SectionTitle>Font Size</SectionTitle>
-        <div style={{ marginTop: 8, padding: "16px", background: "var(--surface-2)", borderRadius: 12, border: "1px solid var(--border-default)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ fontSize: 11, color: "var(--text-muted)", minWidth: 24 }}>A</span>
-            <input type="range" min={12} max={18} value={fontSize}
-              onChange={e => {
-                const v = +e.target.value;
-                setFontSize(v);
-                document.body.style.fontSize = `${v}px`;
-              }}
-              style={{ flex: 1, accentColor: "var(--brand)", cursor: "pointer" }} />
-            <span style={{ fontSize: 16, color: "var(--text-muted)", minWidth: 24, textAlign: "right" }}>A</span>
-            <span style={{
-              minWidth: 36, fontSize: 12, fontWeight: 600, color: "var(--brand-light)",
-              background: "var(--brand-glow)", padding: "2px 8px", borderRadius: 6, textAlign: "center",
-            }}>{fontSize}px</span>
+            <SectionTitle>Font Size</SectionTitle>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 0" }}>
+              <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Aa</span>
+              <input type="range" min={12} max={18} value={fontSize} onChange={(e) => setFontSize(Number(e.target.value))}
+                style={{ flex: 1, accentColor: "var(--brand)" }} />
+              <span style={{ fontSize: 15, color: "var(--text-primary)", minWidth: 24, textAlign: "right" }}>Aa</span>
+              <span style={{ fontSize: 12, color: "var(--brand)", minWidth: 32 }}>{fontSize}px</span>
+            </div>
+
+            <SectionTitle>Density</SectionTitle>
+            <div style={{ display: "flex", gap: 8 }}>
+              {["compact", "default", "comfortable"].map((d) => (
+                <button key={d} onClick={() => setDensity(d)} style={{
+                  flex: 1, padding: "9px 4px", borderRadius: 10, fontSize: 12, fontWeight: 600,
+                  border: `1.5px solid ${density === d ? "var(--brand)" : "var(--border-default)"}`,
+                  background: density === d ? "var(--brand-glow)" : "var(--surface-2)",
+                  color: density === d ? "var(--brand)" : "var(--text-muted)",
+                  cursor: "pointer", textTransform: "capitalize", transition: "all 0.15s ease",
+                }}>
+                  {d}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        );
 
-        <SectionTitle>Density</SectionTitle>
-        <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-          {DENSITY_OPTIONS.map(d => (
-            <button key={d} onClick={() => setDensity(d)} style={{
-              flex: 1, padding: "10px", borderRadius: 10,
-              border: `1.5px solid ${density === d ? "var(--brand)" : "var(--border-default)"}`,
-              background: density === d ? "var(--brand-glow)" : "var(--surface-2)",
-              color: density === d ? "var(--brand-light)" : "var(--text-secondary)",
-              cursor: "pointer", fontSize: 13, fontWeight: 600, transition: "all 0.2s ease",
-            }}>{d}</button>
-          ))}
-        </div>
-      </div>
-    );
-
-    // ── INTERFACE ──────────────────────────────────────────────────
-    if (section === "interface") return (
-      <div>
-        <Row label="Streaming responses" sub="Show AI reply as it's generated"><Toggle value={streaming} onChange={setStreaming} /></Row>
-        <Row label="Markdown rendering" sub="Format bold, italics, code blocks"><Toggle value={markdown} onChange={setMarkdown} /></Row>
-        <Row label="Code syntax highlighting" sub="Color-code programming snippets"><Toggle value={codeHighlight} onChange={setCodeHighlight} /></Row>
-        <Row label="Sound effects" sub="Play audio on send / receive">
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {sounds ? <Volume2 style={{ width: 16, height: 16, color: "var(--brand)" }} /> : <VolumeX style={{ width: 16, height: 16, color: "var(--text-muted)" }} />}
-            <Toggle value={sounds} onChange={setSounds} />
+      case "interface":
+        return (
+          <div>
+            <SectionTitle>Chat</SectionTitle>
+            <Row label="Streaming" subtitle="Show AI response as it types"><Toggle value={streaming} onChange={setStreaming} /></Row>
+            <Row label="Markdown rendering" subtitle="Format bold, code, tables in responses"><Toggle value={markdownEnabled} onChange={setMarkdown} /></Row>
+            <Row label="Syntax highlighting" subtitle="Color-coded code blocks"><Toggle value={codeHighlight} onChange={setCodeHighlight} /></Row>
+            <Row label="Sounds" subtitle="Audio feedback on send/receive"><Toggle value={sounds} onChange={setSounds} /></Row>
+            <SectionTitle>TTS Voice</SectionTitle>
+            <Row label="Voice gender" subtitle="Default voice for read-aloud">
+              <div style={{ display: "flex", gap: 6 }}>
+                {["female", "male"].map((g) => (
+                  <button key={g} onClick={() => setVoiceGender(g)} style={{
+                    padding: "5px 12px", borderRadius: 20, fontSize: 12, fontWeight: 600,
+                    border: `1.5px solid ${voiceGender === g ? "var(--brand)" : "var(--border-default)"}`,
+                    background: voiceGender === g ? "var(--brand-glow)" : "transparent",
+                    color: voiceGender === g ? "var(--brand)" : "var(--text-muted)",
+                    cursor: "pointer", textTransform: "capitalize",
+                  }}>{g}</button>
+                ))}
+              </div>
+            </Row>
           </div>
-        </Row>
-        <SectionTitle>AI Voice Preference (Text-to-Speech)</SectionTitle>
-        <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "4px 0 10px" }}>
-          Choose the default voice gender used when reading AI responses aloud.
-        </p>
-        <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
-          {["female", "male"].map(gender => {
-            const active = voiceGender === gender;
-            return (
-              <button key={gender} onClick={() => setVoiceGender(gender)} style={{
-                flex: 1, padding: "12px", borderRadius: 12,
-                border: `1.5px solid ${active ? "var(--brand)" : "var(--border-default)"}`,
-                background: active ? "var(--brand-glow)" : "var(--surface-2)",
-                color: active ? "var(--brand-light)" : "var(--text-secondary)",
-                cursor: "pointer", fontSize: 13, fontWeight: active ? 700 : 500,
-                textTransform: "capitalize", transition: "all 0.2s ease",
-                boxShadow: active ? "0 0 0 3px rgba(232,160,48,0.12)" : "none",
-              }}>
-                {gender === "female" ? "👩 Female Voice (Default)" : "👨 Male Voice"}
-              </button>
-            );
-          })}
-        </div>
-        <Row label="Show message timestamps"><Toggle value={true} onChange={() => {}} /></Row>
-        <Row label="Auto-scroll to latest"><Toggle value={true} onChange={() => {}} /></Row>
-        <Row label="Haptic feedback (Vibration)" sub="Vibrate device when AI starts responding">
-          <Toggle value={vibration} onChange={setVibration} />
-        </Row>
-        
-        {isInstallable && (
-          <Row label="Install ASTRAMIND App" sub="Add to your device for offline & full-screen access">
-            <button
-              onClick={triggerInstall}
+        );
+
+      case "ai":
+        return (
+          <div>
+            <SectionTitle>Response Style</SectionTitle>
+            <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+              {["concise", "balanced", "detailed"].map((r) => (
+                <button key={r} onClick={() => setResponseLen(r)} style={{
+                  flex: 1, padding: "9px 4px", borderRadius: 10, fontSize: 12, fontWeight: 600,
+                  border: `1.5px solid ${responseLen === r ? "var(--brand)" : "var(--border-default)"}`,
+                  background: responseLen === r ? "var(--brand-glow)" : "var(--surface-2)",
+                  color: responseLen === r ? "var(--brand)" : "var(--text-muted)",
+                  cursor: "pointer", textTransform: "capitalize", transition: "all 0.15s",
+                }}>{r}</button>
+              ))}
+            </div>
+            <p style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.5 }}>
+              {responseLen === "concise" ? "Short, direct answers — great for quick facts." :
+               responseLen === "detailed" ? "Thorough, comprehensive responses with examples." :
+               "Balanced responses — detail when needed, brief when possible."}
+            </p>
+          </div>
+        );
+
+      case "skills":
+        return (
+          <div>
+            <SectionTitle>Custom Expert Skills</SectionTitle>
+            <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 8 }}>
+              Describe your preferred expert persona or domain focus (e.g. "You are a senior DevOps engineer who prefers Kubernetes...").
+            </p>
+            <textarea
+              value={customSkills}
+              onChange={(e) => setCustomSkills(e.target.value)}
+              rows={5}
+              placeholder="Optional: Custom skills or instructions..."
               style={{
-                display: "flex", alignItems: "center", gap: 8,
-                padding: "8px 16px", borderRadius: 10,
-                background: "var(--brand-glow)", border: "none", color: "var(--brand-light)",
-                fontSize: 13, fontWeight: 700, cursor: "pointer",
-                boxShadow: "0 0 10px rgba(232,160,48,0.2)"
+                width: "100%", borderRadius: 10, border: "1px solid var(--border-default)",
+                background: "var(--surface-1)", color: "var(--text-primary)", padding: "10px 12px",
+                fontSize: 13, lineHeight: 1.6, resize: "vertical", outline: "none", fontFamily: "inherit",
+                boxSizing: "border-box",
+              }}
+            />
+            <SectionTitle>ACP Webhook URL</SectionTitle>
+            <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 8 }}>
+              Connect external MCP/ACP tools via webhook.
+            </p>
+            <input
+              type="url"
+              value={acpTools}
+              onChange={(e) => setAcpTools(e.target.value)}
+              placeholder="https://your-tool.example.com/webhook"
+              style={{
+                width: "100%", borderRadius: 10, border: "1px solid var(--border-default)",
+                background: "var(--surface-1)", color: "var(--text-primary)", padding: "10px 12px",
+                fontSize: 13, outline: "none", fontFamily: "inherit", boxSizing: "border-box",
+              }}
+            />
+          </div>
+        );
+
+      case "notifications":
+        return (
+          <div>
+            <SectionTitle>Push Notifications</SectionTitle>
+            <Row label="Chat responses" subtitle="Notify when AI finishes long responses"><Toggle value={notifChat} onChange={setNotifChat} /></Row>
+            <Row label="Product updates" subtitle="New features and improvements"><Toggle value={notifUpdate} onChange={setNotifUpdate} /></Row>
+          </div>
+        );
+
+      case "privacy":
+        return (
+          <div>
+            <SectionTitle>Data</SectionTitle>
+            <Row label="Analytics" subtitle="Help improve AstraMind with usage data"><Toggle value={analytics} onChange={setAnalytics} /></Row>
+            <Row label="Save conversation history" subtitle="Store chats locally for sidebar access"><Toggle value={saveHistory} onChange={setSaveHistory} /></Row>
+            <SectionTitle>Actions</SectionTitle>
+            <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+              <button onClick={() => handleExport('json')} style={{
+                flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                padding: "10px", borderRadius: 10, border: "1px solid var(--border-default)",
+                background: "var(--surface-2)", color: "var(--text-secondary)", cursor: "pointer",
+                fontSize: 13, fontWeight: 600, transition: "all 0.15s",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--brand)")}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border-default)")}>
+                <Download style={{ width: 14, height: 14 }} /> Export JSON
+              </button>
+              <button onClick={() => handleExport('doc')} style={{
+                flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                padding: "10px", borderRadius: 10, border: "1px solid var(--border-default)",
+                background: "var(--surface-2)", color: "var(--text-secondary)", cursor: "pointer",
+                fontSize: 13, fontWeight: 600, transition: "all 0.15s",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--brand)")}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border-default)")}>
+                <Download style={{ width: 14, height: 14 }} /> Export Text
+              </button>
+            </div>
+            <button
+              onClick={handleClearHistory}
+              style={{
+                width: "100%", marginTop: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                padding: "10px", borderRadius: 10,
+                border: `1px solid ${confirmClear ? "var(--error)" : "rgba(245,100,90,0.3)"}`,
+                background: confirmClear ? "rgba(245,100,90,0.15)" : "transparent",
+                color: "var(--error)", cursor: "pointer", fontSize: 13, fontWeight: 700,
+                transition: "all 0.15s",
               }}
             >
-              <Download style={{ width: 15, height: 15 }} />
-              Install
+              <Trash2 style={{ width: 14, height: 14 }} />
+              {confirmClear ? "⚠ Confirm — This cannot be undone" : "Clear all conversation history"}
             </button>
-          </Row>
-        )}
-      </div>
-    );
-
-    // ── AI BEHAVIOR ────────────────────────────────────────────────
-    if (section === "ai") return (
-      <div>
-        <SectionTitle>Response Length</SectionTitle>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8, marginBottom: 20 }}>
-          {[
-            { id: "concise",  label: "Concise",  desc: "Short, direct answers" },
-            { id: "balanced", label: "Balanced", desc: "Comprehensive with examples — default" },
-            { id: "detailed", label: "Detailed", desc: "In-depth explanations and analysis" },
-          ].map(opt => (
-            <button key={opt.id} onClick={() => setResponseLen(opt.id)} style={{
-              display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderRadius: 12,
-              border: `1.5px solid ${responseLen === opt.id ? "var(--brand)" : "var(--border-default)"}`,
-              background: responseLen === opt.id ? "var(--brand-glow)" : "var(--surface-2)",
-              cursor: "pointer", textAlign: "left", transition: "all 0.2s ease",
-            }}>
-              <div style={{
-                width: 16, height: 16, borderRadius: "50%", flexShrink: 0,
-                border: `2px solid ${responseLen === opt.id ? "var(--brand)" : "var(--border-strong)"}`,
-                background: responseLen === opt.id ? "var(--brand)" : "transparent",
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}>
-                {responseLen === opt.id && <Check style={{ width: 9, height: 9, color: "var(--bg-primary)" }} />}
-              </div>
-              <div>
-                <p style={{ fontSize: 14, fontWeight: 600, color: responseLen === opt.id ? "var(--brand-light)" : "var(--text-primary)" }}>{opt.label}</p>
-                <p style={{ fontSize: 12, color: "var(--text-muted)" }}>{opt.desc}</p>
-              </div>
-            </button>
-          ))}
-        </div>
-        <Row label="Show model badge per message"><Toggle value={true} onChange={() => {}} /></Row>
-        <Row label="Show thinking process"><Toggle value={false} onChange={() => {}} /></Row>
-        <Row label="Web search by default"><Toggle value={false} onChange={() => {}} /></Row>
-        <Row label="Auto-suggest follow-ups"><Toggle value={true} onChange={() => {}} /></Row>
-        <SectionTitle>Default System Prompt</SectionTitle>
-        <textarea
-          placeholder="You are ASTRAMIND, a helpful and precise AI assistant…"
-          style={{
-            width: "100%", minHeight: 80, resize: "vertical",
-            background: "var(--surface-2)", border: "1px solid var(--border-default)",
-            borderRadius: 12, padding: "12px 14px", fontSize: 13, color: "var(--text-secondary)",
-            fontFamily: "inherit", outline: "none", marginTop: 8, lineHeight: 1.6,
-          }}
-        />
-      </div>
-    );
-
-    // ── SKILLS & ACP ───────────────────────────────────────────────
-    if (section === "skills") return (
-      <div>
-        <SectionTitle>Custom Expert Skills (GitHub Inspired)</SectionTitle>
-        <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "4px 0 12px", lineHeight: 1.5 }}>
-          Define custom prompt modifiers and expert personas. These are automatically attached to your AI requests for specialized reasoning tasks.
-        </p>
-        <textarea
-          value={customSkills}
-          onChange={(e) => setCustomSkills(e.target.value)}
-          placeholder="e.g., [FinGPT Stock Analyzer] Always format financial data in Markdown tables with P/E ratios and moving averages..."
-          style={{
-            width: "100%", minHeight: 120, resize: "vertical",
-            background: "var(--surface-2)", border: "1px solid var(--border-default)",
-            borderRadius: 12, padding: "14px", fontSize: 13, color: "var(--text-primary)",
-            fontFamily: "var(--font-mono, monospace)", outline: "none", lineHeight: 1.6,
-          }}
-        />
-
-        <SectionTitle>Model Context Protocol (MCP / ACP Webhooks)</SectionTitle>
-        <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "4px 0 12px", lineHeight: 1.5 }}>
-          Configure outbound tool webhooks. Premium users get Tor SOCKS5 proxy isolation (127.0.0.1:9050) and HMAC-SHA256 signature verification.
-        </p>
-        <textarea
-          value={acpTools}
-          onChange={(e) => setAcpTools(e.target.value)}
-          placeholder="e.g., https://my-internal-tool.local/webhook (Endpoints will be securely called via Tor proxy if Premium is active)"
-          style={{
-            width: "100%", minHeight: 100, resize: "vertical",
-            background: "var(--surface-2)", border: "1px solid var(--border-default)",
-            borderRadius: 12, padding: "14px", fontSize: 13, color: "var(--text-primary)",
-            fontFamily: "var(--font-mono, monospace)", outline: "none", lineHeight: 1.6,
-          }}
-        />
-
-        <div style={{ marginTop: 24, padding: 16, background: "rgba(242,169,59,0.1)", borderRadius: 14, border: "1px solid rgba(242,169,59,0.25)", display: "flex", alignItems: "flex-start", gap: 12 }}>
-          <Shield style={{ width: 20, height: 20, color: "#f2a93b", flexShrink: 0, marginTop: 2 }} />
-          <div>
-            <h4 style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 4 }}>Enterprise Security & Tor Isolation</h4>
-            <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.5 }}>
-              All ACP webhook communications are routed through an encrypted Tor circuit to ensure absolute zero-leakage privacy for enterprise workflows.
-            </p>
+            {confirmClear && (
+              <button onClick={() => setConfirmClear(false)} style={{
+                width: "100%", marginTop: 6, padding: "8px", borderRadius: 10,
+                border: "1px solid var(--border-default)", background: "transparent",
+                color: "var(--text-muted)", cursor: "pointer", fontSize: 12,
+              }}>Cancel</button>
+            )}
           </div>
-        </div>
-      </div>
-    );
+        );
 
-    // ── NOTIFICATIONS ──────────────────────────────────────────────
-    if (section === "notifications") return (
-      <div>
-        <Row label="Chat completion alerts" sub="Notify when long tasks finish"><Toggle value={notifChat} onChange={setNotifChat} /></Row>
-        <Row label="Product updates" sub="New features and announcements"><Toggle value={notifUpdate} onChange={setNotifUpdate} /></Row>
-        <Row label="Weekly usage digest"><Toggle value={false} onChange={() => {}} /></Row>
-        <Row label="Push notifications" sub="Requires browser permission"><Toggle value={false} onChange={() => {}} /></Row>
-        <Row label="Email notifications"><Toggle value={false} onChange={() => {}} /></Row>
-        <div style={{ marginTop: 20, padding: 14, background: "rgba(124,106,245,0.06)", borderRadius: 12, border: "1px solid rgba(124,106,245,0.18)" }}>
-          <div style={{ display: "flex", gap: 10 }}>
-            <Zap style={{ width: 16, height: 16, color: "var(--accent)", flexShrink: 0, marginTop: 2 }} />
-            <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.5 }}>
-              Real-time notifications require browser permission.{" "}
-              <span style={{ color: "var(--accent)", cursor: "pointer", fontWeight: 500 }}>Enable now →</span>
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-
-    // ── PRIVACY & DATA ─────────────────────────────────────────────
-    if (section === "privacy") return (
-      <div>
-        <Row label="Usage analytics" sub="Help improve ASTRAMIND (anonymous)">
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {analytics ? <Eye style={{ width: 15, height: 15, color: "var(--brand)" }} /> : <EyeOff style={{ width: 15, height: 15, color: "var(--text-muted)" }} />}
-            <Toggle value={analytics} onChange={setAnalytics} />
-          </div>
-        </Row>
-        <Row label="Save conversation history"><Toggle value={saveHistory} onChange={setSaveHistory} /></Row>
-        <Row label="Allow model fine-tuning"><Toggle value={false} onChange={() => {}} /></Row>
-        <Row label="Data encryption at rest">
-          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--success)", background: "rgba(61,214,140,0.1)", padding: "4px 10px", borderRadius: 100 }}>Active</span>
-        </Row>
-        <SectionTitle>Data Management</SectionTitle>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 8 }}>
-          <button style={{
-            display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderRadius: 12,
-            background: "var(--surface-2)", border: "1px solid var(--border-default)",
-            color: "var(--text-secondary)", cursor: "pointer", fontSize: 13, fontWeight: 500,
-          }}>
-            <Download style={{ width: 15, height: 15 }} />
-            Export all conversations (JSON)
-          </button>
-          <button style={{
-            display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderRadius: 12,
-            background: "rgba(245,100,90,0.06)", border: "1px solid rgba(245,100,90,0.2)",
-            color: "var(--error)", cursor: "pointer", fontSize: 13, fontWeight: 500,
-          }}>
-            <Trash2 style={{ width: 15, height: 15 }} />
-            Clear all conversation history
-          </button>
-        </div>
-        <div style={{ marginTop: 16, padding: 14, background: "var(--surface-2)", borderRadius: 12, border: "1px solid var(--border-subtle)" }}>
-          <p style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.6 }}>
-            Read our{" "}
-            <a href="/privacy" style={{ color: "var(--brand-light)", textDecoration: "none", fontWeight: 500 }}>Privacy Policy</a>
-            {" "}to understand how we handle your data.
-          </p>
-        </div>
-      </div>
-    );
-
-    // ── ACCOUNT ────────────────────────────────────────────────────
-    if (section === "account") {
-      if (!isSignedIn || !user) {
+      case "account":
         return (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px", textAlign: "center", height: "100%" }}>
-            <User style={{ width: 48, height: 48, color: "var(--text-muted)", marginBottom: 16 }} />
-            <h3 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>Sign in to sync your settings</h3>
-            <p style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 24, maxWidth: 320 }}>
-              Create an account to save your font, theme, and API keys securely across all your devices.
-            </p>
-            <button
-               onClick={onClose}
-               style={{
-                 padding: "12px 24px", borderRadius: 12, background: "linear-gradient(135deg,var(--brand),var(--brand-light))",
-                 color: "var(--bg-primary)", fontSize: 14, fontWeight: 700, border: "none", cursor: "pointer",
-                 boxShadow: "0 8px 24px var(--brand-glow)",
-               }}>
-              Sign In Now 
+          <div>
+            <SectionTitle>Profile</SectionTitle>
+            {session?.user ? (
+              <div style={{
+                display: "flex", alignItems: "center", gap: 14, padding: "14px",
+                background: "var(--surface-2)", borderRadius: 12, border: "1px solid var(--border-default)",
+                marginBottom: 14,
+              }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: "50%",
+                  background: "linear-gradient(135deg,var(--brand),var(--brand-light))",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 18, fontWeight: 700, color: "#1a1410", flexShrink: 0,
+                }}>
+                  {(session.user.name?.[0] || session.user.email?.[0] || "A").toUpperCase()}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)", margin: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {session.user.name || "User"}
+                  </p>
+                  <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "2px 0 0", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {session.user.email}
+                  </p>
+                  <span style={{
+                    display: "inline-block", marginTop: 4, fontSize: 10, fontWeight: 700,
+                    letterSpacing: "0.06em", padding: "2px 7px", borderRadius: 20,
+                    background: "rgba(61,214,140,0.12)", color: "#3dd68c", border: "1px solid rgba(61,214,140,0.3)",
+                  }}>✓ Verified</span>
+                </div>
+              </div>
+            ) : (
+              <p style={{ fontSize: 13, color: "var(--text-muted)", padding: "12px 0" }}>Not signed in.</p>
+            )}
+            <button onClick={handleSignOut} style={{
+              width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              padding: "11px", borderRadius: 10,
+              border: "1px solid rgba(245,100,90,0.3)", background: "rgba(245,100,90,0.06)",
+              color: "var(--error)", cursor: "pointer", fontSize: 14, fontWeight: 600, transition: "all 0.15s",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(245,100,90,0.15)")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(245,100,90,0.06)")}>
+              <LogOut style={{ width: 15, height: 15 }} /> Sign out
             </button>
           </div>
         );
-      }
 
-      return (
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 16, padding: 20, background: "var(--surface-2)", borderRadius: 16, border: "1px solid var(--border-default)", marginBottom: 20 }}>
-            <div style={{ width: 52, height: 52, borderRadius: "50%", flexShrink: 0, border: "2px solid var(--border-default)", background: "var(--brand)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 700, color: "var(--bg-primary)" }}>
-              {user.name?.[0]?.toUpperCase() || "A"}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{user.name || "Astramind User"}</p>
-              <p style={{ fontSize: 13, color: "var(--text-muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{user.email}</p>
-              <span style={{ fontSize: 11, fontWeight: 600, color: "var(--success)", background: "rgba(61,214,140,0.1)", padding: "2px 10px", borderRadius: 100, marginTop: 4, display: "inline-block" }}>Verified</span>
+      case "shortcuts":
+        return (
+          <div>
+            <SectionTitle>Keyboard Shortcuts</SectionTitle>
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {SHORTCUTS.map((s, i) => (
+                <div key={i} style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  padding: "9px 0", borderBottom: "1px solid var(--border-subtle)",
+                }}>
+                  <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{s.action}</span>
+                  <div style={{ display: "flex", gap: 4 }}>
+                    {s.keys.map((k) => (
+                      <kbd key={k} style={{
+                        fontSize: 11, padding: "2px 7px", borderRadius: 6,
+                        border: "1px solid var(--border-default)", background: "var(--surface-2)",
+                        color: "var(--text-secondary)", fontFamily: "monospace",
+                      }}>{k}</kbd>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-          <Row label="Email address" sub={user.email || ""}>
-            <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>NextAuth</span>
-          </Row>
-          <Row label="Security" sub="Managed securely by JWT">
-            <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>Active</span>
-          </Row>
-          <div style={{ marginTop: 24 }}>
-            <button 
-              onClick={async () => { 
-                try {
-                  await neonAuthClient.signOut();
-                  // Optional: clear local state if needed
-                  // localStorage.removeItem(`chat_sessions_${user?.email}`);
-                  onClose();
-                  window.location.href = "/"; // Force refresh to home
-                } catch (err) {
-                  console.error("Sign out error:", err);
-                  window.location.href = "/";
-                }
-              }}
-              style={{
-              width: "100%", padding: "12px", borderRadius: 12,
-              border: "1px solid rgba(245,100,90,0.3)",
-              background: "rgba(245,100,90,0.06)", color: "var(--error)", cursor: "pointer", fontSize: 13, fontWeight: 600,
-            }}>Sign out</button>
-          </div>
-        </div>
-      );
+        );
+
+      default:
+        return null;
     }
-
-    // ── SHORTCUTS ──────────────────────────────────────────────────
-    if (section === "shortcuts") return (
-      <div>
-        <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 16, lineHeight: 1.6 }}>
-          Keyboard shortcuts available throughout ASTRAMIND.
-        </p>
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          {SHORTCUTS.map(s => (
-            <div key={s.action} style={{
-              display: "flex", alignItems: "center", justifyContent: "space-between",
-              padding: "12px 14px", borderRadius: 12, background: "var(--surface-2)", border: "1px solid var(--border-subtle)",
-            }}>
-              <span style={{ fontSize: 14, color: "var(--text-secondary)" }}>{s.action}</span>
-              <div style={{ display: "flex", gap: 4 }}>
-                {s.keys.map(k => (
-                  <kbd key={k} style={{
-                    fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 6,
-                    background: "var(--surface-3)", border: "1px solid var(--border-strong)",
-                    color: "var(--text-primary)", fontFamily: "var(--font-mono,'JetBrains Mono')",
-                  }}>{k}</kbd>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-
-    return null;
   };
 
-  // ── Render ─────────────────────────────────────────────────────
   return (
-    <>
-      {/* Backdrop */}
-      <div onClick={onClose} style={{
-        position: "fixed", inset: 0, zIndex: 200,
-        background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)",
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 1000,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)",
         animation: "fadeIn 0.2s ease",
-      }} />
-
-      {/* Dialog */}
-      <div className="mobile-fullscreen-modal" style={{
-        position: "fixed", top: "50%", left: "50%", zIndex: 201,
-        transform: "translate(-50%,-50%)",
-        width: "min(760px, 96vw)", height: "min(640px, 92vh)",
-        display: "flex", flexDirection: "column",
-        background: "var(--surface-1)", border: "1px solid var(--border-default)",
-        borderRadius: 20, overflow: "hidden",
-        boxShadow: "0 24px 80px rgba(0,0,0,0.9), 0 0 0 1px var(--border-subtle)",
-        animation: "scaleIn 0.2s cubic-bezier(0.34,1.56,0.64,1)",
-      }}>
-        {/* Header */}
+        padding: "16px",
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Settings"
+        style={{
+          width: "100%", maxWidth: 720, maxHeight: "85vh",
+          background: "var(--surface-1)", borderRadius: 20,
+          border: "1px solid var(--border-default)",
+          boxShadow: "0 24px 80px rgba(0,0,0,0.6)",
+          display: "flex", flexDirection: "column",
+          animation: "scaleIn 0.2s cubic-bezier(0.34,1.56,0.64,1)",
+          overflow: "hidden",
+        }}
+      >
+        {/* Modal header */}
         <div style={{
-          flexShrink: 0, padding: "18px 20px 16px",
-          borderBottom: "1px solid var(--border-subtle)",
           display: "flex", alignItems: "center", justifyContent: "space-between",
-          background: "var(--surface-1)",
+          padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)",
+          flexShrink: 0,
         }}>
-          <div>
-            <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>Settings</h2>
-            <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>Personalise your ASTRAMIND experience</p>
-          </div>
-          <button
-            onClick={onClose}
-            style={{
-              width: 32, height: 32, borderRadius: 10, border: "none",
-              background: "var(--surface-2)", color: "var(--text-muted)", cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              transition: "all 0.15s ease",
-            }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-3)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-primary)"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-2)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-muted)"; }}
-          >
-            <X style={{ width: 16, height: 16 }} />
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>Settings</h2>
+          <button onClick={onClose} style={{
+            padding: 6, borderRadius: 8, background: "transparent", border: "none",
+            color: "var(--text-muted)", cursor: "pointer", display: "flex",
+            transition: "all 0.15s",
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-3)"; e.currentTarget.style.color = "var(--text-primary)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-muted)"; }}>
+            <X style={{ width: 18, height: 18 }} />
           </button>
         </div>
 
-        {/* Body */}
-        <div className="settings-body" style={{ display: "flex", flex: 1, minHeight: 0 }}>
-          {/* Left nav */}
+        {/* Modal body */}
+        <div className="settings-body" style={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden" }}>
+          {/* Nav sidebar */}
           <nav className="settings-nav" style={{
-            width: 160, flexShrink: 0, borderRight: "1px solid var(--border-subtle)",
-            padding: "10px 8px", display: "flex", flexDirection: "column", gap: 2, overflowY: "auto",
-            background: "var(--surface-1)",
+            width: 180, flexShrink: 0, borderRight: "1px solid var(--border-subtle)",
+            padding: "12px 8px", overflowY: "auto",
           }}>
-            {SECTIONS.map(s => {
-              const Icon = s.icon;
-              const active = section === s.id;
+            {NAV_ITEMS.map((item) => {
+              const Icon = item.icon;
+              const active = section === item.id;
               return (
-                <button key={s.id} onClick={() => setSection(s.id)} style={{
-                  display: "flex", alignItems: "center", gap: 9, padding: "9px 12px",
-                  borderRadius: 10, border: "none", cursor: "pointer", fontSize: 13,
-                  fontWeight: active ? 600 : 400, whiteSpace: "nowrap",
-                  background: active ? "var(--surface-3)" : "transparent",
-                  color: active ? "var(--text-primary)" : "var(--text-muted)",
-                  transition: "all 0.15s ease",
-                }}
-                  onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-2)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-secondary)"; } }}
-                  onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-muted)"; } }}
+                <button
+                  key={item.id}
+                  onClick={() => setSection(item.id)}
+                  style={{
+                    width: "100%", display: "flex", alignItems: "center", gap: 10,
+                    padding: "9px 12px", borderRadius: 10, fontSize: 13, fontWeight: active ? 600 : 400,
+                    background: active ? "var(--surface-3)" : "transparent",
+                    border: "none", cursor: "pointer", textAlign: "left",
+                    color: active ? "var(--text-primary)" : "var(--text-muted)",
+                    transition: "all 0.15s ease",
+                  }}
+                  onMouseEnter={(e) => { if (!active) { e.currentTarget.style.background = "var(--surface-2)"; e.currentTarget.style.color = "var(--text-primary)"; } }}
+                  onMouseLeave={(e) => { if (!active) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-muted)"; } }}
                 >
                   <Icon style={{ width: 15, height: 15, flexShrink: 0 }} />
-                  {s.label}
-                  {active && <ChevronRight className="mobile-hidden" style={{ width: 13, height: 13, marginLeft: "auto", color: "var(--text-muted)" }} />}
+                  {item.label}
                 </button>
               );
             })}
           </nav>
 
-          {/* Content */}
-          <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px", background: "var(--bg-primary)" }}>
+          {/* Content panel */}
+          <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
             {renderSection()}
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
