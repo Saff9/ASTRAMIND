@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { neonAuthClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
-import { useSettings } from "@/lib/SettingsContext";
+import { useSettings, FontId } from "@/lib/SettingsContext";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -111,29 +111,37 @@ const SHORTCUTS = [
 
 export default function SettingsModal({ isOpen, onClose, onExportChat, onClearHistory }: SettingsModalProps) {
   const router = useRouter();
-  const { theme, setTheme, font: globalFont, setFont: setGlobalFont } = useSettings();
+  const { theme, setTheme, font: ctxFont, setFont: ctxSetFont } = useSettings();
   const [section, setSection] = useState("appearance");
   const [session, setSession] = useState<{ user?: { email?: string; name?: string } } | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
   const modalRef = React.useRef<HTMLDivElement>(null);
 
-  // Local font tracking (stored in localStorage, separate from FontId context type)
-  const [globalFont, setGlobalFontRaw] = React.useState(() => lsGet("astramind_ui_font", "dm-sans"));
-  const setGlobalFont = (f: string) => {
-    setGlobalFontRaw(f);
-    lsSet("astramind_ui_font", f);
-    // Apply CSS variable directly
-    const fontMap: Record<string, string> = {
-      "dm-sans": "'DM Sans', sans-serif",
-      "inter": "'Inter', sans-serif",
-      "system": "system-ui, sans-serif",
-      "mono": "'JetBrains Mono', monospace",
-      "serif": "Georgia, serif",
-      "nunito": "'Nunito', sans-serif",
-    };
-    if (typeof document !== "undefined") {
-      document.documentElement.style.setProperty("--ui-font", fontMap[f] || fontMap["dm-sans"]);
-    }
+  // Map between our display FontId strings and context FontId enum
+  const FONT_ID_MAP: Record<string, string> = {
+    "dm-sans":  "dm",
+    "inter":    "inter",   // not in context enum — falls back to dm
+    "system":   "dm",
+    "mono":     "fira",
+    "serif":    "playfair",
+    "nunito":   "rajdhani",
+  };
+  const FONT_DISPLAY_MAP: Record<string, string> = {
+    "dm":        "dm-sans",
+    "fira":      "mono",
+    "playfair":  "serif",
+    "rajdhani":  "nunito",
+    "pacifico":  "dm-sans",
+    "spacemono": "mono",
+  };
+  // Current display key derived from context font
+  const globalFont = FONT_DISPLAY_MAP[ctxFont] || "dm-sans";
+
+  const setGlobalFont = (displayId: string) => {
+    const ctxId = FONT_ID_MAP[displayId] || "dm";
+    ctxSetFont(ctxId as FontId);
+    // Also persist with the display key for the local font settings
+    lsSet("astramind_ui_font", displayId);
   };
 
   // ── Persisted settings ──────────────────────────────────────────────────────
