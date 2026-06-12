@@ -95,6 +95,16 @@ class Settings(BaseSettings):
         description="Comma-separated SambaNova API keys",
     )
 
+    # ===== TTS & VOICE =====
+    OPENAI_API_KEY: Optional[str] = Field(
+        default=None,
+        description="OpenAI API key — used for TTS (tts-1 / tts-1-hd) and optionally GPT-4 chat",
+    )
+    ELEVENLABS_API_KEY: Optional[str] = Field(
+        default=None,
+        description="ElevenLabs API key for premium neural TTS voices",
+    )
+
     # Cloudflare Workers AI (token + account id)
     CLOUDFLARE_ACCOUNT_ID: Optional[str] = Field(
         default=None,

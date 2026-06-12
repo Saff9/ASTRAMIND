@@ -539,10 +539,18 @@ export default function MessageBubble({
 }: MessageBubbleProps) {
   const isUser = role === "user";
   const [isPlaying, setIsPlaying] = useState(false);
+  const [ttsLoading, setTtsLoading] = useState(false);
   const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
 
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = "";
+        audioRef.current = null;
+      }
       if (typeof window !== "undefined" && "speechSynthesis" in window) {
         window.speechSynthesis.cancel();
       }
@@ -554,54 +562,104 @@ export default function MessageBubble({
     onFeedback?.(type);
   }, [onFeedback]);
 
-  const handlePlayVoice = useCallback(() => {
+  // ─── Stop any active playback ────────────────────────────────────────────
+  const stopPlayback = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = "";
+    }
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+    setIsPlaying(false);
+  }, []);
+
+  // ─── Premium TTS via backend (OpenAI / ElevenLabs) ──────────────────────
+  const playWithBackend = useCallback(async (text: string, voice: string): Promise<boolean> => {
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://astramind-reer.onrender.com";
+    try {
+      // Get auth token the same way the chat endpoint does
+      const { neonAuthClient } = await import("@/lib/auth-client");
+      const neonSession = await neonAuthClient.getSession().catch(() => null);
+      const token = neonSession?.data?.session?.id;
+
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const resp = await fetch(`${apiBase}/api/v1/tts`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ text: text.slice(0, 4000), voice, speed: 1.0 }),
+        signal: AbortSignal.timeout(35000),
+      });
+
+      if (resp.ok && resp.headers.get("content-type")?.includes("audio")) {
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        audioRef.current = audio;
+        audio.onplay = () => setIsPlaying(true);
+        audio.onended = () => { setIsPlaying(false); URL.revokeObjectURL(url); };
+        audio.onerror = () => { setIsPlaying(false); URL.revokeObjectURL(url); };
+        await audio.play();
+        return true;
+      }
+    } catch {
+      // Backend unavailable or no API key — fall through to Web Speech
+    }
+    return false;
+  }, []);
+
+  // ─── Natural Web Speech fallback ─────────────────────────────────────────
+  const playWithWebSpeech = useCallback((text: string, prefGender: string) => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
 
-    if (isPlaying) {
-      window.speechSynthesis.cancel();
-      setIsPlaying(false);
-      return;
-    }
+    const utterance = new SpeechSynthesisUtterance(text.slice(0, 3000));
 
-    window.speechSynthesis.cancel();
-    const cleanText = stripMarkdownForTTS(content);
-    if (!cleanText) return;
-
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    const prefGender = (typeof localStorage !== "undefined" && localStorage.getItem("astramind_voice_gender")) || "female";
-
-    const isMale = (v: SpeechSynthesisVoice) => {
+    // Quality scoring — prefer neural/online/natural voices
+    const score = (v: SpeechSynthesisVoice): number => {
       const n = v.name.toLowerCase();
-      return n.includes("male") || n.includes("david") || n.includes("guy") || n.includes("william") || n.includes("brian") || n.includes("ryan") || n.includes("george") || n.includes("stefan");
-    };
-    const isFemale = (v: SpeechSynthesisVoice) => {
-      const n = v.name.toLowerCase();
-      return n.includes("female") || n.includes("zira") || n.includes("hazel") || n.includes("samantha") || n.includes("jenny") || n.includes("aria") || n.includes("karen") || n.includes("victoria") || n.includes("linda");
-    };
-    const score = (v: SpeechSynthesisVoice) => {
-      const n = v.name.toLowerCase();
-      const l = v.lang.toLowerCase();
       let s = 0;
-      const uLang = (navigator.language || "en").toLowerCase().split("-")[0];
-      if (l.startsWith(uLang)) s += 10; else if (l.startsWith("en")) s += 5;
-      if (n.includes("natural")) s += 100;
-      if (n.includes("siri")) s += 80;
-      if (n.includes("premium")) s += 70;
-      if (n.includes("online")) s += 60;
+      if (v.lang.toLowerCase().startsWith("en")) s += 8;
+      // Microsoft neural (Edge/Windows) — best quality
+      if (n.includes("aria") || n.includes("jenny") || n.includes("guy") || n.includes("tony")) s += 100;
+      if (n.includes("neural") || n.includes("online")) s += 80;
+      // Apple Siri voices
+      if (n.includes("siri")) s += 70;
+      if (n.includes("premium")) s += 65;
+      // Google voices
       if (n.includes("google")) s += 50;
-      if (n.includes("microsoft")) s += 40;
-      if (n.includes("neural")) s += 30;
+      // General microsoft (non-neural)
+      if (n.includes("microsoft")) s += 30;
+      // Natural keyword
+      if (n.includes("natural")) s += 90;
       return s;
     };
 
-    const speak = () => {
+    const isMale = (v: SpeechSynthesisVoice) => {
+      const n = v.name.toLowerCase();
+      return n.includes("male") || n.includes("david") || n.includes("guy") || n.includes("william") ||
+             n.includes("brian") || n.includes("ryan") || n.includes("george") || n.includes("tony") ||
+             n.includes("james") || n.includes("thomas") || n.includes("stefan") || n.includes("mark");
+    };
+    const isFemale = (v: SpeechSynthesisVoice) => {
+      const n = v.name.toLowerCase();
+      return n.includes("female") || n.includes("aria") || n.includes("jenny") || n.includes("zira") ||
+             n.includes("hazel") || n.includes("samantha") || n.includes("linda") || n.includes("karen") ||
+             n.includes("victoria") || n.includes("moira") || n.includes("tessa") || n.includes("fiona");
+    };
+
+    const doSpeak = () => {
       const voices = window.speechSynthesis.getVoices();
-      let candidates = voices.filter(prefGender === "male" ? isMale : isFemale);
-      if (candidates.length === 0) candidates = voices;
-      candidates.sort((a, b) => score(b) - score(a));
-      if (candidates[0]) utterance.voice = candidates[0];
-      utterance.pitch = prefGender === "male" ? 0.95 : 1.05;
-      utterance.rate = 1.02;
+      let pool = voices.filter(prefGender === "male" ? isMale : isFemale);
+      if (pool.length === 0) pool = voices;
+      if (pool.length > 0) {
+        pool.sort((a, b) => score(b) - score(a));
+        utterance.voice = pool[0];
+      }
+      utterance.pitch = prefGender === "male" ? 0.92 : 1.08;
+      utterance.rate = 1.05;
+      utterance.volume = 1;
       utterance.onstart = () => setIsPlaying(true);
       utterance.onend = () => setIsPlaying(false);
       utterance.onerror = () => setIsPlaying(false);
@@ -609,11 +667,34 @@ export default function MessageBubble({
     };
 
     if (window.speechSynthesis.getVoices().length === 0) {
-      window.speechSynthesis.onvoiceschanged = () => { speak(); window.speechSynthesis.onvoiceschanged = null; };
+      window.speechSynthesis.onvoiceschanged = () => { doSpeak(); window.speechSynthesis.onvoiceschanged = null; };
     } else {
-      speak();
+      doSpeak();
     }
-  }, [content, isPlaying]);
+  }, []);
+
+  // ─── Main play handler ───────────────────────────────────────────────────
+  const handlePlayVoice = useCallback(async () => {
+    if (isPlaying || ttsLoading) { stopPlayback(); return; }
+
+    const cleanText = stripMarkdownForTTS(content);
+    if (!cleanText) return;
+
+    const prefGender = (typeof localStorage !== "undefined" && localStorage.getItem("astramind_voice_gender")) || "female";
+    // Map gender to OpenAI voice name (nova=female, onyx=male)
+    const openAIVoice = prefGender === "male" ? "onyx" : "nova";
+
+    setTtsLoading(true);
+    try {
+      const usedBackend = await playWithBackend(cleanText, openAIVoice);
+      if (!usedBackend) {
+        // Backend not configured — use Web Speech with best voice
+        playWithWebSpeech(cleanText, prefGender);
+      }
+    } finally {
+      setTtsLoading(false);
+    }
+  }, [content, isPlaying, ttsLoading, stopPlayback, playWithBackend, playWithWebSpeech]);
 
   // ─── User message ──────────────────────────────────────────────────────────
 
@@ -734,19 +815,27 @@ export default function MessageBubble({
               {/* TTS */}
               <button
                 onClick={handlePlayVoice}
-                title={isPlaying ? "Stop voice" : "Read aloud"}
+                title={isPlaying ? "Stop voice" : ttsLoading ? "Loading audio…" : "Read aloud (AI voice)"}
+                disabled={ttsLoading && !isPlaying}
                 style={{
                   padding: "5px 8px", borderRadius: 7,
-                  background: isPlaying ? "var(--brand-glow)" : "transparent",
-                  border: "none", color: isPlaying ? "var(--brand-light)" : "var(--text-muted)",
-                  cursor: "pointer", display: "flex", alignItems: "center", gap: 5,
+                  background: isPlaying ? "var(--brand-glow)" : ttsLoading ? "rgba(242,169,59,0.08)" : "transparent",
+                  border: "none", color: isPlaying ? "var(--brand-light)" : ttsLoading ? "var(--brand)" : "var(--text-muted)",
+                  cursor: ttsLoading && !isPlaying ? "wait" : "pointer",
+                  display: "flex", alignItems: "center", gap: 5,
                   fontSize: 11, fontWeight: 600, transition: "all 0.15s ease",
+                  opacity: ttsLoading && !isPlaying ? 0.7 : 1,
                 }}
-                onMouseEnter={(e) => { if (!isPlaying) e.currentTarget.style.color = "var(--text-primary)"; }}
-                onMouseLeave={(e) => { if (!isPlaying) e.currentTarget.style.color = "var(--text-muted)"; }}
+                onMouseEnter={(e) => { if (!isPlaying && !ttsLoading) e.currentTarget.style.color = "var(--text-primary)"; }}
+                onMouseLeave={(e) => { if (!isPlaying && !ttsLoading) e.currentTarget.style.color = "var(--text-muted)"; }}
               >
-                {isPlaying ? <VolumeX style={{ width: 13, height: 13 }} /> : <Volume2 style={{ width: 13, height: 13 }} />}
-                {isPlaying ? "Stop" : "Listen"}
+                {isPlaying
+                  ? <VolumeX style={{ width: 13, height: 13 }} />
+                  : ttsLoading
+                    ? <Loader2 style={{ width: 13, height: 13, animation: "spin 1s linear infinite" }} />
+                    : <Volume2 style={{ width: 13, height: 13 }} />
+                }
+                {isPlaying ? "Stop" : ttsLoading ? "Loading…" : "Listen"}
               </button>
 
               {/* Regenerate */}

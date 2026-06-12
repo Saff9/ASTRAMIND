@@ -5,7 +5,7 @@ Supports both streaming (SSE) and non-streaming (JSON) responses.
 """
 
 from fastapi import APIRouter, Depends, Request, HTTPException, BackgroundTasks
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse, Response
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Literal, Dict, List, Optional
@@ -878,5 +878,117 @@ async def agent_stream(
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
             "Content-Type": "text/event-stream; charset=utf-8",
+        },
+    )
+
+
+# ===== TTS (TEXT-TO-SPEECH) ENDPOINT =====
+
+class TTSRequest(BaseModel):
+    text: str = Field(..., min_length=1, max_length=4000)
+    voice: str = Field(default="nova")  # nova=female, onyx=male, alloy, echo, fable, shimmer
+    speed: float = Field(default=1.0, ge=0.25, le=4.0)
+
+
+@router.post(
+    "/tts",
+    summary="Natural text-to-speech using premium AI voices",
+    description="Converts text to natural-sounding audio. Uses OpenAI TTS API (gpt-4o-mini-tts) via available provider keys.",
+)
+async def text_to_speech(
+    payload: TTSRequest,
+    request: Request,
+    auth_data: dict = Depends(get_current_user_secure),
+):
+    """
+    Stream MP3 audio from text using OpenAI-compatible TTS.
+    Supports voices: alloy, echo, fable, onyx, nova, shimmer.
+    nova = natural female, onyx = natural male.
+    """
+    import os
+    import httpx
+
+    # Sanitize text — strip markdown
+    import re
+    clean = re.sub(r"```[\s\S]*?```", "", payload.text)
+    clean = re.sub(r"`[^`]*`", "", clean)
+    clean = re.sub(r"\*{1,2}([^*]+)\*{1,2}", r"\1", clean)
+    clean = re.sub(r"#{1,6}\s?", "", clean)
+    clean = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", clean)
+    clean = re.sub(r"[_~>|]", "", clean)
+    clean = re.sub(r"\s+", " ", clean).strip()
+
+    if not clean:
+        raise HTTPException(status_code=400, detail="No speakable text after cleaning.")
+
+    # Limit to 4000 chars (TTS APIs have limits)
+    clean = clean[:4000]
+
+    valid_voices = {"alloy", "echo", "fable", "onyx", "nova", "shimmer"}
+    voice = payload.voice if payload.voice in valid_voices else "nova"
+
+    # ── Provider 1: OpenAI TTS (direct key) ─────────────────────────────────
+    openai_key = getattr(settings, "OPENAI_API_KEY", None) or os.environ.get("OPENAI_API_KEY", "")
+
+    if openai_key:
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.post(
+                    "https://api.openai.com/v1/audio/speech",
+                    headers={"Authorization": f"Bearer {openai_key}", "Content-Type": "application/json"},
+                    json={"model": "tts-1", "input": clean, "voice": voice, "speed": payload.speed, "response_format": "mp3"},
+                )
+                if resp.status_code == 200:
+                    return Response(
+                        content=resp.content, media_type="audio/mpeg",
+                        headers={"Cache-Control": "no-cache", "X-TTS-Provider": "openai", "X-TTS-Voice": voice},
+                    )
+                logger.warning(f"OpenAI TTS {resp.status_code}: {resp.text[:150]}")
+        except Exception as e:
+            logger.warning(f"OpenAI TTS failed: {e}")
+
+    # ── Provider 2: ElevenLabs (free tier, no credit card needed) ───────────
+    el_key = getattr(settings, "ELEVENLABS_API_KEY", None) or os.environ.get("ELEVENLABS_API_KEY", "")
+
+    # Map OpenAI voice names → ElevenLabs voice IDs (free tier voices)
+    EL_VOICE_MAP = {
+        "nova":    "21m00Tcm4TlvDq8ikWAM",  # Rachel — natural female
+        "shimmer": "AZnzlk1XvdvUeBnXmlld",  # Domi — energetic female
+        "alloy":   "MF3mGyEYCl7XYWbV9V6O",  # Elli — young female
+        "onyx":    "TxGEqnHWrfWFTfGW9XjX",  # Josh — natural male
+        "echo":    "VR6AewLTigWG4xSOukaG",   # Arnold — deep male
+        "fable":   "pNInz6obpgDQGcFmaJgB",  # Adam — calm male
+    }
+    el_voice_id = EL_VOICE_MAP.get(voice, EL_VOICE_MAP["nova"])
+
+    if el_key:
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.post(
+                    f"https://api.elevenlabs.io/v1/text-to-speech/{el_voice_id}",
+                    headers={"xi-api-key": el_key, "Content-Type": "application/json", "Accept": "audio/mpeg"},
+                    json={
+                        "text": clean,
+                        "model_id": "eleven_turbo_v2_5",
+                        "voice_settings": {"stability": 0.5, "similarity_boost": 0.8, "speed": payload.speed},
+                    },
+                )
+                if resp.status_code == 200:
+                    return Response(
+                        content=resp.content, media_type="audio/mpeg",
+                        headers={"Cache-Control": "no-cache", "X-TTS-Provider": "elevenlabs", "X-TTS-Voice": voice},
+                    )
+                logger.warning(f"ElevenLabs TTS {resp.status_code}: {resp.text[:150]}")
+        except Exception as e:
+            logger.warning(f"ElevenLabs TTS failed: {e}")
+
+    # ── Fallback: tell frontend to use Web Speech API ────────────────────────
+    return JSONResponse(
+        status_code=503,
+        content={
+            "error": "tts_unavailable",
+            "message": "Premium TTS not configured. Add OPENAI_API_KEY or ELEVENLABS_API_KEY env var.",
+            "fallback": "web_speech",
+            "voice_hint": voice,
         },
     )

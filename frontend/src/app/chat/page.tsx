@@ -380,10 +380,13 @@ export default function ChatPage() {
       const decoder = new TextDecoder();
       let streamedContent = "";
       let vibrationTriggered = false;
+      let streamDone = false; // ← flag to exit outer while loop
       // Accumulated agent events for this message
       const accumulatedAgentEvents: AgentEvent[] = [];
+      // Buffer for partial SSE lines across chunks
+      let lineBuffer = "";
 
-      while (true) {
+      while (!streamDone) {
         const { done, value } = await reader.read();
         if (done) break;
 
@@ -393,16 +396,20 @@ export default function ChatPage() {
         }
 
         const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split("\n");
+        lineBuffer += chunk;
+        const lines = lineBuffer.split("\n");
+        // Keep the last (potentially partial) line in buffer
+        lineBuffer = lines.pop() ?? "";
+
         for (const line of lines) {
           if (!line.startsWith("data: ")) continue;
           const str = line.slice(6).trim();
-          if (!str || str === "[DONE]") continue;
+          if (!str || str === "[DONE]") { streamDone = true; break; }
 
           try {
             const parsed = JSON.parse(str);
 
-            // Agent events — update the message's agentEvents list in real-time
+            // Agent tool events — update in real-time
             if (parsed.type === "thinking" || parsed.type === "tool_start" || parsed.type === "tool_result") {
               accumulatedAgentEvents.push(parsed as AgentEvent);
               setMessages((prev) => prev.map((m) =>
@@ -413,7 +420,8 @@ export default function ChatPage() {
 
             if (parsed.type === "agent_done") continue; // Internal signal, not shown
 
-            if (parsed.type === "done") break;
+            // ✅ FIXED: set flag to exit outer while loop, not just inner for
+            if (parsed.type === "done") { streamDone = true; break; }
 
             if (parsed.type === "error" || parsed.error) {
               const errMsg = parsed.message || parsed.error || "Stream error";
@@ -423,10 +431,10 @@ export default function ChatPage() {
               return;
             }
 
-            // Text event from agent endpoint, or direct content from chat endpoint
+            // Text content — agent endpoint sends {type:"text",content:"..."}, chat endpoint varies
             const delta: string =
               (parsed.type === "text" && typeof parsed.content === "string" ? parsed.content : null) ??
-              (typeof parsed.content === "string" && parsed.type !== "thinking" ? parsed.content : null) ??
+              (typeof parsed.content === "string" && !["thinking", "tool_start", "tool_result", "agent_done", "error", "done"].includes(parsed.type ?? "") ? parsed.content : null) ??
               (parsed.choices?.[0]?.delta?.content as string | undefined) ??
               "";
 
@@ -439,7 +447,7 @@ export default function ChatPage() {
               ));
             }
           } catch {
-            // Ignore partial JSON, keep-alive pings
+            // Ignore partial JSON / keep-alive pings
           }
         }
       }
