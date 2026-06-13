@@ -110,30 +110,35 @@ def _build_planner_prompt(
     step: int,
     max_steps: int,
 ) -> str:
-    return f"""You are AstraMind's internal reasoning agent. Use the ReAct pattern: Reason, then Act.
+    return f"""You are AstraMind's internal execution agent. Your job is to USE TOOLS to accomplish real tasks.
 
 {TOOL_SPEC}
 
-STEP {step + 1} of {max_steps}. Budget your tool calls wisely — don't repeat searches.
+STEP {step + 1} of {max_steps}. Be efficient — use the minimum tools needed.
 
-Respond with EXACTLY ONE JSON object (no prose before or after the JSON):
+IMPORTANT:
+- If a URL, repo, path, or value is already given in the user goal, use it DIRECTLY. Never ask for it again.
+- git_clone needs a URL — extract it from the user message if present.
+- Execute tasks immediately. Don't explain, don't ask, just do.
 
-If you need to use tools:
-{{"finish": false, "thought": "<brief reasoning about what to do and why>", "tool_calls": [{{"tool": "<name>", "args": {{...}}}}]}}
+Respond with EXACTLY ONE JSON object (no prose before or after):
 
-If you have enough information to answer:
-{{"finish": true, "thought": "<brief summary of findings>", "answer_markdown": "<comprehensive answer in markdown format>"}}
+If you need tools:
+{{"finish": false, "thought": "<what I will do and why>", "tool_calls": [{{"tool": "<name>", "args": {{...}}}}]}}
 
---- Conversation context (last few turns) ---
+If done (have results):
+{{"finish": true, "thought": "<brief summary>", "answer_markdown": "<direct answer with tool results>"}}
+
+--- Conversation context ---
 {history_hint or "(none)"}
 
---- Tool execution log so far ---
+--- Tool execution log ---
 {execution_log or "(none — first step)"}
 
 --- User goal ---
 {user_goal}
 
-Think carefully. Use tools to gather REAL information. Produce a comprehensive, accurate answer."""
+Take action NOW. Extract all needed info from the user goal above."""
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -511,9 +516,10 @@ async def run_agent_phase(
         return ""
 
     return (
-        "### 🤖 AstraMind Agent Workspace\n"
-        "_The following research and tool execution steps were performed:_\n\n"
+        "### 🤖 AstraMind Agent — Execution Results\n"
         f"{context}\n\n"
         "---\n"
-        "_Use the above context to give a comprehensive, accurate final answer directly to the user._"
+        "_Summarize the above results directly for the user. Be direct and concise. Do not repeat the steps."
+        " If a command succeeded, say so and show the key output. If it failed, say why."
+        " Do NOT write tutorials or how-to guides — just report what happened._"
     )

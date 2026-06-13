@@ -410,30 +410,42 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
                 except Exception as e:
                     logger.error(f"Web search integration failed: {e}")
 
-        # ── AGENT TOOLS (sandbox orchestration) — PREMIUM ONLY ──────────────
+        # ── AGENT TOOLS (sandbox orchestration) ────────────────────────────
         orm_user = auth_data.get("user", {}).get("orm_user") if isinstance(auth_data.get("user"), dict) else None
-        is_premium = getattr(orm_user, "is_premium", False) if orm_user else False
 
-        if payload.agent_mode:
-            if not is_premium:
-                logger.info(f"Agent mode blocked for free user {user_email} — premium required")
-                safe_prompt = safe_prompt  # passthrough without agent tools
-            elif getattr(settings, "ENABLE_AGENT_TOOLS", True):
-                try:
-                    from services.agent_orchestrator import run_agent_phase
-                    agent_block = await run_agent_phase(
-                        router=ai_router,
-                        user_goal=safe_prompt,
-                        history=history_msgs or None,
-                        model_tier=payload.model,
-                        preferred_provider=provider,
-                        user_email=user_email,
-                        request_id=request_id,
-                    )
-                    if agent_block:
-                        safe_prompt = f"{safe_prompt}\n\n{agent_block}"
-                except Exception as e:
-                    logger.error(f"Agent orchestration failed: {e}", exc_info=True)
+        # Auto-detect action requests that need live tool execution.
+        # If the user asks to DO something (clone, run, create, build, etc.),
+        # automatically activate the agent — regardless of agent_mode flag.
+        _ACTION_KEYWORDS = [
+            "clone", "git clone", "git pull", "git push",
+            "run ", "execute", "bash", "terminal", "install",
+            "create file", "write file", "create a file",
+            "build", "compile", "deploy",
+            "scrape", "fetch", "download",
+            "calculate", "compute", "math",
+        ]
+        _prompt_lower = safe_prompt.lower()
+        auto_agent = any(kw in _prompt_lower for kw in _ACTION_KEYWORDS)
+        should_run_agent = (payload.agent_mode or auto_agent) and getattr(settings, "ENABLE_AGENT_TOOLS", True)
+
+        if should_run_agent:
+            try:
+                from services.agent_orchestrator import run_agent_phase
+                if auto_agent and not payload.agent_mode:
+                    logger.info(f"Auto-agent triggered for user {user_email} [action detected]")
+                agent_block = await run_agent_phase(
+                    router=ai_router,
+                    user_goal=safe_prompt,
+                    history=history_msgs or None,
+                    model_tier=payload.model,
+                    preferred_provider=provider,
+                    user_email=user_email,
+                    request_id=request_id,
+                )
+                if agent_block:
+                    safe_prompt = f"{safe_prompt}\n\n{agent_block}"
+            except Exception as e:
+                logger.error(f"Agent orchestration failed: {e}", exc_info=True)
 
         agent_system_suffix = build_agent_system_suffix(safe_prompt, payload.model)
 
