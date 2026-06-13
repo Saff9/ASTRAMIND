@@ -75,6 +75,34 @@ async_session_maker = async_sessionmaker(
 ) if engine is not None else None
 
 
+# Dedicated local SQLite database for conversation history & agent memory
+sqlite_engine = None
+sqlite_session_maker = None
+try:
+    import os
+    from sqlalchemy.pool import StaticPool
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    sqlite_db_path = os.path.join(os.path.dirname(base_dir), "astramind_local.db")
+    sqlite_url = f"sqlite+aiosqlite:///{sqlite_db_path}"
+    
+    sqlite_engine = create_async_engine(
+        sqlite_url,
+        echo=settings.is_development(),
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    sqlite_session_maker = async_sessionmaker(
+        sqlite_engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+        autocommit=False,
+        autoflush=False,
+    )
+    logger.info(f"Local SQLite database engine initialized at {sqlite_db_path}")
+except Exception as e:
+    logger.error(f"Failed to initialize local SQLite engine: {e}")
+
+
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
     FastAPI dependency for database session.
@@ -111,6 +139,27 @@ async def get_db_session():
         except Exception as e:
             await session.rollback()
             logger.error(f"Background DB session error: {e}")
+            raise
+        finally:
+            await session.close()
+
+
+@asynccontextmanager
+async def get_sqlite_db_session() -> AsyncGenerator[AsyncSession, None]:
+    """
+    Context manager for local SQLite session.
+    Always points to the local astramind_local.db regardless of settings.DATABASE_URL.
+    """
+    if sqlite_session_maker is None:
+        logger.warning("Local SQLite session maker is unavailable")
+        yield None
+        return
+    async with sqlite_session_maker() as session:
+        try:
+            yield session
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Local SQLite session error: {e}")
             raise
         finally:
             await session.close()
@@ -153,53 +202,61 @@ async def cleanup_database():
         logger.info("Database connections closed")
     except Exception as e:
         logger.error(f"Error closing database: {e}")
+    if sqlite_engine is not None:
+        try:
+            await sqlite_engine.dispose()
+            logger.info("Local SQLite database engine disposed")
+        except Exception as e:
+            logger.error(f"Error closing SQLite database: {e}")
 
 
 async def initialize_local_database():
     """
     Initialize local SQLite database with required tables.
-    Only runs when using SQLite (local development mode).
-    Creates admin user only for development purposes.
+    Always runs at startup to ensure local conversation history is supported.
     """
-    if not settings.effective_database_url.startswith("sqlite"):
-        return  # Only initialize for SQLite
+    if sqlite_engine is None:
+        return
 
     try:
         # Import models to ensure they're registered with SQLAlchemy
         from . import models
 
-        # Create all tables
-        async with engine.begin() as conn:
+        # Create all tables in local SQLite database
+        async with sqlite_engine.begin() as conn:
             await conn.run_sync(models.Base.metadata.create_all)
 
-        logger.info("✓ Local SQLite database initialized")
+        logger.info("✓ Local SQLite database initialized (tables created/verified)")
 
-        # Create a development admin user
-        from .models import User
-        from sqlalchemy import select
+        # Create a development admin user in Neon/main database if using SQLite fallback
+        # or if SQLite engine is used as primary DB
+        if settings.effective_database_url.startswith("sqlite"):
+            from .models import User
+            from sqlalchemy import select
 
-        async with get_db_session() as session:
-            # Check if admin user exists
-            stmt = select(User).where(User.email == "admin@localhost")
-            result = await session.execute(stmt)
-            existing_user = result.scalar_one_or_none()
+            async with get_db_session() as session:
+                if session:
+                    # Check if admin user exists
+                    stmt = select(User).where(User.email == "admin@localhost")
+                    result = await session.execute(stmt)
+                    existing_user = result.scalar_one_or_none()
 
-            if not existing_user:
-                admin_user = User(
-                    email="admin@localhost",
-                    daily_quota=10000,  # High quota for development
-                    daily_used=0,
-                    last_reset=datetime.now(timezone.utc),
-                    is_admin=True,
-                    created_at=datetime.now(timezone.utc),
-                    updated_at=datetime.now(timezone.utc),
-                )
-                session.add(admin_user)
-                await session.commit()
-                logger.info("✓ Development admin user created: admin@localhost")
-            else:
-                logger.debug("Admin user already exists")
+                    if not existing_user:
+                        admin_user = User(
+                            email="admin@localhost",
+                            daily_quota=10000,  # High quota for development
+                            daily_used=0,
+                            last_reset=datetime.now(timezone.utc),
+                            is_admin=True,
+                            created_at=datetime.now(timezone.utc),
+                            updated_at=datetime.now(timezone.utc),
+                        )
+                        session.add(admin_user)
+                        await session.commit()
+                        logger.info("✓ Development admin user created: admin@localhost")
+                    else:
+                        logger.debug("Admin user already exists")
 
     except Exception as e:
-        logger.warning(f"⚠ Failed to initialize local database: {type(e).__name__}: {str(e)}")
+        logger.warning(f"⚠ Failed to initialize local SQLite database: {type(e).__name__}: {str(e)}")
         # Don't raise error - allow app to continue without local DB

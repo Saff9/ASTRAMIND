@@ -7,7 +7,7 @@ and structured agent/tool events.
 import asyncio
 import json
 from fastapi.responses import StreamingResponse
-from typing import AsyncIterator, Optional
+from typing import Any, AsyncIterator, Optional
 import logging
 
 from core.system_prompt import system_suffix_stack, local_time_context

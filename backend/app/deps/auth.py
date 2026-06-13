@@ -44,18 +44,28 @@ async def get_current_user(
                 id=user_id,
                 auth_id=email,
                 email=email,
-                daily_quota=settings.USER_DAILY_QUOTA,
+                daily_quota=settings.PREMIUM_DAILY_QUOTA,
                 daily_used=0,
                 last_reset=date.today(),
-                is_premium=False,
+                is_premium=True,
             )
             db.add(user)
             await db.flush()
             await db.commit()
         else:
-            if getattr(user, 'is_premium', False) and user.daily_quota < settings.PREMIUM_DAILY_QUOTA:
+            # Upgrade existing users to Premium automatically if they aren't already
+            needs_update = False
+            if not getattr(user, 'is_premium', False):
+                user.is_premium = True
                 user.daily_quota = settings.PREMIUM_DAILY_QUOTA
+                needs_update = True
+            elif user.daily_quota < settings.PREMIUM_DAILY_QUOTA:
+                user.daily_quota = settings.PREMIUM_DAILY_QUOTA
+                needs_update = True
+            
+            if needs_update:
                 await db.commit()
+                
             if user.email != email:
                 logger.warning(
                     f"Email mismatch for user {user_id}: "

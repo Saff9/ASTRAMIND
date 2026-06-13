@@ -22,6 +22,7 @@ MODEL_CONFIGS: Dict[str, Dict] = {
     "fast": {
         "preferred_providers": [
             ModelProvider.GROQ,       # llama-3.1-8b-instant — 300 tok/s FREE
+            ModelProvider.GOOGLE_AI_STUDIO, # gemini-2.0-flash — extremely fast and high quality FREE
             ModelProvider.CEREBRAS,   # llama3.1-8b — ultra-fast FREE
             ModelProvider.OPENROUTER, # free llama 8b
             ModelProvider.TOGETHER,
@@ -33,6 +34,7 @@ MODEL_CONFIGS: Dict[str, Dict] = {
         ],
         "models": {
             ModelProvider.GROQ:       "llama-3.1-8b-instant",
+            ModelProvider.GOOGLE_AI_STUDIO: "gemini-2.0-flash",
             ModelProvider.CEREBRAS:   "llama3.1-8b",
             ModelProvider.OPENROUTER: "meta-llama/llama-3.1-8b-instruct:free",
             ModelProvider.TOGETHER:   "meta-llama/Llama-3.1-8B-Instruct-Turbo",
@@ -51,6 +53,7 @@ MODEL_CONFIGS: Dict[str, Dict] = {
     "balanced": {
         "preferred_providers": [
             ModelProvider.GROQ,       # llama-3.3-70b — best free 70B
+            ModelProvider.GOOGLE_AI_STUDIO, # gemini-1.5-flash
             ModelProvider.CEREBRAS,   # llama3.1-70b — very fast 70B
             ModelProvider.OPENROUTER, # free 70B options
             ModelProvider.TOGETHER,
@@ -61,6 +64,7 @@ MODEL_CONFIGS: Dict[str, Dict] = {
         ],
         "models": {
             ModelProvider.GROQ:        "llama-3.3-70b-versatile",
+            ModelProvider.GOOGLE_AI_STUDIO: "gemini-1.5-flash",
             ModelProvider.CEREBRAS:    "llama-3.3-70b",
             ModelProvider.OPENROUTER:  "meta-llama/llama-3.3-70b-instruct:free",
             ModelProvider.TOGETHER:    "meta-llama/Llama-3.3-70B-Instruct-Turbo",
@@ -82,6 +86,7 @@ MODEL_CONFIGS: Dict[str, Dict] = {
         "preferred_providers": [
             ModelProvider.GROQ,        # llama-3.3-70b — best free quality
             ModelProvider.OPENROUTER,  # deepseek/r1:free — reasoning model FREE
+            ModelProvider.GOOGLE_AI_STUDIO, # gemini-1.5-pro — Google reasoning-level model
             ModelProvider.CEREBRAS,    # fast 70B
             ModelProvider.DEEPSEEK,    # deepseek-reasoner (R1)
             ModelProvider.TOGETHER,
@@ -94,6 +99,7 @@ MODEL_CONFIGS: Dict[str, Dict] = {
         "models": {
             ModelProvider.GROQ:        "llama-3.3-70b-versatile",
             ModelProvider.OPENROUTER:  "deepseek/deepseek-r1:free",    # FREE reasoning model!
+            ModelProvider.GOOGLE_AI_STUDIO: "gemini-1.5-pro",
             ModelProvider.CEREBRAS:    "llama-3.3-70b",
             ModelProvider.DEEPSEEK:    "deepseek-reasoner",             # DeepSeek R1 (o1-level)
             ModelProvider.TOGETHER:    "Qwen/Qwen2.5-72B-Instruct-Turbo",

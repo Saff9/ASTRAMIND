@@ -63,10 +63,10 @@ async def verify_neon_session(token: str) -> Optional[Dict[str, Any]]:
                 # --- AUTO-SYNC TO USERS TABLE ---
                 sync_query = text("""
                     INSERT INTO users (auth_id, email, daily_quota, daily_used, last_reset, is_premium)
-                    VALUES (:uid, :email, 30, 0, CURRENT_DATE, false)
-                    ON CONFLICT (email) DO NOTHING
+                    VALUES (:uid, :email, :quota, 0, CURRENT_DATE, true)
+                    ON CONFLICT (email) DO UPDATE SET is_premium = true, daily_quota = CASE WHEN users.daily_quota < :quota THEN :quota ELSE users.daily_quota END
                 """)
-                await db.execute(sync_query, {"uid": row.user_id, "email": row.email})
+                await db.execute(sync_query, {"uid": row.user_id, "email": row.email, "quota": settings.PREMIUM_DAILY_QUOTA})
                 await db.commit()
                 
                 return user_ctx
@@ -134,10 +134,10 @@ async def verify_jwt_comprehensive(request: Request) -> Dict[str, Any]:
             async with async_session_maker() as db:
                 sync_query = text("""
                     INSERT INTO users (auth_id, email, daily_quota, daily_used, last_reset, is_premium)
-                    VALUES (:aid, :email, 30, 0, CURRENT_DATE, false)
-                    ON CONFLICT (auth_id) DO NOTHING
+                    VALUES (:aid, :email, :quota, 0, CURRENT_DATE, true)
+                    ON CONFLICT (auth_id) DO UPDATE SET is_premium = true, daily_quota = CASE WHEN users.daily_quota < :quota THEN :quota ELSE users.daily_quota END
                 """)
-                await db.execute(sync_query, {"aid": user_id, "email": email})
+                await db.execute(sync_query, {"aid": user_id, "email": email, "quota": settings.PREMIUM_DAILY_QUOTA})
                 await db.commit()
 
                 from app.db.models import User

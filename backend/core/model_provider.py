@@ -29,6 +29,7 @@ class ModelProvider(Enum):
     ALIBABA_BAILIAN = "alibaba_bailian"
     DEEPSEEK = "deepseek"
     XAI = "xai"
+    GOOGLE_AI_STUDIO = "google_ai_studio"
     ANTHROPIC = "anthropic"
     COHERE = "cohere"
     AI21 = "ai21"
@@ -152,6 +153,7 @@ class ModelRouter:
             ModelProvider.ALIBABA_BAILIAN,
             ModelProvider.DEEPSEEK,
             ModelProvider.XAI,
+            ModelProvider.GOOGLE_AI_STUDIO,
             ModelProvider.ANTHROPIC,
             ModelProvider.COHERE,
             ModelProvider.AI21,
@@ -197,6 +199,8 @@ class ModelRouter:
             has_key = bool(settings.deepseek_api_keys)
         elif provider == ModelProvider.XAI:
             has_key = bool(settings.xai_api_keys)
+        elif provider == ModelProvider.GOOGLE_AI_STUDIO:
+            has_key = bool(settings.google_ai_studio_api_keys)
         elif provider == ModelProvider.ANTHROPIC:
             has_key = bool(settings.anthropic_api_keys)
         elif provider == ModelProvider.COHERE:
@@ -366,6 +370,11 @@ class ModelRouter:
                 "api_key": settings.OPENAI_API_KEY,
                 "base_url": settings.OPENAI_BASE_URL,
                 "type": "openai"
+            },
+            ModelProvider.GOOGLE_AI_STUDIO: {
+                "api_key": settings.google_ai_studio_api_keys[0] if settings.google_ai_studio_api_keys else None,
+                "base_url": "https://generativelanguage.googleapis.com",
+                "type": "google-ai-studio"
             }
         }
 
