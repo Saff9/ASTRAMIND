@@ -6,7 +6,7 @@ import httpx
 
 from app.providers.base import AIProvider
 from core.errors import AppError
-from core.system_prompt import get_system_prompt
+from core.system_prompt import get_system_prompt, get_few_shot_messages
 
 
 class OpenAICompatibleProvider(AIProvider):
@@ -60,10 +60,12 @@ class OpenAICompatibleProvider(AIProvider):
         # Get system prompt for AI identity
         system_prompt = get_system_prompt()
 
-        # Build messages array: system + history + current
+        # Build messages array: system + few-shot examples + history + current
+        # Few-shot examples are the strongest behavioral override for open LLMs.
         msg_list = [{"role": "system", "content": system_prompt}]
+        msg_list.extend(get_few_shot_messages())
         if messages:
-            for m in (messages[-50:] if len(messages) > 20 else messages):
+            for m in (messages[-40:] if len(messages) > 40 else messages):
                 role = m.get("role") if isinstance(m, dict) else getattr(m, "role", "user")
                 content = m.get("content") if isinstance(m, dict) else getattr(m, "content", "")
                 if role in ("user", "assistant") and content:
@@ -74,6 +76,7 @@ class OpenAICompatibleProvider(AIProvider):
             "model": model,
             "messages": msg_list,
             "stream": True,
+            "temperature": 0.65,  # Lower = more direct, consistent responses
         }
 
         timeout = httpx.Timeout(30.0, connect=5.0)

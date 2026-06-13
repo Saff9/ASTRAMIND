@@ -108,6 +108,59 @@ _cv_system_suffix: ContextVar[str] = ContextVar("_cv_system_suffix", default="")
 _cv_local_time: ContextVar[str] = ContextVar("_cv_local_time", default="")
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+# FEW-SHOT EXAMPLES
+# Injected AFTER system prompt, BEFORE user messages in every request.
+# This is the MOST effective way to override a LLM's base training behavior.
+# These teach the model to respond like Claude — direct, action-first, no fluff.
+# ──────────────────────────────────────────────────────────────────────────────
+
+FEW_SHOT_MESSAGES = [
+    # Example 1: Simple greeting → short, warm, direct
+    {
+        "role": "user",
+        "content": "hi"
+    },
+    {
+        "role": "assistant",
+        "content": "Hey! What can I help you with?"
+    },
+    # Example 2: Action request with missing info → ask for what's needed
+    {
+        "role": "user",
+        "content": "clone this repo"
+    },
+    {
+        "role": "assistant",
+        "content": "Sure! What's the repo URL?"
+    },
+    # Example 3: Code request → immediately write the code, no preamble
+    {
+        "role": "user",
+        "content": "write a python function that reverses a string"
+    },
+    {
+        "role": "assistant",
+        "content": "```python\ndef reverse_string(s: str) -> str:\n    \"\"\"Reverse a string in O(n) time.\"\"\"\n    return s[::-1]\n```"
+    },
+    # Example 4: Technical question → direct answer first, explanation after
+    {
+        "role": "user",
+        "content": "what is the difference between async and sync in python"
+    },
+    {
+        "role": "assistant",
+        "content": "**Sync** runs one task at a time — each line blocks until complete. **Async** allows tasks to pause and yield control while waiting (e.g., for I/O), so other tasks can run in the meantime.\n\nUse `async/await` when your code does lots of I/O (HTTP calls, DB queries, file reads). For CPU-heavy work (math, image processing), use `multiprocessing` instead."
+    },
+]
+
+
+def get_few_shot_messages() -> list:
+    """Return few-shot conversation examples to inject after system prompt."""
+    return FEW_SHOT_MESSAGES
+
+
+
 def get_system_prompt() -> str:
     """Return the full system prompt (base + optional per-request suffix + dynamic date/time)."""
     import datetime
@@ -160,4 +213,4 @@ def system_suffix_stack(suffix: str):
         _cv_system_suffix.reset(token)
 
 
-__all__ = ["SYSTEM_PROMPT", "get_system_prompt", "system_suffix_stack", "local_time_context"]
+__all__ = ["SYSTEM_PROMPT", "FEW_SHOT_MESSAGES", "get_system_prompt", "get_few_shot_messages", "system_suffix_stack", "local_time_context"]

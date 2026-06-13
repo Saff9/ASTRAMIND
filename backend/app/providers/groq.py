@@ -6,7 +6,7 @@ from typing import AsyncIterator, List, Dict, Optional
 
 from app.providers.base import AIProvider
 from core.errors import AppError
-from core.system_prompt import get_system_prompt
+from core.system_prompt import get_system_prompt, get_few_shot_messages
 
 logger = logging.getLogger(__name__)
 
@@ -50,10 +50,13 @@ class GroqProvider(AIProvider):
 
         system_prompt = get_system_prompt()
 
-        # Build messages array — system prompt + history + current message
+        # Build messages array: system prompt + few-shot examples + history + current
+        # Few-shot examples teach the model to respond directly (Claude-style)
+        # and are the most effective way to override base LLM training behavior.
         msg_list = [{"role": "system", "content": system_prompt}]
+        msg_list.extend(get_few_shot_messages())
         if messages:
-            for m in messages[-50:]:  # cap at last 20 turns to save tokens
+            for m in messages[-40:]:  # cap at last 40 turns
                 role = m.get("role", "user")
                 content = m.get("content", "")
                 if role in ("user", "assistant") and content:
@@ -69,7 +72,7 @@ class GroqProvider(AIProvider):
             "model": model,
             "messages": msg_list,
             "stream": True,
-            "temperature": 0.7,
+            "temperature": 0.65,  # Slightly lower = more direct, consistent responses
         }
 
         timeout = httpx.Timeout(30.0, connect=5.0)
