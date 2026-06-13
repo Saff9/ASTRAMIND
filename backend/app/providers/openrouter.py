@@ -5,7 +5,7 @@ from typing import AsyncIterator, Dict, List, Optional
 
 from app.providers.base import AIProvider
 from core.errors import AppError
-from core.system_prompt import get_system_prompt
+from core.system_prompt import get_system_prompt, get_few_shot_messages
 
 
 class OpenRouterProvider(AIProvider):
@@ -25,6 +25,7 @@ class OpenRouterProvider(AIProvider):
         system_prompt = get_system_prompt()
 
         msg_list = [{"role": "system", "content": system_prompt}]
+        msg_list.extend(get_few_shot_messages())
         if messages:
             for m in messages[-50:]:
                 role = m.get("role", "user")

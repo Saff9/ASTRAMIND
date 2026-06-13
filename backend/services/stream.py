@@ -20,6 +20,9 @@ def stream_response(
     *,
     system_suffix: Optional[str] = None,
     local_time: Optional[str] = None,
+    user_email: Optional[str] = None,
+    user_prompt: Optional[str] = None,
+    ai_router: Optional[Any] = None,
 ) -> StreamingResponse:
     """
     Wraps an async generator into a FastAPI SSE StreamingResponse.
@@ -28,10 +31,11 @@ def stream_response(
     - Plain text chunks (from AI provider) → {"content": "...", "type": "text"}
     - Pre-formatted structured events (from agent) → passed through unchanged if valid JSON
 
-    SSE format: `data: <json_string>\\n\\n`
+    SSE format: `data: <json_string>\n\n`
     """
 
     async def event_stream():
+        full_assistant_content = []
         try:
             with local_time_context(local_time):
                 with system_suffix_stack(system_suffix or ""):
@@ -76,17 +80,47 @@ def stream_response(
                                     content = parsed["content"]
 
                                 if content:
+                                    full_assistant_content.append(content)
                                     yield f"data: {json.dumps({'content': content, 'type': 'text'})}\n\n"
                                 # else: skip empty/unknown structured chunk
                             else:
+                                full_assistant_content.append(str(parsed))
                                 yield f"data: {json.dumps({'content': str(parsed), 'type': 'text'})}\n\n"
 
                         except (json.JSONDecodeError, ValueError, TypeError, KeyError):
                             # Raw string chunk — wrap as text
+                            full_assistant_content.append(chunk)
                             yield f"data: {json.dumps({'content': chunk, 'type': 'text'})}\n\n"
+
+            # Stream finished successfully, save to SQLite database
+            if user_email and user_prompt and full_assistant_content:
+                assistant_response = "".join(full_assistant_content)
+                try:
+                    from app.db.session import get_db_session
+                    from services.conversation_store import save_message, summarize_if_needed
+                    async with get_db_session() as db:
+                        if db:
+                            await save_message(db, user_email, "user", user_prompt)
+                            await save_message(db, user_email, "assistant", assistant_response)
+                            if ai_router:
+                                await summarize_if_needed(db, user_email, ai_router)
+                except Exception as save_err:
+                    logger.error(f"Error saving stream messages to SQLite: {save_err}")
 
         except asyncio.CancelledError:
             logger.info("Stream cancelled by client")
+            # Save partial response even if cancelled
+            if user_email and user_prompt and full_assistant_content:
+                assistant_response = "".join(full_assistant_content)
+                try:
+                    from app.db.session import get_db_session
+                    from services.conversation_store import save_message
+                    async with get_db_session() as db:
+                        if db:
+                            await save_message(db, user_email, "user", user_prompt)
+                            await save_message(db, user_email, "assistant", assistant_response + " [cancelled]")
+                except Exception as save_err:
+                    logger.error(f"Error saving partial cancelled messages: {save_err}")
             raise
         except GeneratorExit:
             logger.info("Stream closed by client")

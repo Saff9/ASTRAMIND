@@ -158,3 +158,56 @@ class DiscoverNews(Base):
 
     def __repr__(self) -> str:
         return f"<DiscoverNews(title={self.title[:40]}, source={self.source_name})>"
+
+
+class ConversationMessage(Base):
+    """
+    Stores conversation turns for users.
+    Used for server-side memory injection.
+    """
+    __tablename__ = "conversation_messages"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_email: Mapped[str] = mapped_column(
+        String(255),
+        index=True,
+        nullable=False,
+    )
+    role: Mapped[str] = mapped_column(String(50), nullable=False) # 'user' or 'assistant'
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(tz=timezone.utc),
+        nullable=False,
+    )
+
+    def __repr__(self) -> str:
+        return f"<ConversationMessage(user={self.user_email}, role={self.role})>"
+
+
+class UserAgentMemory(Base):
+    """
+    Stores agent summary, cloned repos, and created files per user.
+    """
+    __tablename__ = "user_agent_memories"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_email: Mapped[str] = mapped_column(
+        String(255),
+        unique=True,
+        index=True,
+        nullable=False,
+    )
+    cloned_repos: Mapped[str] = mapped_column(Text, default="[]", nullable=False) # JSON list of strings
+    created_files: Mapped[str] = mapped_column(Text, default="[]", nullable=False) # JSON list of strings
+    last_run_output: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    session_summary: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(tz=timezone.utc),
+        onupdate=lambda: datetime.now(tz=timezone.utc),
+        nullable=False,
+    )
+
+    def __repr__(self) -> str:
+        return f"<UserAgentMemory(user={self.user_email}, updated={self.updated_at})>"

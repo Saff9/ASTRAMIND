@@ -534,12 +534,12 @@ export default function HomePage() {
             <span style={{ fontSize: 11, fontWeight: 700, color: "var(--brand-light)", letterSpacing: "0.08em", textTransform: "uppercase" }}>Premium — ₹149/month</span>
           </div>
           <h2 style={{ fontSize: "clamp(1.6rem,4vw,2.2rem)", fontWeight: 800, letterSpacing: "-0.03em", marginBottom: 16, fontFamily: DISPLAY_FONT }}>
-            Unlock <span style={{ background: "linear-gradient(135deg,var(--brand),var(--brand-light))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>Agent Mode & Expert Skills</span>
+            Unlock <span style={{ background: "linear-gradient(135deg,var(--brand),var(--brand-light))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>Unlimited Potential</span>
           </h2>
           <p style={{ fontSize: "1rem", color: "var(--text-secondary)", lineHeight: 1.75, maxWidth: 560, margin: "0 auto 16px", fontFamily: PAGE_FONT }}>
-            Free users get basic chat. Premium gives you an <strong style={{ color: "var(--text-primary)" }}>autonomous AI that can run code, search the web, analyze stocks, plan trips, and call your own tools</strong> — all in a single response.
+            Get high-capacity daily quotas. Premium gives you up to <strong style={{ color: "var(--text-primary)" }}>300 requests/day and priority access to flagship models</strong> while enjoying Agent Mode, web search, and code execution.
           </p>
-          <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 32 }}>300 requests/day · All flagship models · Agent Mode · Expert Skills · Questions? <a href="mailto:saffanakbar942@gmail.com" style={{ color: "#f2a93b" }}>saffanakbar942@gmail.com</a></p>
+          <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 32 }}>300 requests/day · Priority flagship access · Agent Mode · Expert Skills · Questions? <a href="mailto:saffanakbar942@gmail.com" style={{ color: "#f2a93b" }}>saffanakbar942@gmail.com</a></p>
           <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
             <Link href="/pricing">
               <button style={{

@@ -17,11 +17,60 @@ def workspace_key_from_principal(user_email: str, request_id: Optional[str] = No
     """Stable opaque id for sandbox folder naming."""
     raw = (user_email or "guest").lower().strip()
     salt = getattr(settings, "SANDBOX_USER_SALT", "") or ""
-    h = hashlib.sha256(f"{salt}:{raw}:{request_id or ''}".encode()).hexdigest()
+    # Drop request_id to make workspace persistent across requests for a user
+    h = hashlib.sha256(f"{salt}:{raw}".encode()).hexdigest()
     return h[:32]
 
 
+def get_dir_size(path: Path) -> int:
+    """Calculate total size of directory in bytes."""
+    total = 0
+    if not path.exists():
+        return total
+    for root, dirs, files in os.walk(path):
+        for f in files:
+            fp = os.path.join(root, f)
+            try:
+                total += os.path.getsize(fp)
+            except OSError:
+                pass
+    return total
+
+
+def workspace_ttl_cleanup(max_age_days: int = 7) -> None:
+    """Delete workspace directories that have not been modified/accessed in max_age_days."""
+    import time
+    import shutil
+    base = getattr(settings, "SANDBOX_ROOT", None)
+    if base:
+        root = Path(base)
+    else:
+        root = Path(os.environ.get("TEMP") or os.environ.get("TMP") or "/tmp") / "astramind_workspace"
+    
+    if not root.exists():
+        return
+
+    now = time.time()
+    max_age_seconds = max_age_days * 86400
+
+    try:
+        for entry in os.scandir(root):
+            if entry.is_dir():
+                stat = entry.stat()
+                last_time = max(stat.st_mtime, stat.st_atime)
+                if (now - last_time) > max_age_seconds:
+                    try:
+                        shutil.rmtree(entry.path)
+                    except Exception:
+                        pass
+    except Exception:
+        pass
+
+
 def get_workspace_root(workspace_key: str) -> Path:
+    # Run a quick cleanup on each request
+    workspace_ttl_cleanup()
+    
     base = getattr(settings, "SANDBOX_ROOT", None)
     if base:
         root = Path(base)

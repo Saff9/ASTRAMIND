@@ -381,16 +381,40 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
             if m.role in ("user", "assistant") and m.content
         ]
 
+        # Load active workspace/session context from SQLite
+        memory_suffix = ""
+        if db is not None and user_email:
+            try:
+                from services.conversation_store import get_agent_memory
+                agent_memory = await get_agent_memory(db, user_email)
+                if agent_memory:
+                    mem_parts = []
+                    summary = agent_memory.get("session_summary")
+                    if summary:
+                        mem_parts.append(f"Session Context Summary:\n{summary}")
+                    cloned = agent_memory.get("cloned_repos")
+                    if cloned:
+                        mem_parts.append(f"Cloned Repositories in workspace: {', '.join(cloned)}")
+                    created = agent_memory.get("created_files")
+                    if created:
+                        mem_parts.append(f"Created Files in workspace: {', '.join(created)}")
+                    
+                    if mem_parts:
+                        memory_suffix = "\n\n### 🧠 Active Workspace Context (SQLite Memory)\n" + "\n".join(mem_parts)
+            except Exception as e:
+                logger.error(f"Failed to load agent memory: {e}")
+
+        # ===== INTENT CLASSIFICATION =====
+        from core.intent_classifier import classify_intent, ChatMode
+        intent = classify_intent(safe_prompt)
+        logger.info(f"Classified prompt intent: {intent} for user {user_email}")
+
         # ── DEEP RESEARCH (Perplexity-style multi-query) ─────────────────────
-        if (
-            payload.research_mode
-            and getattr(settings, "ENABLE_DEEP_RESEARCH", True)
-            and getattr(settings, "ENABLE_WEB_SEARCH", False)
-        ):
+        should_run_research = (payload.research_mode or intent == ChatMode.RESEARCH) and getattr(settings, "ENABLE_DEEP_RESEARCH", True)
+        if should_run_research and getattr(settings, "ENABLE_WEB_SEARCH", False):
             try:
                 from services.research_service import deep_research
-
-                logger.info(f"Deep research bundle for user {user_email} [request_id: {request_id}]")
+                logger.info(f"Deep research bundle triggered (intent: {intent}) for user {user_email} [request_id: {request_id}]")
                 dr = await deep_research(safe_prompt)
                 if dr:
                     safe_prompt = f"{safe_prompt}\n\n{dr}"
@@ -398,9 +422,9 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
                 logger.error(f"Deep research failed: {e}")
 
         # ── LIGHT WEB SEARCH (single-pass DDG) ───────────────────────────────
-        if getattr(settings, "ENABLE_WEB_SEARCH", False) and not payload.research_mode:
+        elif getattr(settings, "ENABLE_WEB_SEARCH", False):
             search_keywords = ["who", "what", "where", "when", "why", "how", "latest", "news", "current", "today", "now", "price", "stock", "weather"]
-            if any(kw in safe_prompt.lower() for kw in search_keywords) and len(safe_prompt) > 5:
+            if (intent == ChatMode.RESEARCH or any(kw in safe_prompt.lower() for kw in search_keywords)) and len(safe_prompt) > 5:
                 try:
                     from services.web_search import fetch_web_search
                     logger.info(f"Triggering DuckDuckGo real-time search for: {safe_prompt}")
@@ -414,25 +438,14 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
         orm_user = auth_data.get("user", {}).get("orm_user") if isinstance(auth_data.get("user"), dict) else None
 
         # Auto-detect action requests that need live tool execution.
-        # If the user asks to DO something (clone, run, create, build, etc.),
-        # automatically activate the agent — regardless of agent_mode flag.
-        _ACTION_KEYWORDS = [
-            "clone", "git clone", "git pull", "git push",
-            "run ", "execute", "bash", "terminal", "install",
-            "create file", "write file", "create a file",
-            "build", "compile", "deploy",
-            "scrape", "fetch", "download",
-            "calculate", "compute", "math",
-        ]
-        _prompt_lower = safe_prompt.lower()
-        auto_agent = any(kw in _prompt_lower for kw in _ACTION_KEYWORDS)
+        auto_agent = (intent == ChatMode.AGENT)
         should_run_agent = (payload.agent_mode or auto_agent) and getattr(settings, "ENABLE_AGENT_TOOLS", True)
 
         if should_run_agent:
             try:
                 from services.agent_orchestrator import run_agent_phase
                 if auto_agent and not payload.agent_mode:
-                    logger.info(f"Auto-agent triggered for user {user_email} [action detected]")
+                    logger.info(f"Auto-agent triggered for user {user_email} [action intent classified]")
                 agent_block = await run_agent_phase(
                     router=ai_router,
                     user_goal=safe_prompt,
@@ -457,7 +470,7 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
             async def execute_ai_json():
                 chunks: List[str] = []
                 with local_time_context(payload.local_time):
-                    with system_suffix_stack(agent_system_suffix):
+                    with system_suffix_stack(agent_system_suffix + memory_suffix):
                         async for chunk in ai_router.stream_with_fallback(
                             prompt=safe_prompt,
                             model=payload.model,  # The tier string (e.g. 'balanced')
@@ -476,6 +489,14 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
                                 if chunk and chunk.strip():
                                     chunks.append(chunk)
                 full_text = "".join(chunks)
+                if db is not None and user_email and full_text:
+                    try:
+                        from services.conversation_store import save_message, summarize_if_needed
+                        await save_message(db, user_email, "user", safe_prompt)
+                        await save_message(db, user_email, "assistant", full_text)
+                        await summarize_if_needed(db, user_email, ai_router)
+                    except Exception as e:
+                        logger.error(f"Failed to save non-stream conversation: {e}")
                 return JSONResponse(content={
                     "response": full_text,
                     "provider": provider,
@@ -518,15 +539,18 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
         async def execute_ai_stream():
             return stream_response(
                 base_stream_generator,
-                system_suffix=agent_system_suffix,
+                system_suffix=agent_system_suffix + memory_suffix,
                 local_time=payload.local_time,
+                user_email=user_email,
+                user_prompt=safe_prompt,
+                ai_router=ai_router,
             )
 
         async def fallback_sse():
             async def fallback_generator():
                 yield (
-                    f"Sorry, we're experiencing technical difficulties. "
-                    f"Please try again in a moment! ✨"
+                    f"I'm having trouble connecting to my AI providers right now. "
+                    f"Trying to reconnect... Please wait a moment! 🔄"
                 )
             return stream_response(fallback_generator())
 
@@ -550,25 +574,25 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
             logger.warning(f"Provider rate limited: {e}")
             raise HTTPException(
                 status_code=429,
-                detail="AI provider rate limited. Please try again in a few minutes.",
+                detail="I'm a bit busy — trying a different model for you...",
             )
         elif "key" in error_str or "unauthorized" in error_str:
             logger.error(f"Provider authentication failed: {e}")
             raise HTTPException(
                 status_code=503,
-                detail="AI provider authentication failed",
+                detail="I'm having trouble authenticating with the AI provider. Trying to reconnect...",
             )
         elif "unavailable" in error_str:
             logger.warning(f"Provider unavailable: {e}")
             raise HTTPException(
                 status_code=503,
-                detail="AI provider temporarily unavailable",
+                detail="The AI provider is temporarily unavailable. Trying another provider...",
             )
         else:
             logger.error(f"Provider error: {e}")
             raise HTTPException(
                 status_code=503,
-                detail="AI service temporarily unavailable",
+                detail="I'm having trouble connecting right now. Retrying...",
             )
     except Exception as e:
         logger.error(f"Unexpected error in chat endpoint: {e}", exc_info=True)
@@ -803,7 +827,30 @@ async def agent_stream(
         if m.role in ("user", "assistant") and m.content
     ]
 
-    agent_system_suffix = build_agent_system_suffix(safe_prompt, payload.model)
+    # Load active workspace/session context from SQLite
+    memory_suffix = ""
+    if db is not None and user_email:
+        try:
+            from services.conversation_store import get_agent_memory
+            agent_memory = await get_agent_memory(db, user_email)
+            if agent_memory:
+                mem_parts = []
+                summary = agent_memory.get("session_summary")
+                if summary:
+                    mem_parts.append(f"Session Context Summary:\n{summary}")
+                cloned = agent_memory.get("cloned_repos")
+                if cloned:
+                    mem_parts.append(f"Cloned Repositories in workspace: {', '.join(cloned)}")
+                created = agent_memory.get("created_files")
+                if created:
+                    mem_parts.append(f"Created Files in workspace: {', '.join(created)}")
+                
+                if mem_parts:
+                    memory_suffix = "\n\n### 🧠 Active Workspace Context (SQLite Memory)\n" + "\n".join(mem_parts)
+        except Exception as e:
+            logger.error(f"Failed to load agent memory: {e}")
+
+    agent_system_suffix = build_agent_system_suffix(safe_prompt, payload.model) + memory_suffix
 
     async def unified_agent_stream():
         """
@@ -850,6 +897,7 @@ async def agent_stream(
                 "_Use the above context to give a comprehensive, accurate answer._"
             )
 
+        final_response_text = ""
         try:
             with local_time_context(payload.local_time):
                 with system_suffix_stack(agent_system_suffix):
@@ -871,10 +919,34 @@ async def agent_stream(
                                 elif "content" in parsed:
                                     content = parsed["content"]
                             if content:
+                                final_response_text += content
                                 yield f"data: {_json.dumps({'type': 'text', 'content': content})}\n\n"
                         except (ValueError, KeyError):
                             if chunk.strip():
+                                final_response_text += chunk
                                 yield f"data: {_json.dumps({'type': 'text', 'content': chunk})}\n\n"
+
+            # Update workspace state in SQLite
+            if db is not None and user_email:
+                try:
+                    from services.sandbox_workspace import get_workspace_root, workspace_key_from_principal
+                    from services.conversation_store import update_workspace_state
+                    ws_key = workspace_key_from_principal(user_email, request_id)
+                    ws_root = get_workspace_root(ws_key)
+                    await update_workspace_state(db, user_email, ws_root)
+                except Exception as state_err:
+                    logger.error(f"Failed to update workspace state in SQLite: {state_err}")
+
+            # Save turns to SQLite and summarize if needed
+            if db is not None and user_email and final_response_text:
+                try:
+                    from services.conversation_store import save_message, summarize_if_needed
+                    await save_message(db, user_email, "user", safe_prompt)
+                    await save_message(db, user_email, "assistant", final_response_text)
+                    await summarize_if_needed(db, user_email, ai_router)
+                except Exception as save_err:
+                    logger.error(f"Failed to save agent conversation to SQLite: {save_err}")
+
         except Exception as e:
             logger.error(f"AI response stream failed in agent endpoint: {e}", exc_info=True)
             yield f"data: {_json.dumps({'type': 'error', 'message': 'AI response failed'})}\n\n"

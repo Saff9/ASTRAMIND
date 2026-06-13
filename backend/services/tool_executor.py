@@ -60,6 +60,12 @@ class ToolExecutor:
 
     async def run(self, tool: str, args: Dict[str, Any]) -> str:
         name = (tool or "").strip().lower()
+        if name in ("write_file", "write_markdown_file", "create_file", "git_clone", "run_terminal", "bash_run", "run_code"):
+            from services.sandbox_workspace import get_dir_size
+            max_mb = 500
+            if get_dir_size(self.workspace_root) > max_mb * 1024 * 1024:
+                return f"[{tool} error] workspace size limit of {max_mb}MB exceeded"
+
         try:
             if name == "web_search":
                 return await self._web_search(args)
@@ -89,9 +95,9 @@ class ToolExecutor:
                 return await self._git_clone(args)
             return f"[unknown tool] {tool}"
         except asyncio.TimeoutError:
-            return f"[{tool}] timeout"
+            return "That command took too long. Try a shorter operation."
         except subprocess.TimeoutExpired:
-            return f"[{tool}] command timeout"
+            return "That command took too long. Try a shorter operation."
         except ValueError as ve:
             return f"[{tool} error] {ve}"
         except Exception as e:
@@ -362,6 +368,6 @@ class ToolExecutor:
                 result += f"--- stderr ---\n{err[:trim]}\n"
             return result.strip() or f"exit={proc.returncode} (no output)"
         except subprocess.TimeoutExpired:
-            return f"[timeout] command exceeded {timeout}s"
+            return "That command took too long. Try a shorter operation."
         except FileNotFoundError:
             return f"[error] executable not found: {cmd[0]}"

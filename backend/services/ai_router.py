@@ -25,6 +25,7 @@ from app.providers.openai_compatible import OpenAICompatibleProvider
 from app.providers.google_ai_studio import GoogleAIStudioProvider
 from app.providers.cloudflare_workers_ai import CloudflareWorkersAIProvider
 from app.providers.anthropic import AnthropicProvider
+from services.key_pool import KeyPool
 
 logger = logging.getLogger(__name__)
 
@@ -158,6 +159,24 @@ class AIRouter:
         self.sambanova_keys      = _clean(sambanova_keys)
         self.hf_key              = hf_key
         self.openai_key          = openai_key
+
+        # Populate KeyPool
+        self.key_pool = KeyPool()
+        self.key_pool.add_keys("groq", self.groq_keys)
+        self.key_pool.add_keys("openrouter", self.openrouter_keys)
+        self.key_pool.add_keys("together", self.together_keys)
+        self.key_pool.add_keys("mistral", self.mistral_keys)
+        self.key_pool.add_keys("cerebras", self.cerebras_keys)
+        self.key_pool.add_keys("siliconflow", self.siliconflow_keys)
+        self.key_pool.add_keys("google_ai_studio", self.google_keys)
+        self.key_pool.add_keys("alibaba_bailian", self.alibaba_bailian_keys)
+        self.key_pool.add_keys("deepseek", self.deepseek_keys)
+        self.key_pool.add_keys("xai", self.xai_keys)
+        self.key_pool.add_keys("anthropic", self.anthropic_keys)
+        self.key_pool.add_keys("cohere", self.cohere_keys)
+        self.key_pool.add_keys("ai21", self.ai21_keys)
+        self.key_pool.add_keys("novita", self.novita_keys)
+        self.key_pool.add_keys("sambanova", self.sambanova_keys)
 
         # Provider instances (one per process)
         self.groq_provider       = GroqProvider(http_client=http_client)
@@ -431,24 +450,69 @@ class AIRouter:
         model: str,
         messages: Optional[List[Dict[str, str]]] = None,
     ) -> AsyncIterator[str]:
-        """Try each key in rotation until one succeeds."""
+        """Try each key in rotation until one succeeds using KeyPool."""
         if not keys:
             raise RuntimeError(f"No API keys for {getattr(provider_obj, 'name', str(provider_obj))}")
+
+        # Map keys list to provider name
+        provider_name = "unknown"
+        if keys is self.groq_keys: provider_name = "groq"
+        elif keys is self.openrouter_keys: provider_name = "openrouter"
+        elif keys is self.together_keys: provider_name = "together"
+        elif keys is self.mistral_keys: provider_name = "mistral"
+        elif keys is self.cerebras_keys: provider_name = "cerebras"
+        elif keys is self.siliconflow_keys: provider_name = "siliconflow"
+        elif keys is self.google_keys: provider_name = "google_ai_studio"
+        elif keys is self.alibaba_bailian_keys: provider_name = "alibaba_bailian"
+        elif keys is self.deepseek_keys: provider_name = "deepseek"
+        elif keys is self.xai_keys: provider_name = "xai"
+        elif keys is self.anthropic_keys: provider_name = "anthropic"
+        elif keys is self.cohere_keys: provider_name = "cohere"
+        elif keys is self.ai21_keys: provider_name = "ai21"
+        elif keys is self.novita_keys: provider_name = "novita"
+        elif keys is self.sambanova_keys: provider_name = "sambanova"
+
+        if provider_name == "unknown":
+            last_error = None
+            for idx, key in enumerate(keys):
+                try:
+                    async for chunk in provider_obj.stream(
+                        prompt=prompt, model=model, api_key=key, messages=messages
+                    ):
+                        yield chunk
+                    return
+                except Exception as e:
+                    last_error = e
+                    if idx < len(keys) - 1:
+                        continue
+            raise RuntimeError(f"All keys exhausted. Last: {last_error}")
+
         last_error = None
-        for idx, key in enumerate(keys):
+        num_keys = len(keys)
+        for idx in range(num_keys):
+            key_state = self.key_pool.acquire(provider_name)
+            if not key_state:
+                break
             try:
                 async for chunk in provider_obj.stream(
-                    prompt=prompt, model=model, api_key=key, messages=messages
+                    prompt=prompt, model=model, api_key=key_state.key, messages=messages
                 ):
                     yield chunk
-                return  # success
+                self.key_pool.mark_success(provider_name, key_state)
+                return
             except Exception as e:
                 last_error = e
-                name = getattr(provider_obj, "name", "provider")
-                logger.warning(f"{name} key[{idx}] failed: {type(e).__name__}: {e}")
-                if idx < len(keys) - 1:
+                err_str = str(e).lower()
+                if "429" in err_str or "rate_limit" in err_str or "too many requests" in err_str:
+                    logger.warning(f"Rate limit 429 on {provider_name} key. Cooling down.")
+                    self.key_pool.cooldown_429(provider_name, key_state)
+                else:
+                    logger.warning(f"Error on {provider_name} key: {e}. Cooling down.")
+                    self.key_pool.cooldown(provider_name, key_state, seconds=60)
+                if idx < num_keys - 1:
                     continue
-        raise RuntimeError(f"All keys exhausted. Last: {last_error}")
+
+        raise RuntimeError(f"All keys for {provider_name} exhausted or rate limited. Last: {last_error}")
 
     async def _stream_ollama(
         self, prompt: str, model: str,
@@ -503,6 +567,7 @@ class AIRouter:
         fallback_chain = self._build_fallback_chain(resolved_provider)
         last_error = None
         tried: List[str] = []
+        accumulated_text = ""
 
         from services.models import get_model_for_provider
 
@@ -519,16 +584,39 @@ class AIRouter:
 
             try:
                 start = time.time()
-                
-                # Dynamically resolve correct model string for this provider
                 provider_model = get_model_for_provider(model, provider) or resolved_model
                 
-                logger.info(f"Attempting: {provider} / {provider_model}")
+                # Request continuation if previous provider failed mid-stream
+                current_prompt = prompt
+                if accumulated_text:
+                    current_prompt = (
+                        f"{prompt}\n\n[System Alert: The previous model stream failed mid-response. "
+                        f"Please continue completing the answer exactly from where it left off. Do not repeat the initial part. "
+                        f"Here is the generated partial response so far:\n{accumulated_text}\n"
+                        f"Please continue/complete it below:]"
+                    )
+
+                logger.info(f"Attempting: {provider} / {provider_model} (has_accumulated={bool(accumulated_text)})")
 
                 async for chunk in self._stream_from_provider(
-                    provider, prompt, provider_model, messages
+                    provider, current_prompt, provider_model, messages
                 ):
-                    yield chunk  # Pass through RAW — no sanitization of streaming JSON
+                    try:
+                        parsed = json.loads(chunk)
+                        if isinstance(parsed, dict):
+                            content = None
+                            if "choices" in parsed and parsed["choices"]:
+                                delta = parsed["choices"][0].get("delta", {})
+                                content = delta.get("content")
+                            elif "content" in parsed:
+                                content = parsed["content"]
+                            if content:
+                                accumulated_text += content
+                    except Exception:
+                        if chunk.strip() and not chunk.startswith("{"):
+                            accumulated_text += chunk
+                    
+                    yield chunk
 
                 elapsed = time.time() - start
                 stats.total_requests += 1
@@ -550,14 +638,17 @@ class AIRouter:
                 stats.circuit_breaker.record_failure()
                 last_error = e
                 logger.warning(f"Provider {provider} failed ({elapsed:.2f}s): {type(e).__name__}: {e}")
+                # Log that we will attempt fallback continuation if we had content
+                if accumulated_text:
+                    logger.info(f"Retrying with next provider after generating {len(accumulated_text)} characters.")
                 continue
 
         # All providers failed
         logger.error(f"All providers failed. Tried: {tried}. Last: {last_error}")
         yield json.dumps({
             "content": (
-                "All AI providers are currently unavailable. "
-                "Please try again in a moment. 🔄"
+                "I'm having trouble connecting to my AI providers right now. "
+                "Trying to reconnect... Please wait a moment. 🔄"
             ),
             "type": "fallback",
         })

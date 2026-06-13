@@ -17,6 +17,10 @@ def _build_anthropic_messages(
 ) -> List[Dict[str, str]]:
     """Build Anthropic Messages API `messages` list (must start with a user turn)."""
     out: List[Dict[str, str]] = []
+    from core.system_prompt import get_few_shot_messages
+    # Prepend few-shot examples
+    out.extend(get_few_shot_messages())
+
     if messages:
         for m in messages[-50:]:
             role = m.get("role", "user")

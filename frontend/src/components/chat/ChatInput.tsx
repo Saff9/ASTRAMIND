@@ -410,7 +410,7 @@ export default function ChatInput({
           {onAgentModeChange && (
             <button
               type="button"
-              title={agentMode ? "Agent mode ON — file ops, bash, git clone, code execution" : "Enable Agent mode (Premium)"}
+              title={agentMode ? "Agent mode ON — file ops, bash, git clone, code execution" : "Enable Agent mode"}
               onClick={() => onAgentModeChange(!agentMode)}
               style={{
                 padding: "5px 10px", marginLeft: 4, borderRadius: 8,

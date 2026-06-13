@@ -44,6 +44,14 @@ class GoogleAIStudioProvider(AIProvider):
         )
 
         contents: List[Dict] = []
+        from core.system_prompt import get_few_shot_messages
+        # Prepend few-shot examples
+        for m in get_few_shot_messages():
+            role = m.get("role", "user")
+            text = (m.get("content") or "").strip()
+            gem_role = "user" if role == "user" else "model"
+            contents.append({"role": gem_role, "parts": [{"text": text}]})
+
         if messages:
             for m in messages[-50:]:
                 role = m.get("role", "user")
