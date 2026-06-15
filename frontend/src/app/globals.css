@@ -109,6 +109,40 @@
   border: 1px solid var(--glass-border);
 }
 
+/* Cosmic background pattern */
+.bg-grid-pattern {
+  background-size: 50px 50px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+}
+.bg-grid-pattern-radial {
+  background-size: 60px 60px;
+  background-image: 
+    radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+}
+
+/* Glass panel variants */
+.glass-card {
+  background: rgba(20, 20, 25, 0.55);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.glass-card:hover {
+  background: rgba(255, 255, 255, 0.01);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+}
+.glass-card-glow {
+  background: rgba(20, 20, 25, 0.7);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(242, 169, 59, 0.15);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
 .shine-effect {
   position: relative;
   overflow: hidden;
@@ -134,6 +168,24 @@
   left: 100%;
   opacity: 1;
 }
+
+@keyframes float-slow-1 {
+  0%, 100% { transform: translate(0px, 0px) scale(1); }
+  33% { transform: translate(30px, -50px) scale(1.05); }
+  66% { transform: translate(-20px, 20px) scale(0.95); }
+}
+@keyframes float-slow-2 {
+  0%, 100% { transform: translate(0px, 0px) scale(1); }
+  50% { transform: translate(-40px, 40px) scale(1.08); }
+}
+@keyframes float-slow-3 {
+  0%, 100% { transform: translate(0px, 0px) scale(1); }
+  50% { transform: translate(50px, 20px) scale(0.9); }
+}
+
+.animate-float-1 { animation: float-slow-1 22s ease-in-out infinite; }
+.animate-float-2 { animation: float-slow-2 28s ease-in-out infinite; }
+.animate-float-3 { animation: float-slow-3 25s ease-in-out infinite; }
 
 @keyframes shimmer-fast {
   0% { transform: translateX(-100%); }

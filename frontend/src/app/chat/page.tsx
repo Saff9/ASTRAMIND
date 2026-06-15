@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -552,73 +553,69 @@ export default function ChatPage() {
   const MIcon = selectedModel.Icon;
 
   return (
-    <div style={{ display: "flex", height: "100dvh", overflow: "hidden", background: "var(--bg-primary)", color: "var(--text-primary)" }}>
+    <div className="flex h-screen overflow-hidden bg-[#0c0c0e] text-[#eeeef2] relative font-sans">
+      
+      {/* Background spotlights */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden z-0" aria-hidden="true">
+        <div className="absolute top-[10%] left-[20%] w-[350px] h-[350px] rounded-full bg-amber-500/[0.03] blur-[100px] animate-float-1" />
+        <div className="absolute bottom-[20%] right-[10%] w-[400px] h-[400px] rounded-full bg-[#8b7afc]/[0.03] blur-[100px] animate-float-2" />
+      </div>
 
       {/* ═══ MOBILE OVERLAY ═══ */}
-      {isMobile && sidebarOpen && (
-        <div 
-          onClick={() => setSidebarOpen(false)}
-          style={{ position: "absolute", inset: 0, zIndex: 40, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }} 
-        />
-      )}
+      <AnimatePresence>
+        {isMobile && sidebarOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSidebarOpen(false)}
+            className="absolute inset-0 z-40 bg-black/60 backdrop-blur-[4px]"
+          />
+        )}
+      </AnimatePresence>
 
       {/* ═══ SIDEBAR ═══ */}
-      <aside style={{
-        flexShrink: 0,
-        position: isMobile ? "absolute" : "relative",
-        zIndex: 50,
-        height: "100%",
-        width: sidebarOpen ? 260 : 0,
-        left: isMobile && !sidebarOpen ? -260 : 0,
-        overflow: "hidden",
-        transition: "width 0.3s cubic-bezier(0.16,1,0.3,1), left 0.3s cubic-bezier(0.16,1,0.3,1)",
-        background: "var(--surface-1)",
-        borderRight: "1px solid var(--border-subtle)",
-        display: "flex", flexDirection: "column",
-      }}>
-        <div style={{ width: 260, height: "100%", display: "flex", flexDirection: "column" }}>
-
+      <motion.aside 
+        initial={false}
+        animate={{ 
+          width: sidebarOpen ? 260 : 0,
+          x: isMobile && !sidebarOpen ? -260 : 0 
+        }}
+        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+        className="flex-shrink-0 h-full z-50 bg-[#111116]/95 backdrop-blur-md border-r border-white/[0.06] flex flex-col overflow-hidden"
+        style={{ position: isMobile ? "absolute" : "relative" }}
+      >
+        <div className="w-[260px] h-full flex flex-col">
           {/* Sidebar header */}
-          <div style={{ padding: "12px 12px 10px", borderBottom: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ width: 30, height: 30, borderRadius: 8, background: "linear-gradient(135deg,var(--brand),var(--brand-light))", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <AstraIcon size={18} />
+          <div className="p-4 border-b border-white/[0.06] flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7.5 h-7.5 rounded-lg bg-gradient-to-br from-amber-500 to-amber-300 flex items-center justify-center shadow-[0_0_15px_rgba(242,169,59,0.25)]">
+                <AstraIcon size={16} />
               </div>
-              <span style={{ fontWeight: 700, fontSize: 15, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>ASTRAMIND</span>
+              <span className="font-extrabold text-sm tracking-tight text-white font-display">ASTRAMIND</span>
             </div>
             <button
               onClick={() => setSidebarOpen(false)}
-              style={{ padding: 6, borderRadius: 8, background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", display: "flex", alignItems: "center" }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-3)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-primary)"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-muted)"; }}
+              className="p-1.5 rounded-lg bg-transparent border-none text-[#5a5a72] hover:text-white cursor-pointer hover:bg-white/[0.04] flex items-center transition-colors"
             >
-              <SidebarClose style={{ width: 16, height: 16 }} />
+              <SidebarClose size={15} />
             </button>
           </div>
 
           {/* New chat button */}
-          <div style={{ padding: "10px 10px 6px" }}>
+          <div className="p-3 pb-1.5">
             <button
               onClick={startNewChat}
-              style={{
-                width: "100%", display: "flex", alignItems: "center", gap: 10,
-                padding: "10px 14px", borderRadius: 10, fontSize: 14, fontWeight: 500,
-                background: "rgba(212,118,59,0.08)", color: "var(--brand-light)",
-                border: "1px solid rgba(212,118,59,0.2)", cursor: "pointer",
-                transition: "all 0.2s ease",
-              }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(212,118,59,0.15)"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(212,118,59,0.08)"; }}
+              className="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold bg-amber-500/[0.07] hover:bg-amber-500/[0.12] text-amber-300 border border-amber-500/20 cursor-pointer transition-all duration-200"
             >
-              <Plus style={{ width: 16, height: 16, flexShrink: 0 }} />
+              <Plus size={15} className="flex-shrink-0" />
               New conversation
             </button>
           </div>
 
           {/* Conversation list with date groupings */}
-          <div style={{ flex: 1, overflowY: "auto", padding: "4px 10px" }}>
+          <div className="flex-1 overflow-y-auto px-3 py-2">
             {sessions.length > 0 ? (() => {
-              const now = Date.now();
               const todayStart = new Date(); todayStart.setHours(0,0,0,0);
               const yesterdayStart = new Date(todayStart); yesterdayStart.setDate(todayStart.getDate() - 1);
               const weekStart = new Date(todayStart); weekStart.setDate(todayStart.getDate() - 7);
@@ -631,41 +628,33 @@ export default function ChatPage() {
               ].filter(g => g.items.length > 0);
 
               return (
-                <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                <div className="flex flex-col gap-1.5">
                   {groups.map((group) => (
-                    <div key={group.label}>
-                      <p style={{ padding: "10px 6px 4px", fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)" }}>
+                    <div key={group.label} className="flex flex-col gap-0.5">
+                      <p className="px-2 py-1.5 text-[9px] font-extrabold tracking-wider uppercase text-[#5a5a72]">
                         {group.label}
                       </p>
                       {group.items.map((s) => (
                         <div
                           key={s.id}
                           onClick={() => loadSession(s.id)}
-                          style={{
-                            display: "flex", justifyContent: "space-between", alignItems: "center",
-                            padding: "9px 10px", borderRadius: 10, cursor: "pointer",
-                            background: currentSessionId === s.id ? "var(--surface-3)" : "transparent",
-                            color: currentSessionId === s.id ? "var(--text-primary)" : "var(--text-secondary)",
-                            transition: "all 0.15s ease"
-                          }}
-                          onMouseEnter={(e) => { if (currentSessionId !== s.id) (e.currentTarget as HTMLDivElement).style.background = "var(--surface-2)"; }}
-                          onMouseLeave={(e) => { if (currentSessionId !== s.id) (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
+                          className={`group flex justify-between items-center px-3 py-2 rounded-xl cursor-pointer transition-all duration-150 border ${
+                            currentSessionId === s.id 
+                              ? "bg-white/[0.04] border-white/[0.06] text-white" 
+                              : "bg-transparent border-transparent text-[#9898b0] hover:bg-white/[0.02]"
+                          }`}
                         >
-                          <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, paddingRight: 8 }}>
-                            <p style={{ fontSize: 13, fontWeight: 500, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis" }}>{s.title}</p>
-                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              <p style={{ fontSize: 10, color: "var(--text-disabled)" }}>
-                                {s.messages.length} msg{s.messages.length !== 1 ? "s" : ""}
-                              </p>
-                            </div>
+                          <div className="overflow-hidden text-ellipsis whitespace-nowrap flex-1 pr-2">
+                            <p className="text-[12.5px] font-medium overflow-hidden text-ellipsis">{s.title}</p>
+                            <p className="text-[10px] text-[#5a5a72] mt-0.5">
+                              {s.messages.length} msg{s.messages.length !== 1 ? "s" : ""}
+                            </p>
                           </div>
                           <button
                             onClick={(e) => deleteSession(e, s.id)}
-                            style={{ padding: 6, background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", borderRadius: 6, flexShrink: 0 }}
-                            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--error)"; (e.currentTarget as HTMLButtonElement).style.background = "rgba(245,100,90,0.1)"; }}
-                            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--text-muted)"; (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+                            className="p-1 rounded-lg bg-transparent border-none text-[#5a5a72] hover:text-[#f5645a] hover:bg-[#f5645a]/10 cursor-pointer flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
                           >
-                            <Trash2 style={{ width: 14, height: 14 }} />
+                            <Trash2 size={13} />
                           </button>
                         </div>
                       ))}
@@ -674,303 +663,241 @@ export default function ChatPage() {
                 </div>
               );
             })() : (
-              <p style={{ fontSize: 12, color: "var(--text-muted)", textAlign: "center", padding: "20px 0" }}>No recent chats</p>
+              <p className="text-xs text-[#5a5a72] text-center py-6">No recent chats</p>
             )}
           </div>
 
           {/* Sidebar footer */}
-          <div style={{ padding: "8px 10px 12px", borderTop: "1px solid var(--border-subtle)", display: "flex", flexDirection: "column", gap: 2 }}>
-            <Link href="/" style={{ textDecoration: "none" }}>
-              <button style={{
-                width: "100%", display: "flex", alignItems: "center", gap: 10,
-                padding: "9px 12px", borderRadius: 10, fontSize: 13,
-                background: "transparent", border: "none", cursor: "pointer",
-                color: "var(--text-muted)", transition: "all 0.15s ease",
-              }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-2)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-primary)"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-muted)"; }}>
-                <ArrowLeft style={{ width: 15, height: 15 }} />
+          <div className="p-3 border-t border-white/[0.06] flex flex-col gap-0.5">
+            <Link href="/" className="no-underline">
+              <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs bg-transparent border-none cursor-pointer text-[#9898b0] hover:text-white hover:bg-white/[0.03] transition-all">
+                <ArrowLeft size={14} />
                 Back to Home
               </button>
             </Link>
-            {/* Settings — opens modal */}
+            
             <button
               onClick={() => setSettingsOpen(true)}
-              style={{
-                width: "100%", display: "flex", alignItems: "center", gap: 10,
-                padding: "9px 12px", borderRadius: 10, fontSize: 13,
-                background: "transparent", border: "none", cursor: "pointer",
-                color: "var(--text-muted)", transition: "all 0.15s ease",
-              }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-2)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-primary)"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-muted)"; }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs bg-transparent border-none cursor-pointer text-[#9898b0] hover:text-white hover:bg-white/[0.03] transition-all"
             >
-              <Settings style={{ width: 15, height: 15 }} />
+              <Settings size={14} />
               Settings
             </button>
 
-            {/* Discover Link */}
-            <Link href="/discover" style={{ textDecoration: "none" }}>
-              <button style={{
-                width: "100%", display: "flex", alignItems: "center", gap: 10,
-                padding: "9px 12px", borderRadius: 10, fontSize: 13,
-                background: "transparent", border: "none", cursor: "pointer",
-                color: "var(--text-muted)", transition: "all 0.15s ease",
-              }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-2)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-primary)"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-muted)"; }}>
-                <svg style={{ width: 15, height: 15 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <Link href="/discover" className="no-underline">
+              <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs bg-transparent border-none cursor-pointer text-[#9898b0] hover:text-white hover:bg-white/[0.03] transition-all">
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="10"></circle>
                   <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
                 </svg>
                 Discover
-                <span style={{ marginLeft: "auto", fontSize: 9, padding: "2px 5px", background: "rgba(212,118,59,0.15)", color: "var(--brand-light)", borderRadius: 100, fontWeight: 700 }}>NEW</span>
+                <span className="ml-auto text-[8px] font-extrabold px-1.5 py-0.5 bg-amber-500/10 text-amber-300 rounded">NEW</span>
               </button>
             </Link>
 
-            <button style={{
-              width: "100%", display: "flex", alignItems: "center", gap: 10,
-              padding: "9px 12px", borderRadius: 10, fontSize: 13,
-              background: "transparent", border: "none", cursor: "pointer",
-              color: "var(--text-muted)", transition: "all 0.15s ease",
-            }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-2)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-primary)"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-muted)"; }}>
-              <Wrench style={{ width: 15, height: 15 }} />
+            <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs bg-transparent border-none cursor-pointer text-[#9898b0] hover:text-white hover:bg-white/[0.03] transition-all">
+              <Wrench size={14} />
               Tools
             </button>
 
-            <button style={{
-              width: "100%", display: "flex", alignItems: "center", gap: 10,
-              padding: "9px 12px", borderRadius: 10, fontSize: 13,
-              background: "transparent", border: "none", cursor: "pointer",
-              color: "var(--text-muted)", transition: "all 0.15s ease",
-            }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-2)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-primary)"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-muted)"; }}>
-              <Info style={{ width: 15, height: 15 }} />
+            <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs bg-transparent border-none cursor-pointer text-[#9898b0] hover:text-white hover:bg-white/[0.03] transition-all">
+              <Info size={14} />
               About
             </button>
 
-            {/* Privacy — navigates to /privacy */}
-            <Link href="/privacy" style={{ textDecoration: "none" }}>
-              <button style={{
-                width: "100%", display: "flex", alignItems: "center", gap: 10,
-                padding: "9px 12px", borderRadius: 10, fontSize: 13,
-                background: "transparent", border: "none", cursor: "pointer",
-                color: "var(--text-muted)", transition: "all 0.15s ease",
-              }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-2)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-primary)"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-muted)"; }}>
-                <Shield style={{ width: 15, height: 15 }} />
+            <Link href="/privacy" className="no-underline">
+              <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs bg-transparent border-none cursor-pointer text-[#9898b0] hover:text-white hover:bg-white/[0.03] transition-all">
+                <Shield size={14} />
                 Privacy
               </button>
             </Link>
           </div>
         </div>
-      </aside>
+      </motion.aside>
 
-      {/* ═══ MAIN ═══ */}
-      <main style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflow: "hidden" }}>
+      {/* ═══ MAIN CHAT CONTAINER ═══ */}
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative z-10">
 
-        {/* Top bar */}
-        <header style={{
-          flexShrink: 0, height: 56,
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          padding: "0 16px",
-          background: "rgba(26,22,18,0.85)",
-          backdropFilter: "blur(16px)",
-          borderBottom: "1px solid var(--border-subtle)",
-          position: "relative", zIndex: 45,
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        {/* Top Header Bar */}
+        <header className="flex-shrink-0 h-14 flex items-center justify-between px-4 bg-[#111116]/80 backdrop-blur-md border-b border-white/[0.06] relative z-40 shadow-[0_2px_15px_rgba(0,0,0,0.3)]">
+          <div className="flex items-center gap-2">
             {!sidebarOpen && (
               <button
                 onClick={() => setSidebarOpen(true)}
-                style={{ padding: 7, borderRadius: 8, background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", display: "flex" }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-2)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-primary)"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-muted)"; }}
+                className="p-1.5 rounded-lg bg-transparent border-none text-[#9898b0] hover:text-white cursor-pointer hover:bg-white/[0.03] flex"
               >
-                <SidebarOpen style={{ width: 17, height: 17 }} />
+                <SidebarOpen size={16} />
               </button>
             )}
 
             <button
               onClick={startNewChat}
               title="New chat"
-              style={{ padding: 7, borderRadius: 8, background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", display: "flex" }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-2)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-primary)"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-muted)"; }}
+              className="p-1.5 rounded-lg bg-transparent border-none text-[#9898b0] hover:text-white cursor-pointer hover:bg-white/[0.03] flex"
             >
-              <SquarePen style={{ width: 17, height: 17 }} />
+              <SquarePen size={16} />
             </button>
 
-            {/* Model selector */}
-            <div style={{ position: "relative" }}>
+            {/* Model Selector Dropdown Button */}
+            <div className="relative ml-1">
               <button
                 onClick={() => {
                   if (modelOpen) setShowAllModels(false);
                   setModelOpen(!modelOpen);
                 }}
-                style={{
-                  display: "flex", alignItems: "center", gap: 7,
-                  padding: "6px 12px", borderRadius: 10, fontSize: 13, fontWeight: 500,
-                  background: modelOpen ? "var(--surface-3)" : "var(--surface-2)",
-                  border: "1px solid var(--border-default)", cursor: "pointer",
-                  color: "var(--text-secondary)", transition: "all 0.15s ease",
-                }}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer border transition-colors ${
+                  modelOpen 
+                    ? "bg-[#1c1c24] border-white/[0.12] text-white" 
+                    : "bg-[#16161c] border-white/[0.06] text-[#9898b0] hover:text-white"
+                }`}
               >
-                <MIcon size={16} />
+                <MIcon size={14} />
                 {selectedModel.label}
-                <svg style={{ width: 12, height: 12, transform: modelOpen ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <svg 
+                  className={`w-3 h-3 transition-transform duration-200 ${modelOpen ? "rotate-180" : "rotate-0"}`} 
+                  viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                >
                   <path d="M6 9l6 6 6-6" />
                 </svg>
               </button>
 
-              {modelOpen && (
-                <div style={{
-                  position: "absolute", top: "calc(100% + 6px)", left: 0, width: 240, zIndex: 100,
-                  background: "var(--surface-2)", border: "1px solid var(--border-default)",
-                  borderRadius: 14, padding: "6px",
-                  boxShadow: "0 12px 40px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.3)",
-                  maxHeight: 400, overflowY: "auto"
-                }}>
-                  {(showAllModels ? MODEL_OPTIONS : MODEL_OPTIONS.slice(0, 3)).map((m) => {
-                    const MIcon = m.Icon;
-                    const isActive = m.id === modelId;
-                    return (
+              {/* Model Dropdown Panel */}
+              <AnimatePresence>
+                {modelOpen && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                    transition={{ duration: 0.15, ease: "easeOut" }}
+                    className="absolute top-[calc(100%+6px)] left-0 w-60 z-100 bg-[#16161c] border border-white/[0.08] rounded-xl p-1 shadow-[0_12px_40px_rgba(0,0,0,0.6)] max-h-96 overflow-y-auto"
+                  >
+                    {(showAllModels ? MODEL_OPTIONS : MODEL_OPTIONS.slice(0, 3)).map((m) => {
+                      const ModelIcon = m.Icon;
+                      const isActive = m.id === modelId;
+                      return (
+                        <button
+                          key={m.id}
+                          onClick={() => { setModelId(m.id); setModelOpen(false); setShowAllModels(false); }}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs border-none cursor-pointer text-left transition-colors ${
+                            isActive 
+                              ? "bg-amber-500/10 text-amber-300 font-bold" 
+                              : "bg-transparent text-[#9898b0] hover:bg-white/[0.03] hover:text-white"
+                          }`}
+                        >
+                          <ModelIcon size={15} />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold leading-tight">{m.label}</p>
+                            <p className="text-[10px] text-[#5a5a72] mt-0.5 truncate">{m.desc}</p>
+                          </div>
+                          {isActive && (
+                            <svg className="w-3.5 h-3.5 flex-shrink-0 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                              <path d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </button>
+                      );
+                    })}
+                    
+                    {!showAllModels && (
                       <button
-                        key={m.id}
-                        onClick={() => { setModelId(m.id); setModelOpen(false); setShowAllModels(false); }}
-                        style={{
-                          width: "100%", display: "flex", alignItems: "center", gap: 10,
-                          padding: "10px 12px", borderRadius: 10, fontSize: 13, border: "none", cursor: "pointer",
-                          background: isActive ? "var(--brand-glow)" : "transparent",
-                          color: isActive ? "var(--brand-light)" : "var(--text-secondary)",
-                          transition: "all 0.15s ease",
-                        }}
-                        onMouseEnter={(e) => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-3)"; }}
-                        onMouseLeave={(e) => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+                        onClick={() => setShowAllModels(true)}
+                        className="w-full py-2.5 mt-1 rounded-lg border border-dashed border-white/[0.1] bg-transparent text-[#5a5a72] hover:text-white hover:bg-white/[0.02] text-[11px] font-bold cursor-pointer transition-colors"
                       >
-                        <MIcon size={18} />
-                        <div style={{ textAlign: "left", flex: 1 }}>
-                          <p style={{ fontWeight: 500, marginBottom: 1 }}>{m.label}</p>
-                          <p style={{ fontSize: 11, opacity: 0.6 }}>{m.desc}</p>
-                        </div>
-                        {isActive && (
-                          <svg style={{ width: 14, height: 14, flexShrink: 0 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                            <path d="M5 13l4 4L19 7" />
-                          </svg>
-                        )}
+                        Show 12 more models
                       </button>
-                    );
-                  })}
-                  
-                  {!showAllModels && (
-                    <button
-                      onClick={() => setShowAllModels(true)}
-                      style={{
-                        width: "100%", padding: "10px 12px", marginTop: 4,
-                        borderRadius: 10, border: "1px dashed var(--border-strong)",
-                        background: "transparent", color: "var(--text-muted)",
-                        fontSize: 12, fontWeight: 600, cursor: "pointer",
-                        transition: "all 0.15s ease",
-                      }}
-                      onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-3)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-primary)"; }}
-                      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-muted)"; }}
-                    >
-                      Show 12 more models
-                    </button>
-                  )}
-                </div>
-              )}
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
 
-          {/* Right actions — NO sign out here, that's in Settings */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {/* Right Action Menu */}
+          <div className="flex items-center gap-2">
             {!session && (
-              <button onClick={() => router.push("/signin")} style={{ padding: "6px 14px", borderRadius: 8, background: "var(--text-primary)", color: "var(--bg-primary)", fontSize: 13, fontWeight: 600, border: "none", cursor: "pointer" }}>
+              <button 
+                onClick={() => router.push("/signin")} 
+                className="px-3.5 py-1.5 rounded-lg bg-white text-black text-xs font-bold border-none cursor-pointer"
+              >
                 Sign In
               </button>
             )}
-            {/* Export Menu */}
-            <div style={{ position: "relative" }}>
-              <button onClick={() => {
-                const el = document.getElementById("export-menu");
-                if (el) el.style.display = el.style.display === "none" ? "block" : "none";
-              }} style={{ padding: 7, borderRadius: 8, background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", display: "flex" }}>
-                <Download style={{ width: 16, height: 16 }} />
+            
+            {/* Export Dropdown */}
+            <div className="relative">
+              <button 
+                onClick={() => {
+                  const el = document.getElementById("export-menu");
+                  if (el) el.style.display = el.style.display === "none" ? "block" : "none";
+                }} 
+                className="p-1.5 rounded-lg bg-transparent border-none text-[#9898b0] hover:text-white cursor-pointer hover:bg-white/[0.03] flex"
+              >
+                <Download size={15} />
               </button>
-              <div id="export-menu" style={{ display: "none", position: "absolute", top: "100%", right: 0, marginTop: 8, background: "var(--surface-2)", border: "1px solid var(--border-subtle)", borderRadius: 10, padding: 4, width: 120, zIndex: 100, boxShadow: "0 8px 24px rgba(0,0,0,0.5)" }}>
-                <button onClick={() => { exportChat("pdf"); document.getElementById("export-menu")!.style.display="none"; }} style={{ width: "100%", padding: "8px", background: "transparent", border: "none", borderRadius: 6, color: "var(--text-primary)", fontSize: 13, textAlign: "left", cursor: "pointer" }}>Save as PDF</button>
-                <button onClick={() => { exportChat("doc"); document.getElementById("export-menu")!.style.display="none"; }} style={{ width: "100%", padding: "8px", background: "transparent", border: "none", borderRadius: 6, color: "var(--text-primary)", fontSize: 13, textAlign: "left", cursor: "pointer" }}>Export DOC</button>
-                <button onClick={() => { exportChat("json"); document.getElementById("export-menu")!.style.display="none"; }} style={{ width: "100%", padding: "8px", background: "transparent", border: "none", borderRadius: 6, color: "var(--text-primary)", fontSize: 13, textAlign: "left", cursor: "pointer" }}>Export JSON</button>
+              <div 
+                id="export-menu" 
+                style={{ display: "none" }}
+                className="absolute top-full right-0 mt-1.5 bg-[#16161c] border border-white/[0.08] rounded-lg p-1 w-28 z-100 shadow-[0_8px_24px_rgba(0,0,0,0.5)]"
+              >
+                <button 
+                  onClick={() => { exportChat("pdf"); document.getElementById("export-menu")!.style.display="none"; }} 
+                  className="w-full p-2 bg-transparent border-none rounded-md text-white text-xs text-left cursor-pointer hover:bg-white/[0.03]"
+                >
+                  Save as PDF
+                </button>
+                <button 
+                  onClick={() => { exportChat("doc"); document.getElementById("export-menu")!.style.display="none"; }} 
+                  className="w-full p-2 bg-transparent border-none rounded-md text-white text-xs text-left cursor-pointer hover:bg-white/[0.03]"
+                >
+                  Export DOC
+                </button>
+                <button 
+                  onClick={() => { exportChat("json"); document.getElementById("export-menu")!.style.display="none"; }} 
+                  className="w-full p-2 bg-transparent border-none rounded-md text-white text-xs text-left cursor-pointer hover:bg-white/[0.03]"
+                >
+                  Export JSON
+                </button>
               </div>
             </div>
           </div>
         </header>
 
-        {/* Message area — flex-1 with overflow-y:auto, no fixed height needed */}
-        <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", position: "relative", minHeight: 0 }}>
+        {/* Scrollable Message Area */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden relative min-h-0">
           {messages.length === 0 ? (
-            // Empty state
-            <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 24px", textAlign: "center" }}>
-              <div style={{
-                width: 64, height: 64, borderRadius: 20, marginBottom: 24,
-                background: "linear-gradient(135deg,var(--brand),var(--brand-light))",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                boxShadow: "0 8px 32px var(--brand-glow), 0 16px 48px rgba(0,0,0,0.3)",
-              }}>
-                <AstraIcon size={36} />
-              </div>
-              <h1 style={{ fontSize: "2rem", fontWeight: 800, letterSpacing: "-0.03em", marginBottom: 8, fontFamily: "var(--font-syne,'Syne'),sans-serif" }}>How can I help?</h1>
-              <p style={{ fontSize: 15, color: "var(--text-secondary)", marginBottom: 20 }}>
-                Using <span style={{ color: "var(--brand-light)", fontWeight: 600 }}>{selectedModel.label}</span> mode · {selectedModel.desc}
+            // Redesigned Empty State suggestions
+            <div className="h-full flex flex-col items-center justify-center p-6 text-center max-w-xl mx-auto z-10 relative">
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-300 flex items-center justify-center shadow-[0_8px_25px_rgba(242,169,59,0.3)] mb-6"
+              >
+                <AstraIcon size={30} />
+              </motion.div>
+              
+              <h1 className="text-2xl font-extrabold tracking-tight mb-2 font-display text-white">How can I help?</h1>
+              <p className="text-xs text-[#9898b0] mb-8">
+                Orchestrating <span className="text-amber-300 font-bold">{selectedModel.label}</span> · {selectedModel.desc}
               </p>
 
-              {/* Popular Models Badges */}
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center", marginBottom: 40, maxWidth: 640 }}>
-                <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, padding: "6px 12px", borderRadius: 20, border: "1px solid var(--border-default)", background: "var(--surface-1)", color: "var(--text-secondary)", boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>
-                  <OpenAIIcon size={14} /> GPT-4.5
-                </span>
-                <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, padding: "6px 12px", borderRadius: 20, border: "1px solid var(--border-default)", background: "var(--surface-1)", color: "var(--text-secondary)", boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>
-                  <ClaudeIcon size={14} /> Claude 3.7 Sonnet
-                </span>
-                <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, padding: "6px 12px", borderRadius: 20, border: "1px solid var(--border-default)", background: "var(--surface-1)", color: "var(--text-secondary)", boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>
-                  <DeepSeekIcon size={14} /> DeepSeek V3 / R1
-                </span>
-                <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, padding: "6px 12px", borderRadius: 20, border: "1px solid var(--border-default)", background: "var(--surface-1)", color: "var(--text-secondary)", boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>
-                  <GeminiIcon size={14} /> Gemini 1.5 Pro
-                </span>
-                <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, padding: "6px 12px", borderRadius: 20, border: "1px solid var(--border-default)", background: "var(--surface-1)", color: "var(--text-secondary)", boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2l3 7h7l-5 5 2 8-7-4-7 4 2-8-5-5h7z" /></svg> xAI Grok-2
-                </span>
-                <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, padding: "6px 12px", borderRadius: 20, border: "1px solid var(--border-default)", background: "var(--surface-1)", color: "var(--text-secondary)", boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>
-                  <GroqLogoIcon size={14} /> Llama 3.1 405B
-                </span>
-              </div>
-
-              {/* Suggestion grid */}
-              <div className="mobile-grid-1" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, maxWidth: 580, width: "100%" }}>
+              {/* Suggestions grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
                 {EMPTY_SUGGESTIONS.map((s) => (
-                  <button key={s} onClick={() => handleSend(s)} style={{
-                    textAlign: "left", padding: "16px 18px", borderRadius: 16, fontSize: 14, fontWeight: 400,
-                    background: "var(--surface-1)", border: "1px solid var(--border-default)",
-                    cursor: "pointer", color: "var(--text-secondary)", lineHeight: 1.45,
-                    transition: "all 0.2s ease",
-                  }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--brand)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-primary)"; (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)"; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border-default)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-secondary)"; (e.currentTarget as HTMLButtonElement).style.transform = ""; }}>
+                  <button 
+                    key={s} 
+                    onClick={() => handleSend(s)} 
+                    className="text-left p-4.5 rounded-2xl text-xs sm:text-[13px] font-normal bg-[#16161c]/60 hover:bg-[#1a1a22]/70 border border-white/[0.05] hover:border-amber-500/20 text-[#9898b0] hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5"
+                  >
                     {s}
                   </button>
                 ))}
               </div>
             </div>
           ) : (
-            <div style={{ maxWidth: 760, margin: "0 auto", padding: "32px 24px" }}>
+            <div className="max-w-3xl mx-auto px-6 py-8">
               {messages.map((msg) => (
-                <div key={msg.id} style={{ marginBottom: 28 }}>
+                <div key={msg.id} className="mb-7">
                   <MessageBubble
                     {...msg}
                     sources={msg.sources}
@@ -986,15 +913,16 @@ export default function ChatPage() {
           )}
         </div>
 
-        {/* Composer area */}
-        <div className="mobile-p-sm" style={{ flexShrink: 0, padding: "12px 24px 16px", background: "var(--bg-primary)" }}>
-          <div style={{ maxWidth: 760, margin: "0 auto" }}>
+        {/* Input composer area */}
+        <div className="flex-shrink-0 p-3 sm:p-4 bg-[#0c0c0e]">
+          <div className="max-w-3xl mx-auto">
             {searchingWeb && (
-              <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center", marginBottom: 8, padding: "5px 14px", borderRadius: 20, background: "rgba(242,169,59,0.08)", border: "1px solid rgba(242,169,59,0.2)", width: "fit-content", margin: "0 auto 8px" }}>
-                <div style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--brand)", animation: "thinking 1s ease-in-out infinite" }} />
-                <span style={{ fontSize: 12, color: "var(--brand-light)", fontWeight: 600 }}>🔍 Searching the web…</span>
+              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/[0.08] border border-amber-500/15 w-fit mx-auto mb-3.5 shadow-sm">
+                <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                <span className="text-[11px] color-amber-300 font-semibold">Searching the web...</span>
               </div>
             )}
+            
             <ChatInput
               onSend={handleSend}
               onStop={stopResponse}
@@ -1005,20 +933,21 @@ export default function ChatPage() {
               onAgentModeChange={setAgentModePersist}
               onResearchModeChange={setResearchModePersist}
             />
-            <p style={{ textAlign: "center", fontSize: 11, color: "var(--text-muted)", marginTop: 8 }}>
-              AI can make mistakes. Verify important information. ·{" "}
-              <a href="/disclaimer" style={{ color: "var(--text-muted)", textDecoration: "underline", textUnderlineOffset: 2 }}>API Disclaimer</a>
+            
+            <p className="text-center text-[10px] text-[#5a5a72] mt-2.5">
+              AI can make mistakes. Verify critical output. ·{" "}
+              <a href="/disclaimer" className="text-[#5a5a72] underline underline-offset-2 hover:text-[#9898b0]">Disclaimer</a>
             </p>
           </div>
         </div>
       </main>
 
-      {/* Click-away to close model dropdown */}
+      {/* Click-away overlay to close model selector */}
       {modelOpen && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 40 }} onClick={() => { setModelOpen(false); setShowAllModels(false); }} />
+        <div className="fixed inset-0 z-40" onClick={() => { setModelOpen(false); setShowAllModels(false); }} />
       )}
 
-      {/* Settings Modal */}
+      {/* Settings Dialog */}
       <SettingsModal
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}

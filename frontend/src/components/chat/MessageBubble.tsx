@@ -104,6 +104,23 @@ function getLang(lang?: string): LangConfig {
   };
 }
 
+const getDomain = (urlStr: string) => {
+  try {
+    return new URL(urlStr).hostname.replace("www.", "");
+  } catch {
+    return "Web";
+  }
+};
+
+const getFaviconUrl = (urlStr: string) => {
+  try {
+    const domain = new URL(urlStr).hostname;
+    return `https://www.google.com/s2/favicons?sz=32&domain=${domain}`;
+  } catch {
+    return "";
+  }
+};
+
 // ─── Tool icon mapping ───────────────────────────────────────────────────────
 
 function getToolIcon(tool: string) {
@@ -186,51 +203,96 @@ function CodeBlock({ code, lang }: { code: string; lang?: string }) {
 
   return (
     <div style={{
-      margin: "12px 0", borderRadius: 12, overflow: "hidden",
-      border: "1px solid var(--border-default)", background: "#1a1b26",
-      borderLeft: `3px solid ${cfg.color}`,
+      margin: "16px 0",
+      borderRadius: 12,
+      overflow: "hidden",
+      border: "1px solid var(--border-default)",
+      background: "#0d0e15",
+      boxShadow: "0 8px 30px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05)",
+      transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
     }}>
       {/* Header */}
       <div style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "7px 14px", background: "rgba(255,255,255,0.03)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "10px 16px",
+        background: "rgba(255,255,255,0.02)",
         borderBottom: "1px solid rgba(255,255,255,0.06)",
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {/* macOS window control dots */}
+          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#ff5f56", opacity: 0.85 }} />
+            <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#ffbd2e", opacity: 0.85 }} />
+            <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#27c93f", opacity: 0.85 }} />
+          </div>
           <span style={{
-            display: "inline-flex", alignItems: "center", justifyContent: "center",
-            padding: "2px 7px", borderRadius: 6, fontSize: 10, fontWeight: 800,
-            background: cfg.bg, color: cfg.color, fontFamily: "monospace",
-            border: `1px solid ${cfg.color}30`, letterSpacing: "0.03em",
-            minWidth: 28, textAlign: "center",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "2px 8px",
+            borderRadius: 6,
+            fontSize: 10,
+            fontWeight: 800,
+            background: cfg.bg,
+            color: cfg.color,
+            fontFamily: "monospace",
+            border: `1px solid ${cfg.color}35`,
+            letterSpacing: "0.03em",
+            marginLeft: 8,
           }}>{cfg.badge}</span>
-          <span style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.5)" }}>{cfg.label}</span>
-          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.25)" }}>{lines} lines</span>
+          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)" }}>{cfg.label}</span>
+          <span style={{ fontSize: 11, color: "var(--text-muted)", opacity: 0.75 }}>({lines} lines)</span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {isHTML && (
             <button
               onClick={() => setShowPreview(!showPreview)}
               style={{
-                display: "flex", alignItems: "center", gap: 5, fontSize: 11, padding: "3px 10px",
-                borderRadius: 7, border: `1px solid ${showPreview ? cfg.color + "60" : "rgba(255,255,255,0.12)"}`,
-                background: showPreview ? cfg.bg : "transparent", cursor: "pointer",
-                color: showPreview ? cfg.color : "rgba(255,255,255,0.45)", fontWeight: 600, transition: "all 0.15s",
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+                fontSize: 11,
+                padding: "4px 10px",
+                borderRadius: 6,
+                border: `1px solid ${showPreview ? cfg.color + "60" : "rgba(255,255,255,0.1)"}`,
+                background: showPreview ? cfg.bg : "transparent",
+                cursor: "pointer",
+                color: showPreview ? cfg.color : "var(--text-secondary)",
+                fontWeight: 600,
+                transition: "all 0.2s",
               }}
             >
-              👁 {showPreview ? "Hide" : "Preview"}
+              👁️ {showPreview ? "Hide Preview" : "Live Preview"}
             </button>
           )}
           <button
             onClick={copy}
             style={{
-              display: "flex", alignItems: "center", gap: 5, fontSize: 12, padding: "3px 10px",
-              borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)", background: "transparent",
-              cursor: "pointer", color: "rgba(255,255,255,0.45)", transition: "all 0.15s ease",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: 11,
+              padding: "4px 10px",
+              borderRadius: 6,
+              border: "1px solid rgba(255,255,255,0.08)",
+              background: "rgba(255,255,255,0.02)",
+              cursor: "pointer",
+              color: "var(--text-secondary)",
+              transition: "all 0.2s ease",
               fontWeight: 500,
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.85)")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.45)")}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = "var(--text-primary)";
+              e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+              e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.15)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = "var(--text-secondary)";
+              e.currentTarget.style.background = "rgba(255, 255, 255, 0.02)";
+              e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.08)";
+            }}
           >
             {copied ? <Check style={{ width: 11, height: 11 }} /> : <Copy style={{ width: 11, height: 11 }} />}
             {copied ? "Copied!" : "Copy"}
@@ -245,12 +307,20 @@ function CodeBlock({ code, lang }: { code: string; lang?: string }) {
           style={atomOneDark}
           showLineNumbers={showLineNumbers}
           lineNumberStyle={{
-            color: "rgba(255,255,255,0.18)", fontSize: 12, paddingRight: 16,
-            userSelect: "none", minWidth: 36,
+            color: "rgba(255,255,255,0.12)",
+            fontSize: 11,
+            paddingRight: 16,
+            userSelect: "none",
+            minWidth: 32,
+            textAlign: "right",
           }}
           customStyle={{
-            margin: 0, padding: "14px 18px", background: "transparent",
-            fontSize: 13, lineHeight: 1.7, fontFamily: "var(--font-mono, 'JetBrains Mono', 'Fira Code', monospace)",
+            margin: 0,
+            padding: "16px",
+            background: "transparent",
+            fontSize: 13,
+            lineHeight: 1.65,
+            fontFamily: "var(--font-mono, 'JetBrains Mono', 'Fira Code', monospace)",
           }}
           wrapLongLines={false}
         >
@@ -700,12 +770,18 @@ export default function MessageBubble({
 
   if (isUser) {
     return (
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
         <div style={{
-          maxWidth: "78%", padding: "12px 18px", borderRadius: "20px 20px 6px 20px",
-          background: "var(--surface-2)", border: "1px solid var(--border-default)",
-          color: "var(--text-primary)", fontSize: 14, lineHeight: 1.65,
-          animation: "slideUp 0.3s cubic-bezier(0.16,1,0.3,1)",
+          maxWidth: "75%",
+          padding: "12px 18px",
+          borderRadius: "20px 20px 4px 20px",
+          background: "rgba(255, 255, 255, 0.03)",
+          border: "1px solid var(--border-default)",
+          boxShadow: "0 4px 16px rgba(0, 0, 0, 0.25)",
+          color: "var(--text-primary)",
+          fontSize: 14,
+          lineHeight: 1.7,
+          animation: "slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
           wordBreak: "break-word",
         }}>
           <Markdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
@@ -719,16 +795,21 @@ export default function MessageBubble({
   // ─── Assistant message ────────────────────────────────────────────────────
 
   return (
-    <div style={{ display: "flex", gap: 14, animation: "slideUp 0.35s cubic-bezier(0.16,1,0.3,1)", marginBottom: 8 }}>
+    <div style={{ display: "flex", gap: 16, animation: "slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1)", marginBottom: 16 }}>
       {/* Avatar */}
-      <div style={{ flexShrink: 0, marginTop: 2 }}>
+      <div style={{ flexShrink: 0, marginTop: 4 }}>
         <div style={{
-          width: 30, height: 30, borderRadius: 9,
-          background: "linear-gradient(135deg,var(--brand),var(--brand-light))",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          boxShadow: "0 2px 8px var(--brand-glow)",
+          width: 32,
+          height: 32,
+          borderRadius: 10,
+          background: "linear-gradient(135deg, var(--brand), var(--brand-light))",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          boxShadow: "0 0 12px var(--brand-glow)",
+          border: "1px solid rgba(255, 255, 255, 0.1)",
         }}>
-          <AstraIcon size={18} />
+          <AstraIcon size={20} />
         </div>
       </div>
 
@@ -775,41 +856,127 @@ export default function MessageBubble({
               </Markdown>
               {/* Streaming cursor */}
               {streaming && content && (
-                <span style={{ display: "inline-block", width: 2, height: "1em", background: "var(--brand)", marginLeft: 2, animation: "cursor-blink 1s step-end infinite", verticalAlign: "text-bottom" }} />
+                <span style={{
+                  display: "inline-block",
+                  width: 2,
+                  height: "1.05em",
+                  background: "var(--brand)",
+                  marginLeft: 3,
+                  boxShadow: "0 0 8px var(--brand)",
+                  animation: "cursor-blink 1s step-end infinite",
+                  verticalAlign: "text-bottom"
+                }} />
               )}
             </div>
 
             {/* Sources */}
             {sources && sources.length > 0 && (
               <div style={{
-                marginTop: 14, padding: "12px 14px",
-                background: "rgba(212,118,59,0.06)", border: "1px solid rgba(212,118,59,0.18)",
-                borderRadius: 12,
+                marginTop: 16,
+                padding: "14px 16px",
+                background: "rgba(242, 169, 59, 0.02)",
+                border: "1px solid rgba(242, 169, 59, 0.08)",
+                borderRadius: 14,
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.01)",
               }}>
-                <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--brand-light)", marginBottom: 8 }}>
-                  🔍 Web Sources
+                <p style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: "var(--brand-light)",
+                  marginBottom: 12,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6
+                }}>
+                  <Search style={{ width: 12, height: 12 }} /> Source Citations
                 </p>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {sources.slice(0, 5).map((s, i) => (
-                    <a key={i} href={s.url} target="_blank" rel="noopener noreferrer"
-                      style={{ display: "flex", alignItems: "flex-start", gap: 8, textDecoration: "none", padding: "6px 8px", borderRadius: 8, transition: "background 0.15s" }}
-                      onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "rgba(212,118,59,0.1)"; }}
-                      onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; }}
-                    >
-                      <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", minWidth: 16, marginTop: 1 }}>{i + 1}.</span>
-                      <div>
-                        <p style={{ fontSize: 12, fontWeight: 600, color: "var(--brand-light)", margin: 0, lineHeight: 1.3 }}>{s.title}</p>
-                        {s.snippet && <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "2px 0 0", lineHeight: 1.4 }}>{s.snippet.slice(0, 120)}…</p>}
-                        <p style={{ fontSize: 10, color: "var(--text-disabled, var(--text-muted))", margin: "2px 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 400 }}>{s.url}</p>
-                      </div>
-                    </a>
-                  ))}
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+                  gap: 10
+                }}>
+                  {sources.slice(0, 6).map((s, i) => {
+                    const domain = getDomain(s.url);
+                    const favicon = getFaviconUrl(s.url);
+                    return (
+                      <a key={i} href={s.url} target="_blank" rel="noopener noreferrer"
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 6,
+                          textDecoration: "none",
+                          padding: "10px 12px",
+                          borderRadius: 10,
+                          background: "rgba(255, 255, 255, 0.02)",
+                          border: "1px solid rgba(255, 255, 255, 0.04)",
+                          transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = "rgba(242, 169, 59, 0.05)";
+                          e.currentTarget.style.borderColor = "rgba(242, 169, 59, 0.2)";
+                          e.currentTarget.style.transform = "translateY(-1px)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = "rgba(255, 255, 255, 0.02)";
+                          e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.04)";
+                          e.currentTarget.style.transform = "translateY(0)";
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          {favicon ? (
+                            <img
+                              src={favicon}
+                              alt={domain}
+                              style={{ width: 14, height: 14, borderRadius: 3, objectFit: "contain" }}
+                              onError={(e) => { e.currentTarget.style.display = "none"; }}
+                            />
+                          ) : (
+                            <Globe style={{ width: 14, height: 14, color: "var(--text-muted)" }} />
+                          )}
+                          <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 120 }}>{domain}</span>
+                          <span style={{ fontSize: 10, color: "var(--text-muted)", marginLeft: "auto" }}>[{i + 1}]</span>
+                        </div>
+                        <p style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: "var(--brand-light)",
+                          margin: 0,
+                          lineHeight: 1.3,
+                          overflow: "hidden",
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical"
+                        }}>{s.title}</p>
+                        {s.snippet && (
+                          <p style={{
+                            fontSize: 11,
+                            color: "var(--text-muted)",
+                            margin: 0,
+                            lineHeight: 1.4,
+                            overflow: "hidden",
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical"
+                          }}>{s.snippet.slice(0, 120)}…</p>
+                        )}
+                      </a>
+                    );
+                  })}
                 </div>
               </div>
             )}
 
             {/* Action row */}
-            <div style={{ display: "flex", alignItems: "center", gap: 2, marginTop: 10 }}>
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              marginTop: 14,
+              paddingTop: 8,
+              borderTop: "1px solid rgba(255, 255, 255, 0.03)"
+            }}>
               <CopyBtn text={content} />
 
               {/* TTS */}
@@ -818,7 +985,7 @@ export default function MessageBubble({
                 title={isPlaying ? "Stop voice" : ttsLoading ? "Loading audio…" : "Read aloud (AI voice)"}
                 disabled={ttsLoading && !isPlaying}
                 style={{
-                  padding: "5px 8px", borderRadius: 7,
+                  padding: "5px 10px", borderRadius: 7,
                   background: isPlaying ? "var(--brand-glow)" : ttsLoading ? "rgba(242,169,59,0.08)" : "transparent",
                   border: "none", color: isPlaying ? "var(--brand-light)" : ttsLoading ? "var(--brand)" : "var(--text-muted)",
                   cursor: ttsLoading && !isPlaying ? "wait" : "pointer",

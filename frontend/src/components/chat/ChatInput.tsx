@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Send, Globe, Paperclip, Mic, MicOff, Cpu, Microscope, Square, X } from "lucide-react";
 
 interface ChatInputProps {
@@ -195,6 +196,10 @@ export default function ChatInput({
     fileInputRef.current?.click();
   }, []);
 
+  const removeFile = useCallback((idx: number) => {
+    setAttachedFiles((prev) => prev.filter((_, i) => i !== idx));
+  }, []);
+
   const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
@@ -227,33 +232,45 @@ export default function ChatInput({
       setErrorMsg(null);
     }
 
-    // Reset file input so same file can be re-selected
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  }, []);
-
-  const removeFile = useCallback((idx: number) => {
-    setAttachedFiles((prev) => prev.filter((_, i) => i !== idx));
-  }, []);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }, [setErrorMsg]);
 
   // ─── Derived state ────────────────────────────────────────────────────────
 
   const canSend = (input.trim().length > 0 || attachedFiles.length > 0) && input.length <= 32000 && !isLoading;
-  const borderColor = focused || isListening
-    ? (isListening ? "rgba(248,113,113,0.7)" : "var(--brand)")
+  
+  const isVoiceGlow = isListening;
+  const isAgentGlow = agentMode && focused;
+  const isResearchGlow = researchMode && focused;
+
+  const borderColor = isVoiceGlow
+    ? "rgba(248,113,113,0.8)"
+    : isAgentGlow
+    ? "var(--brand)"
+    : isResearchGlow
+    ? "var(--accent)"
+    : focused
+    ? "rgba(255, 255, 255, 0.2)"
     : "var(--border-default)";
+
   const boxShadow = focused || isListening
-    ? (isListening
-        ? "0 0 0 3px rgba(248,113,113,0.15), 0 4px 20px rgba(0,0,0,0.4)"
-        : "0 0 0 3px var(--brand-glow), 0 4px 20px rgba(0,0,0,0.4)")
-    : "0 2px 12px rgba(0,0,0,0.25)";
+    ? (isVoiceGlow
+        ? "0 0 0 3px rgba(248,113,113,0.15), 0 12px 30px rgba(0,0,0,0.4)"
+        : isAgentGlow
+        ? "0 0 0 3px var(--brand-glow), 0 12px 30px rgba(0,0,0,0.4)"
+        : isResearchGlow
+        ? "0 0 0 3px var(--accent-glow), 0 12px 30px rgba(0,0,0,0.4)"
+        : "0 0 0 3px rgba(255,255,255,0.03), 0 12px 30px rgba(0,0,0,0.4)")
+    : "0 4px 20px rgba(0,0,0,0.3)";
 
   return (
     <div
+      className="bg-[#121217] transition-all duration-300 relative"
       style={{
-        background: "var(--surface-2)",
         border: `1.5px solid ${borderColor}`,
         borderRadius: 18,
-        transition: "border-color 0.2s ease, box-shadow 0.2s ease",
         boxShadow,
       }}
       onClick={() => {
@@ -271,33 +288,32 @@ export default function ChatInput({
       />
 
       {/* Attached files preview */}
-      {attachedFiles.length > 0 && (
-        <div style={{
-          display: "flex", flexWrap: "wrap", gap: 6, padding: "10px 14px 0",
-        }}>
+      <div className="flex flex-wrap gap-2 px-4.5 pt-3.5 EmptyIsEmpty">
+        <AnimatePresence>
           {attachedFiles.map((f, idx) => (
-            <div key={idx} style={{
-              display: "flex", alignItems: "center", gap: 5,
-              padding: "3px 8px 3px 10px", borderRadius: 20,
-              background: "var(--brand-glow)", border: "1px solid rgba(242,169,59,0.3)",
-              fontSize: 11, color: "var(--brand-light)", fontWeight: 600,
-            }}>
+            <motion.div 
+              key={f.name + idx}
+              initial={{ opacity: 0, scale: 0.8, y: 5 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: 5 }}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/[0.08] border border-amber-500/25 text-[11px] text-amber-300 font-semibold shadow-sm"
+            >
               📎 {f.name}
               <button
                 onClick={(e) => { e.stopPropagation(); removeFile(idx); }}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "0 0 0 2px", display: "flex", lineHeight: 1 }}
+                className="bg-transparent border-none cursor-pointer text-[#5a5a72] hover:text-white p-0 flex items-center transition-colors"
               >
-                <X style={{ width: 11, height: 11 }} />
+                <X size={11} />
               </button>
-            </div>
+            </motion.div>
           ))}
-        </div>
-      )}
+        </AnimatePresence>
+      </div>
 
       {/* Textarea row */}
-      <div className="mobile-tight" style={{ padding: "12px 16px 4px" }}>
+      <div className="mobile-tight px-4.5 pt-3.5 pb-1">
         {errorMsg && (
-          <div style={{ fontSize: 12, color: "var(--error)", marginBottom: 6, fontWeight: 500 }}>
+          <div className="text-xs text-[#f5645a] mb-1.5 font-semibold">
             ⚠ {errorMsg}
           </div>
         )}
@@ -312,69 +328,45 @@ export default function ChatInput({
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           disabled={isLoading}
-          placeholder={isListening ? "🎤 Listening… speak now" : "Ask anything… (Shift+Enter for new line)"}
+          placeholder={isListening ? "🎤 Listening... speak now" : "Ask anything... (Shift+Enter for new line)"}
           maxLength={32000}
           rows={1}
           autoComplete="off"
           spellCheck={true}
+          className="w-full resize-none bg-transparent border-none outline-none text-base leading-relaxed overflow-y-auto block p-0 m-0 min-h-6 max-h-[40vh] transition-colors"
           style={{
-            width: "100%",
-            resize: "none",
-            background: "transparent",
-            border: "none",
-            outline: "none",
-            fontSize: 15,
-            lineHeight: 1.6,
             color: isListening ? "#f87171" : "var(--text-primary)",
             fontFamily: "inherit",
-            minHeight: 24,
-            maxHeight: "40vh",
-            overflowY: "auto",
-            display: "block",
-            padding: 0,
-            margin: 0,
-            transition: "color 0.2s ease",
           }}
         />
       </div>
 
       {/* Toolbar */}
       <div
-        className="mobile-tight-toolbar"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "4px 10px 10px",
-        }}
+        className="mobile-tight-toolbar flex items-center justify-between px-3.5 pb-3.5 pt-1.5"
       >
         {/* Left tools */}
-        <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+        <div className="flex items-center gap-1.5">
           {/* Attach file */}
           <button
             title="Attach text file (.py, .js, .txt, .md, etc.)"
             onClick={handleFileAttach}
+            className="p-2 rounded-lg bg-transparent border-none cursor-pointer flex items-center transition-colors"
             style={{
-              padding: 7, borderRadius: 8, background: "transparent", border: "none",
-              color: attachedFiles.length > 0 ? "var(--brand)" : "var(--text-muted)",
-              cursor: "pointer", display: "flex", alignItems: "center",
-              transition: "color 0.15s",
+              color: attachedFiles.length > 0 ? "var(--brand)" : "var(--text-muted)"
             }}
             onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-primary)")}
             onMouseLeave={(e) => (e.currentTarget.style.color = attachedFiles.length > 0 ? "var(--brand)" : "var(--text-muted)")}
           >
-            <Paperclip style={{ width: 14, height: 14 }} />
+            <Paperclip size={14} />
           </button>
 
           {/* Web search (informational — auto-detects) */}
           <button
             title="Web search auto-detects based on your query"
-            style={{
-              padding: 7, borderRadius: 8, background: "transparent", border: "none",
-              color: "var(--text-muted)", cursor: "default", display: "flex", alignItems: "center", opacity: 0.5,
-            }}
+            className="p-2 rounded-lg bg-transparent border-none text-[#5a5a72] opacity-40 cursor-default flex items-center"
           >
-            <Globe style={{ width: 14, height: 14 }} />
+            <Globe size={14} />
           </button>
 
           {/* Voice input */}
@@ -387,49 +379,39 @@ export default function ChatInput({
                 : "Voice input"
             }
             onClick={voiceSupported ? toggleVoice : undefined}
+            className={`p-2 rounded-lg border-none flex items-center transition-all ${
+              isListening ? "bg-[#f5645a]/10" : "bg-transparent"
+            }`}
             style={{
-              padding: 7, borderRadius: 8,
-              background: isListening ? "rgba(248,113,113,0.12)" : "transparent",
-              border: "none",
-              color: isListening ? "#f87171" : voiceSupported ? "var(--text-muted)" : "var(--text-muted)",
+              color: isListening ? "#f87171" : "var(--text-muted)",
               cursor: voiceSupported ? "pointer" : "not-allowed",
-              display: "flex", alignItems: "center",
               opacity: voiceSupported ? 1 : 0.4,
-              transition: "all 0.15s",
               animation: isListening ? "glow-pulse 1.5s ease-in-out infinite" : "none",
             }}
             onMouseEnter={(e) => { if (voiceSupported && !isListening) e.currentTarget.style.color = "var(--text-primary)"; }}
-            onMouseLeave={(e) => { if (!isListening) e.currentTarget.style.color = voiceSupported ? "var(--text-muted)" : "var(--text-muted)"; }}
+            onMouseLeave={(e) => { if (!isListening) e.currentTarget.style.color = "var(--text-muted)"; }}
           >
             {isListening
-              ? <MicOff style={{ width: 14, height: 14 }} />
-              : <Mic style={{ width: 14, height: 14 }} />}
+              ? <MicOff size={14} />
+              : <Mic size={14} />}
           </button>
 
           {/* Agent mode toggle */}
           {onAgentModeChange && (
             <button
               type="button"
-              title={agentMode ? "Agent mode ON — file ops, bash, git clone, code execution" : "Enable Agent mode"}
+              title={agentMode ? "Agent mode ON — file operations and executions enabled" : "Enable Agent mode"}
               onClick={() => onAgentModeChange(!agentMode)}
-              style={{
-                padding: "5px 10px", marginLeft: 4, borderRadius: 8,
-                border: agentMode ? "1px solid var(--brand)" : "1px solid var(--border-default)",
-                background: agentMode ? "var(--brand-glow)" : "transparent",
-                color: agentMode ? "var(--brand-light)" : "var(--text-muted)",
-                cursor: "pointer", display: "flex", alignItems: "center", gap: 5,
-                fontSize: 12, fontWeight: agentMode ? 700 : 500,
-                transition: "all 0.15s ease",
-              }}
+              className={`px-3 py-1.5 rounded-lg flex items-center gap-1 text-[11.5px] cursor-pointer transition-all border ${
+                agentMode 
+                  ? "bg-amber-500/10 border-amber-500/30 text-amber-300 font-bold shadow-sm" 
+                  : "bg-transparent border-white/[0.06] text-[#9898b0] hover:text-white"
+              }`}
             >
-              <Cpu style={{ width: 13, height: 13 }} />
+              <Cpu size={13} />
               <span className="mobile-hidden">Agent</span>
               {agentMode && (
-                <span style={{
-                  fontSize: 9, fontWeight: 800, letterSpacing: "0.05em",
-                  background: "var(--brand)", color: "#1a1410",
-                  padding: "1px 4px", borderRadius: 10,
-                }}>ON</span>
+                <span className="text-[8px] font-extrabold bg-amber-400 text-black px-1.5 py-0.5 rounded ml-0.5 select-none leading-none">ON</span>
               )}
             </button>
           )}
@@ -438,19 +420,15 @@ export default function ChatInput({
           {onResearchModeChange && (
             <button
               type="button"
-              title={researchMode ? "Deep Research ON — multi-source web synthesis" : "Enable Deep Research"}
+              title={researchMode ? "Deep Research ON — multi-source web synthesis enabled" : "Enable Deep Research"}
               onClick={() => onResearchModeChange(!researchMode)}
-              style={{
-                padding: "5px 10px", borderRadius: 8,
-                border: researchMode ? "1px solid var(--accent)" : "1px solid var(--border-default)",
-                background: researchMode ? "rgba(139,122,252,0.12)" : "transparent",
-                color: researchMode ? "var(--accent-light, var(--accent))" : "var(--text-muted)",
-                cursor: "pointer", display: "flex", alignItems: "center", gap: 5,
-                fontSize: 12, fontWeight: researchMode ? 700 : 500,
-                transition: "all 0.15s ease",
-              }}
+              className={`px-3 py-1.5 rounded-lg flex items-center gap-1 text-[11.5px] cursor-pointer transition-all border ${
+                researchMode 
+                  ? "bg-[#8b7afc]/10 border-[#8b7afc]/30 text-[#b0a5ff] font-bold shadow-sm" 
+                  : "bg-transparent border-white/[0.06] text-[#9898b0] hover:text-white"
+              }`}
             >
-              <Microscope style={{ width: 13, height: 13 }} />
+              <Microscope size={13} />
               <span className="mobile-hidden">Research</span>
             </button>
           )}
@@ -458,14 +436,7 @@ export default function ChatInput({
           {/* Model badge */}
           {model && (
             <div
-              className="mobile-hidden"
-              style={{
-                marginLeft: 6, fontSize: 11, fontWeight: 700,
-                padding: "3px 10px", borderRadius: 100,
-                background: "var(--brand-glow)", color: "var(--brand-light)",
-                border: "1px solid rgba(242,169,59,0.25)", letterSpacing: "0.04em",
-                textTransform: "capitalize",
-              }}
+              className="mobile-hidden text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-amber-500/[0.08] border border-amber-500/15 text-amber-300 ml-1.5 uppercase tracking-wide"
             >
               {model}
             </div>
@@ -473,11 +444,11 @@ export default function ChatInput({
 
           {/* Character counter */}
           {input.length > 8000 && (
-            <span style={{
-              fontSize: 11,
-              color: input.length > 28000 ? "var(--error)" : "var(--text-muted)",
-              marginLeft: 8,
-            }}>
+            <span 
+              className={`text-xs ml-2 ${
+                input.length > 28000 ? "text-[#f5645a]" : "text-[#5a5a72]"
+              }`}
+            >
               {input.length.toLocaleString()}/32k
             </span>
           )}
@@ -488,18 +459,9 @@ export default function ChatInput({
           <button
             onClick={onStop}
             title="Stop generating"
-            style={{
-              display: "flex", alignItems: "center", gap: 6,
-              padding: "5px 14px", borderRadius: 10,
-              border: "1px solid rgba(255,80,80,0.35)",
-              background: "rgba(255,80,80,0.1)", color: "#ff5050",
-              fontSize: 12, fontWeight: 700, cursor: "pointer",
-              transition: "all 0.15s ease",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,80,80,0.2)")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,80,80,0.1)")}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-[#f5645a]/30 bg-[#f5645a]/10 hover:bg-[#f5645a]/20 text-[#f87171] text-xs font-bold cursor-pointer transition-all"
           >
-            <Square style={{ width: 12, height: 12 }} />
+            <Square size={11} className="fill-[#f87171]" />
             Stop
           </button>
         ) : (
@@ -507,24 +469,20 @@ export default function ChatInput({
             onClick={handleSend}
             disabled={!canSend}
             aria-label="Send message"
+            className="w-9 h-9 rounded-xl border-none flex items-center justify-center cursor-pointer transition-all flex-shrink-0"
             style={{
-              width: 36, height: 36, borderRadius: 10, border: "none",
               background: canSend
                 ? "linear-gradient(135deg, var(--brand), var(--brand-light))"
                 : "var(--surface-3)",
-              color: canSend ? "#1a1410" : "var(--text-muted)",
-              boxShadow: canSend ? "0 2px 12px var(--brand-glow)" : "none",
-              cursor: canSend ? "pointer" : "default",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              flexShrink: 0,
-              opacity: canSend ? 1 : 0.45,
-              transform: canSend ? "scale(1)" : "scale(0.9)",
-              transition: "all 0.2s cubic-bezier(0.34,1.56,0.64,1)",
+              color: canSend ? "#100c0a" : "var(--text-disabled)",
+              boxShadow: canSend ? "0 4px 14px var(--brand-glow)" : "none",
+              opacity: canSend ? 1 : 0.4,
+              transform: canSend ? "scale(1)" : "scale(0.95)",
             }}
-            onMouseEnter={(e) => { if (canSend) (e.currentTarget as HTMLButtonElement).style.transform = "scale(1.06)"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = canSend ? "scale(1)" : "scale(0.9)"; }}
+            onMouseEnter={(e) => { if (canSend) (e.currentTarget as HTMLButtonElement).style.transform = "scale(1.05)"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = canSend ? "scale(1)" : "scale(0.95)"; }}
           >
-            <Send style={{ width: 15, height: 15 }} />
+            <Send size={15} />
           </button>
         )}
       </div>
