@@ -94,6 +94,7 @@ export default function ChatPage() {
   const [modelOpen, setModelOpen]       = useState(false);
   const [showAllModels, setShowAllModels] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMessageTime = useRef<number>(0);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -550,7 +551,7 @@ export default function ChatPage() {
   const MIcon = selectedModel.Icon;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#0c0c0e] text-[#eeeef2] relative font-sans">
+    <div className="flex h-dvh overflow-hidden bg-[#0c0c0e] text-[#eeeef2] relative font-sans">
       
       {/* Background spotlights */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0" aria-hidden="true">
@@ -586,7 +587,7 @@ export default function ChatPage() {
           {/* Sidebar header */}
           <div className="p-4 border-b border-white/[0.06] flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-7.5 h-7.5 rounded-lg bg-gradient-to-br from-amber-500 to-amber-300 flex items-center justify-center shadow-[0_0_15px_rgba(242,169,59,0.25)]">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-300 flex items-center justify-center shadow-[0_0_15px_rgba(242,169,59,0.25)]">
                 <AstraIcon size={16} />
               </div>
               <span className="font-extrabold text-sm tracking-tight text-white font-display">ASTRAMIND</span>
@@ -766,7 +767,7 @@ export default function ChatPage() {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 8, scale: 0.96 }}
                     transition={{ duration: 0.15, ease: "easeOut" }}
-                    className="absolute top-[calc(100%+6px)] left-0 w-60 z-100 bg-[#16161c] border border-white/[0.08] rounded-xl p-1 shadow-[0_12px_40px_rgba(0,0,0,0.6)] max-h-96 overflow-y-auto"
+                    className="absolute top-[calc(100%+6px)] left-0 w-60 z-[100] bg-[#16161c] border border-white/[0.08] rounded-xl p-1 shadow-[0_12px_40px_rgba(0,0,0,0.6)] max-h-96 overflow-y-auto"
                   >
                     {(showAllModels ? MODEL_OPTIONS : MODEL_OPTIONS.slice(0, 4)).map((m) => {
                       const ModelIcon = m.Icon;
@@ -823,38 +824,38 @@ export default function ChatPage() {
             {/* Export Dropdown */}
             <div className="relative">
               <button 
-                onClick={() => {
-                  const el = document.getElementById("export-menu");
-                  if (el) el.style.display = el.style.display === "none" ? "block" : "none";
-                }} 
+                onClick={() => setExportOpen(!exportOpen)} 
                 className="p-1.5 rounded-lg bg-transparent border-none text-[#9898b0] hover:text-white cursor-pointer hover:bg-white/[0.03] flex"
               >
                 <Download size={15} />
               </button>
-              <div 
-                id="export-menu" 
-                style={{ display: "none" }}
-                className="absolute top-full right-0 mt-1.5 bg-[#16161c] border border-white/[0.08] rounded-lg p-1 w-28 z-100 shadow-[0_8px_24px_rgba(0,0,0,0.5)]"
-              >
-                <button 
-                  onClick={() => { exportChat("pdf"); document.getElementById("export-menu")!.style.display="none"; }} 
-                  className="w-full p-2 bg-transparent border-none rounded-md text-white text-xs text-left cursor-pointer hover:bg-white/[0.03]"
-                >
-                  Save as PDF
-                </button>
-                <button 
-                  onClick={() => { exportChat("doc"); document.getElementById("export-menu")!.style.display="none"; }} 
-                  className="w-full p-2 bg-transparent border-none rounded-md text-white text-xs text-left cursor-pointer hover:bg-white/[0.03]"
-                >
-                  Export DOC
-                </button>
-                <button 
-                  onClick={() => { exportChat("json"); document.getElementById("export-menu")!.style.display="none"; }} 
-                  className="w-full p-2 bg-transparent border-none rounded-md text-white text-xs text-left cursor-pointer hover:bg-white/[0.03]"
-                >
-                  Export JSON
-                </button>
-              </div>
+              {exportOpen && (
+                <>
+                  <div className="fixed inset-0 z-[45]" onClick={() => setExportOpen(false)} />
+                  <div 
+                    className="absolute top-full right-0 mt-1.5 bg-[#16161c] border border-white/[0.08] rounded-lg p-1 w-28 z-[100] shadow-[0_8px_24px_rgba(0,0,0,0.5)]"
+                  >
+                    <button 
+                      onClick={() => { exportChat("pdf"); setExportOpen(false); }} 
+                      className="w-full p-2 bg-transparent border-none rounded-md text-white text-xs text-left cursor-pointer hover:bg-white/[0.03]"
+                    >
+                      Save as PDF
+                    </button>
+                    <button 
+                      onClick={() => { exportChat("doc"); setExportOpen(false); }} 
+                      className="w-full p-2 bg-transparent border-none rounded-md text-white text-xs text-left cursor-pointer hover:bg-white/[0.03]"
+                    >
+                      Export DOC
+                    </button>
+                    <button 
+                      onClick={() => { exportChat("json"); setExportOpen(false); }} 
+                      className="w-full p-2 bg-transparent border-none rounded-md text-white text-xs text-left cursor-pointer hover:bg-white/[0.03]"
+                    >
+                      Export JSON
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </header>
@@ -884,7 +885,7 @@ export default function ChatPage() {
                   <button 
                     key={s} 
                     onClick={() => handleSend(s)} 
-                    className="text-left p-4.5 rounded-2xl text-xs sm:text-[13px] font-normal bg-[#16161c]/60 hover:bg-[#1a1a22]/70 border border-white/[0.05] hover:border-amber-500/20 text-[#9898b0] hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5"
+                    className="text-left p-4 rounded-2xl text-xs sm:text-[13px] font-normal bg-[#16161c]/60 hover:bg-[#1a1a22]/70 border border-white/[0.05] hover:border-amber-500/20 text-[#9898b0] hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5"
                   >
                     {s}
                   </button>
@@ -916,7 +917,7 @@ export default function ChatPage() {
             {searchingWeb && (
               <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/[0.08] border border-amber-500/15 w-fit mx-auto mb-3.5 shadow-sm">
                 <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                <span className="text-[11px] color-amber-300 font-semibold">Searching the web...</span>
+                <span className="text-[11px] text-amber-300 font-semibold">Searching the web...</span>
               </div>
             )}
             
@@ -941,7 +942,7 @@ export default function ChatPage() {
 
       {/* Click-away overlay to close model selector */}
       {modelOpen && (
-        <div className="fixed inset-0 z-40" onClick={() => { setModelOpen(false); setShowAllModels(false); }} />
+        <div className="fixed inset-0 z-[45]" onClick={() => { setModelOpen(false); setShowAllModels(false); }} />
       )}
 
       {/* Settings Dialog */}

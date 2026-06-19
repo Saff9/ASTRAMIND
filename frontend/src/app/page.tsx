@@ -133,7 +133,7 @@ export default function HomePage() {
                 </Link>
                 <button 
                   onClick={() => router.push("/signin")} 
-                  className="bg-transparent border border-white/[0.1] hover:border-white/20 text-[#9898b0] hover:text-white px-4.5 py-2 rounded-xl text-sm font-semibold cursor-pointer transition-all duration-200"
+                  className="bg-transparent border border-white/[0.1] hover:border-white/20 text-[#9898b0] hover:text-white px-5 py-2 rounded-xl text-sm font-semibold cursor-pointer transition-all duration-200"
                 >
                   Sign in
                 </button>
@@ -248,10 +248,10 @@ export default function HomePage() {
           Supported Architectures & Frameworks
         </p>
         
-        <div className="absolute left-0 top-0 bottom-0 w-[15%] bg-gradient-to-r from-[#0c0c0e] to-transparent z-2 pointer-events-none" />
-        <div className="absolute right-0 top-0 bottom-0 w-[15%] bg-gradient-to-l from-[#0c0c0e] to-transparent z-2 pointer-events-none" />
+        <div className="absolute left-0 top-0 bottom-0 w-[15%] bg-gradient-to-r from-[#0c0c0e] to-transparent z-[2] pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-[15%] bg-gradient-to-l from-[#0c0c0e] to-transparent z-[2] pointer-events-none" />
 
-        <div className="flex width-[200%] marquee-container">
+        <div className="flex w-[200%] marquee-container">
           <div className="flex w-1/2 justify-between items-center px-10 opacity-30 filter grayscale hover:grayscale-0 hover:opacity-85 transition-all duration-500 animate-[marquee_45s_linear_infinite]">
             <div className="flex items-center gap-2 text-white">
               <OpenAIIcon size={22} /> <span className="font-extrabold tracking-tight text-base">OpenAI</span>
@@ -342,7 +342,7 @@ export default function HomePage() {
           {FEATURES.map((f, i) => (
             <div 
               key={i} 
-              className="glass-card rounded-2xl p-6.5 hover:border-amber-500/20 group"
+              className="glass-card rounded-2xl p-7 hover:border-amber-500/20 group"
             >
               <div className="w-10 h-10 rounded-lg bg-white/[0.02] border border-white/[0.05] group-hover:border-amber-500/20 group-hover:bg-amber-500/[0.02] flex items-center justify-center mb-5 transition-all duration-300">
                 {f.icon}
@@ -368,10 +368,10 @@ export default function HomePage() {
           ].map((item, i) => (
             <div 
               key={i} 
-              className="glass-card rounded-2xl p-5.5 text-center relative overflow-hidden group hover:border-amber-500/15"
+              className="glass-card rounded-2xl p-6 text-center relative overflow-hidden group hover:border-amber-500/15"
             >
               <div className="absolute top-2 right-4 text-4xl font-black text-white/[0.02] font-display select-none">{item.step}</div>
-              <div className="text-3.5xl mb-3">{item.emoji}</div>
+              <div className="text-4xl mb-3">{item.emoji}</div>
               <h3 className="text-sm font-bold mb-2.5 text-white">{item.title}</h3>
               <p className="text-xs text-[#9898b0] leading-relaxed opacity-85">{item.desc}</p>
             </div>
@@ -474,22 +474,23 @@ export default function HomePage() {
               <Link href="#features" className="text-xs text-[#9898b0] hover:text-amber-300 no-underline transition-colors duration-200">Documentation</Link>
               <Link href="/privacy" className="text-xs text-[#9898b0] hover:text-amber-300 no-underline transition-colors duration-200">Privacy Policy</Link>
               <Link href="/disclaimer" className="text-xs text-[#9898b0] hover:text-amber-300 no-underline transition-colors duration-200">API Disclaimer</Link>
-              <Link href="/privacy" className="text-xs text-[#9898b0] hover:text-amber-300 no-underline transition-colors duration-200">Terms of Service</Link>
+              <Link href="/disclaimer" className="text-xs text-[#9898b0] hover:text-amber-300 no-underline transition-colors duration-200">Terms of Service</Link>
             </div>
 
             <div>
               <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-2">Newsletter</h4>
               <p className="text-[11px] text-[#9898b0] mb-3">Get release notes and updates.</p>
-              <div className="flex gap-2">
+              <form onSubmit={(e) => e.preventDefault()} className="flex gap-2">
                 <input 
                   type="email" 
                   placeholder="Enter email" 
                   className="flex-1 px-3 py-1.5 rounded-lg border border-white/[0.08] bg-white/[0.02] text-white text-xs outline-none focus:border-amber-500 transition-colors"
+                  required
                 />
-                <button className="bg-[#1c1c24] hover:bg-white text-white hover:text-black border border-white/[0.08] hover:border-transparent px-3 rounded-lg text-xs font-bold cursor-pointer transition-all duration-200">
+                <button type="submit" className="bg-[#1c1c24] hover:bg-white text-white hover:text-black border border-white/[0.08] hover:border-transparent px-3 rounded-lg text-xs font-bold cursor-pointer transition-all duration-200">
                   Join
                 </button>
-              </div>
+              </form>
             </div>
           </div>
 
@@ -499,7 +500,7 @@ export default function HomePage() {
             </p>
             <div className="flex gap-4">
               {["Twitter", "GitHub", "Discord"].map((social) => (
-                <span key={social} className="text-[11px] text-[#5a5a72] hover:text-white cursor-pointer transition-colors duration-200">{social}</span>
+                <a key={social} href="#" className="text-[11px] text-[#5a5a72] hover:text-white cursor-pointer transition-colors duration-200 no-underline">{social}</a>
               ))}
             </div>
           </div>

@@ -136,7 +136,7 @@ export default function PrivacyPage() {
           color: "var(--brand-light)", letterSpacing: "0.06em",
         }}>
           <Shield style={{ width: 13, height: 13 }} />
-          LAST UPDATED: 11 APRIL 2025
+          LAST UPDATED: JUNE 2026
         </div>
         <h1 style={{
           fontSize: "clamp(2rem, 5vw, 3.2rem)", fontWeight: 800, letterSpacing: "-0.03em",
@@ -225,7 +225,7 @@ export default function PrivacyPage() {
             <a href="mailto:privacy@astramind.ai" style={{ color: "var(--brand-light)", textDecoration: "none", fontWeight: 600 }}>
               privacy@astramind.ai
             </a>
-            <br />ASTRAMIND Technologies Pvt. Ltd. · All rights reserved © 2025
+            <br />ASTRAMIND Technologies Pvt. Ltd. · All rights reserved © 2026
           </p>
         </div>
       </main>

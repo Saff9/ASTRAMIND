@@ -288,7 +288,7 @@ export default function ChatInput({
       />
 
       {/* Attached files preview */}
-      <div className="flex flex-wrap gap-2 px-4.5 pt-3.5 EmptyIsEmpty">
+      <div className="flex flex-wrap gap-2 px-5 pt-3">
         <AnimatePresence>
           {attachedFiles.map((f, idx) => (
             <motion.div 
@@ -311,7 +311,7 @@ export default function ChatInput({
       </div>
 
       {/* Textarea row */}
-      <div className="mobile-tight px-4.5 pt-3.5 pb-1">
+      <div className="mobile-tight px-5 pt-3 pb-1">
         {errorMsg && (
           <div className="text-xs text-[#f5645a] mb-1.5 font-semibold">
             ⚠ {errorMsg}

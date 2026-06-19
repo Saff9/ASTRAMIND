@@ -203,14 +203,6 @@ export default function SignInPage() {
       </div>
 
       <style>{`
-        @keyframes scaleIn {
-          from { opacity: 0; transform: scale(0.92) translateY(14px); }
-          to   { opacity: 1; transform: scale(1) translateY(0); }
-        }
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to   { transform: rotate(360deg); }
-        }
         @keyframes logoPulse {
           0%, 100% { box-shadow: 0 8px 32px var(--brand-glow), 0 0 0 10px rgba(212,118,59,0.08); }
           50%       { box-shadow: 0 8px 32px var(--brand-glow), 0 0 0 14px rgba(212,118,59,0.16); }

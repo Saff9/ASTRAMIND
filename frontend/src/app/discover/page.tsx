@@ -106,7 +106,7 @@ export default function DiscoverPage() {
       {/* ═══ STICKY HEADER ═══ */}
       <header style={{
         position: "sticky", top: 0, zIndex: 50,
-        background: "rgba(18,14,10,0.92)", backdropFilter: "blur(20px)",
+        background: "rgba(12,12,14,0.88)", backdropFilter: "blur(20px)",
         borderBottom: "1px solid var(--border-subtle)", padding: "0 24px",
       }}>
         <div style={{ maxWidth: 1280, margin: "0 auto", height: 60, display: "flex", alignItems: "center", gap: 16 }}>
@@ -251,7 +251,7 @@ export default function DiscoverPage() {
             {featured && (
               <a href={featured.source_url} target="_blank" rel="noreferrer" style={{ display: "block", textDecoration: "none", marginBottom: 28 }}>
                 <div style={{
-                  display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0,
+                  display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 0,
                   background: "var(--surface-1)", border: "1px solid var(--border-subtle)",
                   borderRadius: 24, overflow: "hidden", transition: "all 0.3s ease",
                   minHeight: 300,
@@ -322,10 +322,7 @@ export default function DiscoverPage() {
         )}
       </section>
 
-      <style>{`
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-        @keyframes spin { to { transform: rotate(360deg); } }
-      `}</style>
+      {/* Keyframes moved to globals.css */}
     </div>
   );
 }

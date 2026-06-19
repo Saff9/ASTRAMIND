@@ -119,6 +119,17 @@ export default function PricingPage() {
   return (
     <div style={{ background: "var(--bg-primary)", minHeight: "100vh", color: "var(--text-primary)", position: "relative" }}>
 
+      {/* Nav */}
+      <nav style={{ padding: "0 24px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", position: "sticky", top: 0, zIndex: 50, background: "rgba(12,12,14,0.88)", backdropFilter: "blur(20px)" }}>
+        <a href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", color: "var(--text-muted)", fontSize: 14, fontWeight: 500 }}>
+          ← Back to Home
+        </a>
+        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-muted)" }}>Pricing</span>
+        <a href="/chat" style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: "var(--brand-light)", textDecoration: "none", padding: "6px 14px", borderRadius: 10, background: "var(--brand-glow)", border: "1px solid rgba(242,169,59,0.2)" }}>
+          Open Chat
+        </a>
+      </nav>
+
       {/* Glow background */}
       <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, overflow: "hidden" }}>
         <div style={{ position: "absolute", top: -200, left: "50%", transform: "translateX(-50%)", width: 700, height: 700, borderRadius: "50%", background: "radial-gradient(circle, rgba(242,169,59,0.12) 0%, transparent 70%)", filter: "blur(80px)" }} />
