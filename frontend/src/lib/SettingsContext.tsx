@@ -61,6 +61,7 @@ function applyFont(font: FontId) {
 
 // ─── Provider ────────────────────────────────────────────────────────
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://astramind-reer.onrender.com";
   const [theme, setThemeState] = useState<Theme>("dark");
   const [font, setFontState] = useState<FontId>("dm");
   const [vibration, setVibrationState] = useState<boolean>(true);
@@ -81,7 +82,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     }, 0);
 
     // Background sync from backend — optional, fails silently if unauthenticated
-    fetch("/api/v1/user/config", {
+    fetch(`${apiBase}/api/v1/user/config`, {
       headers: { "Content-Type": "application/json" },
     })
       .then(res => res.ok ? res.json() : null)
@@ -107,7 +108,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   // Sync settings back to server (fire-and-forget, fails silently if unauthenticated)
   const syncToBackend = async (payload: { preferred_theme?: string, preferred_font?: string, last_used_model?: string }) => {
     try {
-      await fetch("/api/v1/user/config", {
+      await fetch(`${apiBase}/api/v1/user/config`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
