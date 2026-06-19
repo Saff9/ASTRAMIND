@@ -5,7 +5,7 @@ import { Smartphone, Download, Check, Shield, Zap, RefreshCw, Monitor, Globe, Ar
 import { AstraIcon } from "@/components/common/ProviderIcons";
 
 const GITHUB_RELEASE_URL = "https://github.com/Saff9/ASTRAMIND/releases/latest";
-const APP_VERSION = "2.0.4";
+const APP_VERSION = "2.0.5";
 
 export default function DownloadPage() {
   return (

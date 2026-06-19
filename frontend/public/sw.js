@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'astramind-v2.0.4';
+const CACHE_VERSION = 'astramind-v2.0.5';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const ALL_CACHES = [STATIC_CACHE, DYNAMIC_CACHE];
