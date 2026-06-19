@@ -768,7 +768,7 @@ export default function ChatPage() {
                     transition={{ duration: 0.15, ease: "easeOut" }}
                     className="absolute top-[calc(100%+6px)] left-0 w-60 z-100 bg-[#16161c] border border-white/[0.08] rounded-xl p-1 shadow-[0_12px_40px_rgba(0,0,0,0.6)] max-h-96 overflow-y-auto"
                   >
-                    {(showAllModels ? MODEL_OPTIONS : MODEL_OPTIONS.slice(0, 3)).map((m) => {
+                    {(showAllModels ? MODEL_OPTIONS : MODEL_OPTIONS.slice(0, 4)).map((m) => {
                       const ModelIcon = m.Icon;
                       const isActive = m.id === modelId;
                       return (
@@ -800,7 +800,7 @@ export default function ChatPage() {
                         onClick={() => setShowAllModels(true)}
                         className="w-full py-2.5 mt-1 rounded-lg border border-dashed border-white/[0.1] bg-transparent text-[#5a5a72] hover:text-white hover:bg-white/[0.02] text-[11px] font-bold cursor-pointer transition-colors"
                       >
-                        Show 12 more models
+                        Show {MODEL_OPTIONS.length - 4} more models
                       </button>
                     )}
                   </motion.div>
