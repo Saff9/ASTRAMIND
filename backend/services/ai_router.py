@@ -668,7 +668,19 @@ class AIRouter:
             raise ValueError("Prompt must be a non-empty string")
         if not model:
             raise ValueError("Model name is required")
+
+        valid_providers = {
+            "groq", "openrouter", "together", "mistral", "cerebras",
+            "siliconflow", "openai", "google_ai_studio", "cloudflare",
+            "alibaba_bailian", "deepseek", "xai", "anthropic", "cohere",
+            "ai21", "novita", "sambanova", "huggingface", "local"
+        }
+        if provider not in valid_providers:
+            raise ValueError(f"Unknown provider: '{provider}'")
+
         if not self._has_keys(provider):
+            if provider == "groq":
+                raise ValueError("No Groq API keys configured")
             raise ValueError(f"No API keys configured for provider: {provider}")
 
         try:

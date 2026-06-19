@@ -118,6 +118,18 @@ MODEL_CONFIGS: Dict[str, Dict] = {
 
 # Mapping for specific model names → tier
 MODEL_MAPPING: Dict[str, str] = {
+    # Custom frontend model placeholders
+    "claude 4.8":              "smart",
+    "claude-4.8":              "smart",
+    "kimi":                    "smart",
+    "meta":                    "balanced",
+    "grok coder":              "smart",
+    "grok-coder":              "smart",
+    "qwen":                    "balanced",
+    "deepseek nlu":            "balanced",
+    "deepseek-nlu":            "balanced",
+    "qgpt":                    "smart",
+
     # Smart / Reasoning tier
     "gpt-4.5":                 "smart",
     "claude-3-7-sonnet":       "smart",

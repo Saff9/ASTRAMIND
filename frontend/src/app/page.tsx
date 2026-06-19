@@ -8,8 +8,10 @@ import {
   Zap, Shield, GitBranch, Globe,
   Sparkles, ArrowRight, Code2, Search, Lightbulb, MessageSquare, ChevronRight, Download, Smartphone,
 } from "lucide-react";
-import { GroqLogoIcon, OpenAIIcon, ClaudeIcon, GeminiIcon, DeepSeekIcon, MistralIcon } from "@/components/common/ProviderIcons";
-import { AstraIcon } from "@/components/common/ProviderIcons";
+import { 
+  GroqLogoIcon, OpenAIIcon, ClaudeIcon, GeminiIcon, DeepSeekIcon, MistralIcon,
+  KimiIcon, GrokIcon, QwenIcon, QGPTIcon, MetaIcon, AstraIcon
+} from "@/components/common/ProviderIcons";
 import { neonAuthClient } from "@/lib/auth-client";
 
 const PROMPTS = [
@@ -21,12 +23,13 @@ const PROMPTS = [
 ];
 
 const PROVIDERS = [
-  { name: "Groq",     ms: "45ms",   color: "#F55036", Icon: GroqLogoIcon },
-  { name: "Gemini",   ms: "310ms",  color: "#4285F4", Icon: GeminiIcon },
-  { name: "Claude",   ms: "890ms",  color: "#CC785C", Icon: ClaudeIcon },
-  { name: "DeepSeek", ms: "520ms",  color: "#4D6BFE", Icon: DeepSeekIcon },
-  { name: "Mistral",  ms: "280ms",  color: "#F7431C", Icon: MistralIcon },
-  { name: "OpenAI",   ms: "680ms",  color: "#74aa9c", Icon: OpenAIIcon },
+  { name: "Claude 4.8",    ms: "950ms",  color: "#D97757", Icon: ClaudeIcon },
+  { name: "Kimi",          ms: "820ms",  color: "#14C775", Icon: KimiIcon },
+  { name: "Meta",          ms: "450ms",  color: "#0064E0", Icon: MetaIcon },
+  { name: "Grok Coder",    ms: "1100ms", color: "#FFFFFF", Icon: GrokIcon },
+  { name: "Qwen",          ms: "880ms",  color: "#6A3AE3", Icon: QwenIcon },
+  { name: "DeepSeek NLU",  ms: "750ms",  color: "#4D6BFE", Icon: DeepSeekIcon },
+  { name: "QGPT",          ms: "980ms",  color: "#0080FF", Icon: QGPTIcon },
 ];
 
 const FEATURES = [
@@ -298,7 +301,7 @@ export default function HomePage() {
           <p className="text-center text-[10px] font-bold tracking-wider uppercase text-[#9898b0] mb-8">
             Dynamic Model Routing and Latency Metrics
           </p>
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-4">
             {PROVIDERS.map((p) => {
               const Icon = p.Icon;
               return (

@@ -77,6 +77,16 @@ def _get_client_ip(request: Request) -> str:
         return xri.strip()
     return request.client.host if request.client else "unknown"
 
+
+def is_continuation_prompt(prompt: str) -> bool:
+    continuation_keywords = {
+        "continue", "then continue", "go on", "resume", "cont", 
+        "continue please", "please continue", "carry on", "keep going", "proceed"
+    }
+    cleaned = "".join(c for c in prompt.lower() if c.isalnum() or c.isspace()).strip()
+    return cleaned in continuation_keywords
+
+
 # ===== BACKGROUND TASKS =====
 
 async def atomic_increment_quota(user_id: int, db: AsyncSession) -> bool:
@@ -381,6 +391,31 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
             if m.role in ("user", "assistant") and m.content
         ]
 
+        # Check for continuation
+        is_cont = is_continuation_prompt(payload.prompt)
+        last_assistant_idx = -1
+        if is_cont:
+            for i in range(len(history_msgs) - 1, -1, -1):
+                if history_msgs[i]["role"] == "assistant":
+                    last_assistant_idx = i
+                    break
+
+        if is_cont and last_assistant_idx != -1:
+            logger.info(f"Continuation detected for user {user_email}. Modifying last assistant message.")
+            from services.conversation_store import clean_assistant_response, clean_last_assistant_message
+            original_content = history_msgs[last_assistant_idx]["content"]
+            cleaned_content = clean_assistant_response(original_content)
+            history_msgs[last_assistant_idx]["content"] = cleaned_content
+            
+            # Clean database history for last assistant message
+            await clean_last_assistant_message(user_email)
+            
+            # Instruct provider to continue
+            safe_prompt = (
+                "Please continue the response to the previous prompt from where it was interrupted. "
+                "Start directly with the continuation, without repeating the initial part."
+            )
+
         # Load active workspace/session context from SQLite
         memory_suffix = ""
         if db is not None and user_email:
@@ -492,7 +527,7 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
                 if db is not None and user_email and full_text:
                     try:
                         from services.conversation_store import save_message, summarize_if_needed
-                        await save_message(db, user_email, "user", safe_prompt)
+                        await save_message(db, user_email, "user", payload.prompt)
                         await save_message(db, user_email, "assistant", full_text)
                         await summarize_if_needed(db, user_email, ai_router)
                     except Exception as e:
@@ -542,7 +577,7 @@ async def chat(  # CRITICAL SECURITY: Zero Trust Implementation
                 system_suffix=agent_system_suffix + memory_suffix,
                 local_time=payload.local_time,
                 user_email=user_email,
-                user_prompt=safe_prompt,
+                user_prompt=payload.prompt,
                 ai_router=ai_router,
             )
 
@@ -827,6 +862,29 @@ async def agent_stream(
         if m.role in ("user", "assistant") and m.content
     ]
 
+    # Check for continuation
+    is_cont = is_continuation_prompt(payload.prompt)
+    last_assistant_idx = -1
+    if is_cont:
+        for i in range(len(history_msgs) - 1, -1, -1):
+            if history_msgs[i]["role"] == "assistant":
+                last_assistant_idx = i
+                break
+
+    if is_cont and last_assistant_idx != -1:
+        logger.info(f"Continuation detected in agent stream for user {user_email}. Modifying last assistant message.")
+        from services.conversation_store import clean_assistant_response, clean_last_assistant_message
+        original_content = history_msgs[last_assistant_idx]["content"]
+        cleaned_content = clean_assistant_response(original_content)
+        history_msgs[last_assistant_idx]["content"] = cleaned_content
+        
+        await clean_last_assistant_message(user_email)
+        
+        safe_prompt = (
+            "Please continue the response to the previous prompt from where it was interrupted. "
+            "Start directly with the continuation, without repeating the initial part."
+        )
+
     # Load active workspace/session context from SQLite
     memory_suffix = ""
     if db is not None and user_email:
@@ -941,7 +999,7 @@ async def agent_stream(
             if db is not None and user_email and final_response_text:
                 try:
                     from services.conversation_store import save_message, summarize_if_needed
-                    await save_message(db, user_email, "user", safe_prompt)
+                    await save_message(db, user_email, "user", payload.prompt)
                     await save_message(db, user_email, "assistant", final_response_text)
                     await summarize_if_needed(db, user_email, ai_router)
                 except Exception as save_err:

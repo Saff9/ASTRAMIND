@@ -36,6 +36,44 @@ async def save_message(db: Any, user_email: str, role: str, content: str) -> Non
         logger.error(f"Failed to save message to SQLite: {e}", exc_info=True)
 
 
+def clean_assistant_response(text: str) -> str:
+    err_patterns = [
+        "I'm having trouble connecting to my AI providers right now. Trying to reconnect... Please wait a moment. 🔄",
+        "Sorry, we're experiencing technical difficulties. Please try again in a moment! ✨",
+        " [cancelled]"
+    ]
+    cleaned = text
+    for pattern in err_patterns:
+        cleaned = cleaned.replace(pattern, "")
+    return cleaned.strip()
+
+
+async def clean_last_assistant_message(user_email: str) -> None:
+    """Find the last assistant message in SQLite and strip error patterns from it."""
+    if not user_email:
+        return
+    try:
+        async with get_sqlite_db_session() as local_db:
+            if not local_db:
+                return
+            stmt = (
+                select(ConversationMessage)
+                .where(ConversationMessage.user_email == user_email)
+                .order_by(ConversationMessage.id.desc())
+                .limit(1)
+            )
+            result = await local_db.execute(stmt)
+            msg = result.scalars().first()
+            if msg and msg.role == "assistant":
+                cleaned = clean_assistant_response(msg.content)
+                if cleaned != msg.content:
+                    msg.content = cleaned
+                    await local_db.commit()
+                    logger.info(f"Cleaned up last assistant message in SQLite for {user_email}")
+    except Exception as e:
+        logger.error(f"Failed to clean last assistant message in SQLite: {e}", exc_info=True)
+
+
 async def get_conversation_history(db: Any, user_email: str, limit: int = 50) -> List[Dict[str, str]]:
     """Retrieve conversation history from local SQLite (ordered by oldest first for injection)."""
     if not user_email:

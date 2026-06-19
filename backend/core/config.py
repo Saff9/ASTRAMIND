@@ -161,7 +161,7 @@ class Settings(BaseSettings):
     RATE_LIMIT_PER_MINUTE: int = Field(default=60)
     RATE_LIMIT_WINDOW_SECONDS: int = Field(default=60)
     USER_DAILY_QUOTA: int = Field(
-        default=30,
+        default=50,
         description="Default daily request quota per free user"
     )
     ADMIN_DAILY_QUOTA: int = Field(
@@ -169,7 +169,7 @@ class Settings(BaseSettings):
         description="Daily request quota for admin users"
     )
     PREMIUM_DAILY_QUOTA: int = Field(
-        default=300,
+        default=200,
         description="Daily request quota for premium users"
     )
     ENABLE_QUOTA_TIERS: bool = Field(

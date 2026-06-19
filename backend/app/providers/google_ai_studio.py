@@ -77,7 +77,7 @@ class GoogleAIStudioProvider(AIProvider):
                     async with client.stream(
                         "POST",
                         url,
-                        params={"key": api_key.strip()},
+                        params={"key": api_key.strip(), "alt": "sse"},
                         headers=headers,
                         json=payload,
                     ) as response:
@@ -88,7 +88,7 @@ class GoogleAIStudioProvider(AIProvider):
                 async with self._client.stream(
                     "POST",
                     url,
-                    params={"key": api_key.strip()},
+                    params={"key": api_key.strip(), "alt": "sse"},
                     headers=headers,
                     json=payload,
                     timeout=timeout,
@@ -133,10 +133,20 @@ async def _iterate_google_stream_text(response: httpx.Response) -> AsyncIterator
     async for line in response.aiter_lines():
         if not line:
             continue
+        line_str = line.strip()
+        if line_str.startswith("data: "):
+            line_str = line_str[6:]
+        if line_str == "[" or line_str == "]":
+            continue
+        if line_str.startswith(","):
+            line_str = line_str[1:]
+        line_str = line_str.strip()
+        if not line_str:
+            continue
         try:
-            obj = json.loads(line)
+            obj = json.loads(line_str)
         except json.JSONDecodeError as e:
-            logger.debug("Skipping malformed JSON from Google AI: %s... Error: %s", line[:100], e)
+            logger.debug("Skipping malformed JSON from Google AI: %s... Error: %s", line_str[:100], e)
             continue
         except Exception as e:
             logger.debug("Error parsing Google AI response line: %s", e)

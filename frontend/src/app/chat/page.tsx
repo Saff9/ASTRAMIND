@@ -13,7 +13,8 @@ import ChatInput from "@/components/chat/ChatInput";
 import SettingsModal from "@/components/chat/SettingsModal";
 import { 
   GroqLogoIcon, ClaudeIcon, DeepSeekIcon, AstraIcon,
-  OpenAIIcon, GeminiIcon, MistralIcon, MetaIcon 
+  OpenAIIcon, GeminiIcon, MistralIcon, MetaIcon,
+  KimiIcon, GrokIcon, QwenIcon, QGPTIcon
 } from "@/components/common/ProviderIcons";
 import { neonAuthClient } from "@/lib/auth-client";
 import { useSettings } from "@/lib/SettingsContext";
@@ -41,23 +42,19 @@ interface ChatSession {
 }
 
 const MODEL_OPTIONS = [
-  // Top 3 (Always shown initially)
+  // Top Models (Always shown initially)
+  { id: "claude-4.8",       label: "Claude 4.8",          Icon: ClaudeIcon,   desc: "Next-gen reasoning",       provider: "Anthropic", model: "claude-4.8",       tier: "smart",    speedMs: 1300 },
+  { id: "kimi",             label: "Kimi",                Icon: KimiIcon,     desc: "Moonshot's smart assistant", provider: "Moonshot", model: "kimi",            tier: "smart",    speedMs: 1100 },
+  { id: "meta",             label: "Meta",                Icon: MetaIcon,     desc: "Llama open intelligence",    provider: "Meta",      model: "meta",            tier: "balanced", speedMs: 450 },
+  { id: "grok-coder",       label: "Grok Coder",          Icon: GrokIcon,     desc: "xAI's coding expert",        provider: "xAI",       model: "grok-coder",      tier: "smart",    speedMs: 1200 },
+  // The rest (Shown on 'Show more')
+  { id: "qwen",             label: "Qwen",                Icon: QwenIcon,     desc: "Alibaba's top model",        provider: "Alibaba",   model: "qwen",            tier: "balanced", speedMs: 900 },
+  { id: "deepseek-nlu",     label: "DeepSeek NLU",        Icon: DeepSeekIcon, desc: "Language understanding",      provider: "DeepSeek",  model: "deepseek-nlu",    tier: "balanced", speedMs: 800 },
+  { id: "qgpt",             label: "QGPT",                Icon: QGPTIcon,     desc: "Enhanced GPT model",         provider: "OpenAI",    model: "qgpt",            tier: "smart",    speedMs: 1000 },
   { id: "gpt-4.5",          label: "GPT-4.5",             Icon: OpenAIIcon,   desc: "Flagship multi-modal",     provider: "OpenAI",    model: "gpt-4.5",          tier: "smart",    speedMs: 1200 },
   { id: "claude-sonnet",    label: "Claude 3.7 Sonnet",   Icon: ClaudeIcon,   desc: "Top coding & reasoning",   provider: "Anthropic", model: "claude-3-7-sonnet",tier: "smart",    speedMs: 1600 },
   { id: "llama-3-70b",      label: "Llama 3.3 70B",       Icon: GroqLogoIcon, desc: "Lightning fast open weight",provider:"Groq",      model: "llama-3.3-70b",    tier: "balanced", speedMs: 400 },
-  // The rest (Shown on 'Show more')
   { id: "deepseek-r1",      label: "DeepSeek R1",         Icon: DeepSeekIcon, desc: "Advanced reasoning",       provider: "DeepSeek",  model: "deepseek-reasoner",tier: "smart",    speedMs: 2500 },
-  { id: "gpt-4o-mini",      label: "GPT-4o Mini",         Icon: OpenAIIcon,   desc: "Fast & affordable",        provider: "OpenAI",    model: "gpt-4o-mini",      tier: "fast",     speedMs: 600 },
-  { id: "claude-haiku",     label: "Claude 3.5 Haiku",    Icon: ClaudeIcon,   desc: "Fastest from Anthropic",   provider: "Anthropic", model: "claude-3-haiku",   tier: "fast",     speedMs: 700 },
-  { id: "gemini-2-flash",   label: "Gemini 2.0 Flash",    Icon: GeminiIcon,   desc: "Google's fastest",         provider: "Google",    model: "gemini-2.0-flash", tier: "fast",     speedMs: 500 },
-  { id: "gemini-pro",       label: "Gemini 1.5 Pro",      Icon: GeminiIcon,   desc: "Large context window",     provider: "Google",    model: "gemini-1.5-pro",   tier: "smart",    speedMs: 1800 },
-  { id: "mistral-large",    label: "Mistral Large",       Icon: MistralIcon,  desc: "European flagship",        provider: "Mistral",   model: "mistral-large",    tier: "smart",    speedMs: 1500 },
-  { id: "mistral-small",    label: "Mistral Small",       Icon: MistralIcon,  desc: "Efficient & fast",         provider: "Mistral",   model: "mistral-small",    tier: "fast",     speedMs: 600 },
-  { id: "llama-3-8b",       label: "Llama 3.1 8B",        Icon: GroqLogoIcon, desc: "Sub-100ms responses",      provider: "Groq",      model: "llama-3.1-8b",     tier: "fast",     speedMs: 200 },
-  { id: "deepseek-chat",    label: "DeepSeek V3",         Icon: DeepSeekIcon, desc: "Standard chat model",      provider: "DeepSeek",  model: "deepseek-chat",    tier: "fast",     speedMs: 1100 },
-  { id: "grok-2",           label: "Grok 2",              Icon: MetaIcon, /* Using placeholder Meta icon for grok */ desc: "Real-time knowledge",      provider: "xAI",       model: "grok-2",           tier: "balanced", speedMs: 1300 },
-  { id: "phi-3",            label: "Phi-3 Mini",          Icon: AstraIcon,    desc: "Microsoft's small model",  provider: "Azure",     model: "phi-3-mini",       tier: "fast",     speedMs: 400 },
-  { id: "qwen-max",         label: "Qwen Max",            Icon: AstraIcon,    desc: "Alibaba's top model",      provider: "Alibaba",   model: "qwen-max",         tier: "smart",    speedMs: 1400 },
 ];
 
 const EMPTY_SUGGESTIONS = [
@@ -91,7 +88,7 @@ export default function ChatPage() {
   const [searchingWeb, setSearchingWeb] = useState(false);
   const [agentMode, setAgentMode] = useState(false);
   const [researchMode, setResearchMode] = useState(false);
-  const [modelId, setModelId]     = useState("gpt-4.5");
+  const [modelId, setModelId]     = useState("claude-4.8");
   const [sidebarOpen, setSidebarOpen]   = useState(true);
   const [isMobile, setIsMobile]         = useState(false);
   const [modelOpen, setModelOpen]       = useState(false);

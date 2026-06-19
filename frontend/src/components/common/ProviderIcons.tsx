@@ -81,8 +81,43 @@ export function MistralIcon({ size = 20, ...props }: IconProps) {
 
 export function MetaIcon({ size = 20, ...props }: IconProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z"/>
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor" {...props}>
+      <path fillRule="evenodd" d="M8.217 5.243C9.145 3.988 10.171 3 11.483 3 13.96 3 16 6.153 16.001 9.907c0 2.29-.986 3.725-2.757 3.725-1.543 0-2.395-.866-3.924-3.424l-.667-1.123-.118-.197a54.944 54.944 0 0 0-.53-.877l-1.178 2.08c-1.673 2.925-2.615 3.541-3.923 3.541C1.086 13.632 0 12.217 0 9.973 0 6.388 1.995 3 4.598 3c.319 0 .625.039.924.122.31.086.611.22.913.407.577.359 1.154.915 1.782 1.714Zm1.516 2.224c-.252-.41-.494-.787-.727-1.133L9 6.326c.845-1.305 1.543-1.954 2.372-1.954 1.723 0 3.102 2.537 3.102 5.653 0 1.188-.39 1.877-1.195 1.877-.773 0-1.142-.51-2.61-2.87l-.937-1.565ZM4.846 4.756c.725.1 1.385.634 2.34 2.001A212.13 212.13 0 0 0 5.551 9.3c-1.357 2.126-1.826 2.603-2.581 2.603-.777 0-1.24-.682-1.24-1.9 0-2.602 1.298-5.264 2.846-5.264.091 0 .181.006.27.018Z"/>
+    </svg>
+  );
+}
+
+export function KimiIcon({ size = 20, ...props }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" {...props}>
+      <rect width="24" height="24" rx="6" fill="#14C775" />
+      <path d="M7 6V18H9.5V13.5L14.5 18H18L12.5 12L17.5 6H14L9.5 10.5V6H7Z" fill="white" />
+    </svg>
+  );
+}
+
+export function GrokIcon({ size = 20, ...props }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" {...props}>
+      <path d="M4.5 3h3.5l4 6 4-6h3.5L14 11.5 20.5 21h-3.5l-5-7.5-5 7.5H3.5L10 12.5 4.5 3Z" />
+    </svg>
+  );
+}
+
+export function QwenIcon({ size = 20, ...props }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" {...props}>
+      <rect width="24" height="24" rx="6" fill="#6A3AE3" />
+      <path fillRule="evenodd" clipRule="evenodd" d="M12 5C8.13401 5 5 8.13401 5 12C5 13.9189 5.7709 15.6576 7.02126 16.9248L6 19.5L9.0838 18.4721C9.97607 18.8143 10.9579 19 12 19C15.866 19 19 15.866 19 12C19 8.13401 15.866 5 12 5ZM12 8C14.2091 8 16 9.79086 16 12C16 14.2091 14.2091 16 12 16C10.8954 16 9.89543 15.5523 9.17157 14.8284L7.5 15.5L8.17157 13.8284C7.55228 13.2091 7.17157 12.2091 7.17157 11C7.17157 8.79086 8.96243 8 11.1716 8H12Z" fill="white" />
+    </svg>
+  );
+}
+
+export function QGPTIcon({ size = 20, ...props }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" {...props}>
+      <rect width="24" height="24" rx="6" fill="#0080FF" />
+      <path d="M12 7C9.24 7 7 9.24 7 12C7 14.76 9.24 17 12 17C13.1 17 14.1 16.64 14.92 16.03L17 18.11L18.11 17L16.03 14.92C16.64 14.1 17 13.1 17 12C17 9.24 14.76 7 12 7ZM12 15C10.34 15 9 13.66 9 12C9 10.34 10.34 9 12 9C13.66 9 15 10.34 15 12C15 13.66 13.66 15 12 15Z" fill="white" />
     </svg>
   );
 }
