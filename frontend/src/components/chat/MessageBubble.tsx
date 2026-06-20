@@ -9,7 +9,11 @@ import {
   Search, Terminal, Code2, FolderGit2, Globe,
   Loader2, CheckCircle2, XCircle, FileText, Cpu,
 } from "lucide-react";
-import { AstraIcon } from "@/components/common/ProviderIcons";
+import { 
+  AstraIcon, GroqLogoIcon, ClaudeIcon, DeepSeekIcon, OpenAIIcon,
+  GeminiIcon, MistralIcon, MetaIcon, KimiIcon, GrokIcon,
+  QwenIcon, QGPTIcon, PerplexityIcon
+} from "@/components/common/ProviderIcons";
 import { HTMLPreview } from "./HTMLPreview";
 import SyntaxHighlighter from "react-syntax-highlighter";
 import { atomOneDark } from "react-syntax-highlighter/dist/esm/styles/hljs";
@@ -131,6 +135,31 @@ function getToolIcon(tool: string) {
   if (t === "run_code") return <Code2 style={{ width: 13, height: 13 }} />;
   if (t === "read_file" || t === "write_file" || t === "create_file" || t === "list_dir") return <FileText style={{ width: 13, height: 13 }} />;
   return <Cpu style={{ width: 13, height: 13 }} />;
+}
+
+// ─── Model icon mapping ───────────────────────────────────────────────────────
+
+function getModelInfo(modelId?: string) {
+  if (!modelId) return { name: "ASTRAMIND", Icon: AstraIcon };
+  
+  switch(modelId) {
+    case "claude-4.8":
+    case "claude-3-7-sonnet": return { name: "Claude", Icon: ClaudeIcon };
+    case "gpt-4.5": return { name: "GPT-4.5", Icon: QGPTIcon };
+    case "qgpt": return { name: "QGPT Ultra", Icon: OpenAIIcon };
+    case "gemini-2.0": return { name: "Gemini", Icon: GeminiIcon };
+    case "sonar-huge":
+    case "perplexity": return { name: "Perplexity", Icon: PerplexityIcon };
+    case "meta": return { name: "Meta Llama", Icon: MetaIcon };
+    case "grok-coder": return { name: "Grok", Icon: GrokIcon };
+    case "qwen": return { name: "Qwen", Icon: QwenIcon };
+    case "deepseek-nlu":
+    case "deepseek-reasoner": return { name: "DeepSeek", Icon: DeepSeekIcon };
+    case "mistral-large": return { name: "Mistral", Icon: MistralIcon };
+    case "kimi": return { name: "Kimi", Icon: KimiIcon };
+    case "llama-3.3-70b": return { name: "Groq Llama", Icon: GroqLogoIcon };
+    default: return { name: "ASTRAMIND", Icon: AstraIcon };
+  }
 }
 
 // ─── CopyBtn ─────────────────────────────────────────────────────────────────
@@ -599,6 +628,7 @@ function stripMarkdownForTTS(text: string): string {
 export default function MessageBubble({
   role,
   content,
+  model,
   timestamp,
   loading,
   streaming,
@@ -793,6 +823,8 @@ export default function MessageBubble({
   }
 
   // ─── Assistant message ────────────────────────────────────────────────────
+  
+  const { name: ModelName, Icon: ModelIcon } = getModelInfo(model);
 
   return (
     <div style={{ display: "flex", gap: 16, animation: "slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1)", marginBottom: 16 }}>
@@ -809,14 +841,14 @@ export default function MessageBubble({
           boxShadow: "0 0 12px var(--brand-glow)",
           border: "1px solid rgba(255, 255, 255, 0.1)",
         }}>
-          <AstraIcon size={20} />
+          <ModelIcon size={20} />
         </div>
       </div>
 
       <div style={{ flex: 1, minWidth: 0 }}>
         {/* Label row */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--brand-light)" }}>ASTRAMIND</span>
+          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--brand-light)" }}>{ModelName}</span>
           {streaming && (
             <span style={{
               fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase",

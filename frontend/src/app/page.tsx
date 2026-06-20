@@ -204,23 +204,25 @@ export default function HomePage() {
           </p>
 
           {/* Composer Typing Simulation Card */}
-          <div className="w-full max-w-2xl glass-card rounded-2xl p-6 mb-12 text-left animate-pulse-glow relative">
-            <div className="flex items-center justify-between mb-4 relative">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-bg-elevated border border-border-strong flex items-center justify-center shadow-inner">
-                  <AstraIcon size={14} className="text-brand-400" />
+          <div className="relative w-full max-w-2xl mb-12">
+            <div className="absolute -inset-1 bg-gradient-to-r from-brand-500/30 via-accent-500/30 to-brand-500/30 rounded-3xl blur-lg opacity-50 animate-pulse-glow z-0" />
+            <div className="w-full glass-card rounded-2xl p-6 text-left relative z-10 border border-border-strong/50 bg-bg-panel/80 backdrop-blur-2xl shadow-2xl">
+              <div className="flex items-center justify-between mb-4 relative">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500/20 to-transparent border border-brand-500/30 flex items-center justify-center shadow-inner">
+                    <AstraIcon size={14} className="text-brand-400" />
+                  </div>
+                  <span className="text-sm font-semibold text-brand-300 uppercase tracking-wider drop-shadow-sm">Try asking ASTRAMIND...</span>
                 </div>
-                <span className="text-sm font-semibold text-text-dim uppercase tracking-wider">Try asking ASTRAMIND...</span>
-              </div>
               
               <div className="relative z-20">
                 <button 
                   onClick={() => setShowDropdown(!showDropdown)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-bg-elevated border border-border-dim hover:border-brand-500/50 text-sm font-semibold text-text-muted hover:text-white transition-all cursor-pointer shadow-sm group"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-bg-base/80 border border-brand-500/20 hover:border-brand-500 text-sm font-bold text-white transition-all cursor-pointer shadow-[0_0_15px_rgba(255,255,255,0.05)] hover:shadow-[0_0_20px_rgba(var(--brand-rgb),0.2)] group"
                 >
-                  <selectedModel.Icon size={14} />
+                  <selectedModel.Icon size={15} />
                   <span>{selectedModel.name}</span>
-                  <ChevronDown size={14} className={`transition-transform duration-200 ${showDropdown ? "rotate-180" : ""}`} />
+                  <ChevronDown size={14} className={`text-brand-400 transition-transform duration-200 ${showDropdown ? "rotate-180" : ""}`} />
                 </button>
 
                 {/* Dropdown Menu */}
@@ -258,13 +260,13 @@ export default function HomePage() {
               </div>
             </div>
             
-            <p className="text-lg sm:text-xl font-medium text-white min-h-[60px] leading-relaxed mb-6">
+            <p className="text-xl sm:text-2xl font-semibold min-h-[60px] leading-relaxed mb-6 bg-clip-text text-transparent bg-gradient-to-r from-white via-white/90 to-text-muted">
               {displayText}
-              <span className={`inline-block w-0.5 h-5 ml-1 bg-brand-400 align-middle ${typing ? "animate-pulse" : "opacity-0"}`} />
+              <span className={`inline-block w-0.5 h-6 ml-1 bg-brand-400 align-middle ${typing ? "animate-pulse" : "opacity-0"}`} />
             </p>
 
             {/* Suggestions */}
-            <div className="flex flex-wrap gap-3 pt-5 border-t border-border-dim">
+            <div className="flex flex-wrap gap-3 pt-5 border-t border-border-strong/50">
               {SUGGESTIONS.map((s) => (
                 <Link key={s.label} href="/chat" className="no-underline flex-1 min-w-[140px]">
                   <button className="w-full flex justify-center items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-bg-elevated hover:bg-brand-500/10 text-text-muted hover:text-brand-300 border border-border-dim hover:border-brand-500/30 cursor-pointer transition-all duration-300 hover-lift">
@@ -273,6 +275,7 @@ export default function HomePage() {
                 </Link>
               ))}
             </div>
+          </div>
           </div>
 
           {/* CTA Action Bar */}
