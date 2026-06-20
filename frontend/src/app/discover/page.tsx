@@ -2,27 +2,26 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, Compass, Clock, Search, ExternalLink, RefreshCw, TrendingUp, Zap, Brain, Globe } from "lucide-react";
+import { ArrowLeft, Compass, Clock, Search, ExternalLink, RefreshCw, TrendingUp, Zap, Brain, Globe, Flame } from "lucide-react";
 import { AstraIcon } from "@/components/common/ProviderIcons";
 
 interface NewsItem {
-  id: number;
+  id: string;
   title: string;
-  summary: string;
   source_name: string;
   source_url: string;
-  image_url: string | null;
   published_at: string;
+  points: number;
 }
 
 const CATEGORIES = ["All", "Models", "Research", "Tools", "Companies"];
 
 const CATEGORY_QUERIES: Record<string, string> = {
-  All: "",
-  Models: "language model",
-  Research: "research paper",
-  Tools: "AI tool developer",
-  Companies: "OpenAI Anthropic Google Meta",
+  All: "AI OR LLM OR OpenAI OR Claude OR Anthropic OR Gemini",
+  Models: "LLM OR \"language model\" OR GPT OR Claude OR Gemini",
+  Research: "paper OR \"research\" OR arxiv OR reasoning",
+  Tools: "\"AI tool\" OR framework OR agents OR RAG",
+  Companies: "OpenAI OR Anthropic OR Google OR Meta OR xAI",
 };
 
 function formatTimeAgo(dateString: string) {
@@ -45,8 +44,6 @@ function getDomainFavicon(url: string): string {
   }
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
-
 export default function DiscoverPage() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,26 +51,47 @@ export default function DiscoverPage() {
   const [category, setCategory] = useState("All");
   const [search, setSearch] = useState("");
   const [error, setError] = useState(false);
-  const [source, setSource] = useState<"live" | "fallback">("live");
 
-  const fetchNews = useCallback(async (showRefresh = false) => {
-    if (showRefresh) setRefreshing(true);
+  const fetchNews = useCallback(async (cat: string, isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
     else setLoading(true);
     setError(false);
 
     try {
-      const res = await fetch(`${API_BASE}/api/v1/discover/feed`, {
-        cache: "no-store",
-      });
-
+      const query = encodeURIComponent(CATEGORY_QUERIES[cat] || "AI");
+      // Fetch from HackerNews Algolia API
+      const res = await fetch(`https://hn.algolia.com/api/v1/search_by_date?query=${query}&tags=story&hitsPerPage=24`);
+      
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       
-      if (data?.items?.length > 0) {
-        setNews(data.items);
-        setSource(data.source === "fallback" ? "fallback" : "live");
+      if (data?.hits?.length > 0) {
+        const mapped: NewsItem[] = data.hits.map((hit: any) => {
+          let domain = "news.ycombinator.com";
+          try { domain = new URL(hit.url).hostname.replace('www.', ''); } catch { }
+          return {
+            id: hit.objectID,
+            title: hit.title,
+            source_name: hit.url ? domain : "HackerNews",
+            source_url: hit.url || `https://news.ycombinator.com/item?id=${hit.objectID}`,
+            published_at: hit.created_at,
+            points: hit.points || 1,
+          };
+        });
+        
+        // Boost items with higher points slightly to the top, but keep mostly chronological
+        const sorted = mapped.sort((a, b) => {
+          const timeA = new Date(a.published_at).getTime();
+          const timeB = new Date(b.published_at).getTime();
+          // Complex scoring: recency + points weight
+          const scoreA = timeA + (a.points * 600000); 
+          const scoreB = timeB + (b.points * 600000);
+          return scoreB - scoreA;
+        });
+
+        setNews(sorted);
       } else {
-        setError(true);
+        setNews([]);
       }
     } catch (err) {
       console.warn("Discover fetch failed:", err);
@@ -84,245 +102,236 @@ export default function DiscoverPage() {
     }
   }, []);
 
-  useEffect(() => { fetchNews(); }, [fetchNews]);
+  useEffect(() => { 
+    fetchNews(category); 
+  }, [category, fetchNews]);
 
-  // Filter news
+  // Client-side search filter
   const filtered = news.filter(item => {
-    const matchSearch = !search ||
-      item.title.toLowerCase().includes(search.toLowerCase()) ||
-      item.summary?.toLowerCase().includes(search.toLowerCase());
-    const matchCategory = category === "All" ||
-      item.title.toLowerCase().includes(CATEGORY_QUERIES[category]?.toLowerCase() || "") ||
-      item.summary?.toLowerCase().includes(CATEGORY_QUERIES[category]?.toLowerCase() || "");
-    return matchSearch && matchCategory;
+    if (!search) return true;
+    return item.title.toLowerCase().includes(search.toLowerCase()) || 
+           item.source_name.toLowerCase().includes(search.toLowerCase());
   });
 
   const featured = filtered[0];
   const rest = filtered.slice(1);
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg-primary)", color: "var(--text-primary)" }}>
+    <div className="min-h-screen bg-bg-base text-text-main font-sans selection:bg-brand-500/30 selection:text-white">
 
       {/* ═══ STICKY HEADER ═══ */}
-      <header style={{
-        position: "sticky", top: 0, zIndex: 50,
-        background: "rgba(12,12,14,0.88)", backdropFilter: "blur(20px)",
-        borderBottom: "1px solid var(--border-subtle)", padding: "0 24px",
-      }}>
-        <div style={{ maxWidth: 1280, margin: "0 auto", height: 60, display: "flex", alignItems: "center", gap: 16 }}>
-          <Link href="/chat">
-            <button style={{
-              padding: "7px 14px", borderRadius: 10, background: "var(--surface-2)",
-              border: "1px solid var(--border-default)", color: "var(--text-secondary)",
-              cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 13,
-              fontWeight: 500, transition: "all 0.2s",
-            }}
-            onMouseEnter={e => e.currentTarget.style.color = "var(--text-primary)"}
-            onMouseLeave={e => e.currentTarget.style.color = "var(--text-secondary)"}>
-              <ArrowLeft size={14} /> Back
+      <header className="sticky top-0 z-50 bg-bg-panel/80 backdrop-blur-xl border-b border-border-dim">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center gap-4">
+          <Link href="/chat" className="no-underline">
+            <button className="px-3.5 py-2 rounded-xl bg-bg-elevated border border-border-dim text-text-muted hover:text-white cursor-pointer flex items-center gap-2 text-sm font-semibold transition-colors hover:bg-bg-hover">
+              <ArrowLeft size={16} /> Back
             </button>
           </Link>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ width: 30, height: 30, borderRadius: 9, background: "linear-gradient(135deg,var(--brand),var(--brand-light))", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <AstraIcon size={17} />
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center shadow-lg shadow-brand-500/20">
+              <AstraIcon size={16} className="text-white" />
             </div>
-            <span style={{ fontWeight: 700, fontSize: 17, letterSpacing: "-0.01em" }}>Discover</span>
-            {source === "live" && (
-              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", padding: "3px 8px", borderRadius: 100, background: "rgba(34,197,94,0.15)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.3)" }}>
-                ● LIVE
-              </span>
-            )}
+            <span className="font-display font-extrabold text-lg tracking-tight hidden sm:block">Discover</span>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 shadow-sm ml-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-[10px] font-bold text-emerald-400 tracking-widest uppercase">Live Feed</span>
+            </div>
           </div>
 
-          <div style={{ flex: 1 }} />
+          <div className="flex-1" />
 
-          {/* Search */}
-          <div style={{
-            display: "flex", alignItems: "center", gap: 8,
-            background: "var(--surface-2)", padding: "7px 14px",
-            borderRadius: 100, border: "1px solid var(--border-subtle)", width: 240,
-            transition: "border-color 0.2s",
-          }}>
-            <Search size={13} color="var(--text-muted)" />
+          {/* Search Bar */}
+          <div className="hidden sm:flex items-center gap-2 bg-bg-elevated px-4 py-2 rounded-xl border border-border-dim focus-within:border-brand-500/50 focus-within:ring-1 focus-within:ring-brand-500/50 transition-all w-64">
+            <Search size={14} className="text-text-muted" />
             <input
               type="text"
-              placeholder="Search AI news..."
+              placeholder="Search news..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              style={{ background: "transparent", border: "none", color: "var(--text-primary)", fontSize: 13, outline: "none", width: "100%" }}
+              className="bg-transparent border-none text-text-main text-sm outline-none w-full placeholder:text-text-dim"
             />
           </div>
 
-          <button onClick={() => fetchNews(true)} disabled={refreshing} style={{
-            padding: "7px 14px", borderRadius: 10, background: "var(--surface-2)",
-            border: "1px solid var(--border-default)", color: "var(--text-secondary)",
-            cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 13,
-            transition: "all 0.2s", opacity: refreshing ? 0.5 : 1,
-          }}>
-            <RefreshCw size={13} style={{ animation: refreshing ? "spin 1s linear infinite" : "none" }} />
-            Refresh
+          <button 
+            onClick={() => fetchNews(category, true)} 
+            disabled={refreshing} 
+            className="px-3.5 py-2 rounded-xl bg-brand-500/10 hover:bg-brand-500/20 border border-brand-500/20 text-brand-400 cursor-pointer flex items-center gap-2 text-sm font-semibold transition-all disabled:opacity-50"
+          >
+            <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
+            <span className="hidden sm:inline">Refresh</span>
           </button>
         </div>
       </header>
 
-      {/* ═══ HERO ═══ */}
-      <section style={{ maxWidth: 1280, margin: "0 auto", padding: "48px 24px 32px" }}>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 24 }}>
+      <main className="max-w-7xl mx-auto px-6 pt-12 pb-24">
+        {/* ═══ HERO TITLE ═══ */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12">
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-              <Compass size={28} color="var(--brand-light)" />
-              <h1 style={{ fontSize: "2.4rem", fontWeight: 900, fontFamily: "var(--font-syne, Syne), sans-serif", letterSpacing: "-0.04em" }}>
-                AI Intelligence Feed
+            <div className="flex items-center gap-3 mb-4">
+              <Compass size={32} className="text-brand-400" />
+              <h1 className="text-4xl md:text-5xl font-display font-extrabold tracking-tighter">
+                AI Intelligence
               </h1>
             </div>
-            <p style={{ fontSize: 15, color: "var(--text-secondary)", maxWidth: 560, lineHeight: 1.6 }}>
-              Live AI & tech news curated by AstraMind — updated every 30 minutes from across the web.
+            <p className="text-text-muted text-base max-w-xl leading-relaxed">
+              Real-time, unfiltered AI technology news directly from the community. Live updates, zero delays.
             </p>
           </div>
 
-          {/* Stats bar */}
-          <div style={{ display: "flex", gap: 20 }}>
+          {/* Stats Bar */}
+          <div className="flex gap-6 bg-bg-elevated border border-border-dim p-4 rounded-2xl shadow-inner">
             {[
-              { icon: <TrendingUp size={14} />, label: "Stories", value: filtered.length.toString() },
-              { icon: <Zap size={14} />, label: "Updated", value: "30m" },
-              { icon: <Globe size={14} />, label: "Sources", value: "Live" },
-              { icon: <Brain size={14} />, label: "AI Focus", value: "100%" },
-            ].map(s => (
-              <div key={s.label} style={{ textAlign: "center" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--brand-light)", justifyContent: "center", marginBottom: 2 }}>
+              { icon: <TrendingUp size={16} />, label: "Stories", value: "24+" },
+              { icon: <Zap size={16} />, label: "Latency", value: "<1s" },
+              { icon: <Globe size={16} />, label: "Sources", value: "Live HN" },
+            ].map((s, idx) => (
+              <div key={idx} className="flex flex-col items-center">
+                <div className="flex items-center gap-1.5 text-brand-400 mb-1">
                   {s.icon}
-                  <span style={{ fontSize: 16, fontWeight: 800 }}>{s.value}</span>
+                  <span className="text-lg font-bold">{s.value}</span>
                 </div>
-                <div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>{s.label}</div>
+                <div className="text-[10px] text-text-dim uppercase tracking-widest font-bold">{s.label}</div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Category chips */}
-        <div style={{ display: "flex", gap: 8, marginTop: 28, flexWrap: "wrap" }}>
+        {/* ═══ CATEGORY CHIPS ═══ */}
+        <div className="flex flex-wrap gap-2 mb-12">
           {CATEGORIES.map(cat => (
-            <button key={cat} onClick={() => setCategory(cat)} style={{
-              padding: "6px 16px", borderRadius: 100, fontSize: 13, fontWeight: 600,
-              cursor: "pointer", transition: "all 0.2s", border: "1px solid",
-              borderColor: category === cat ? "var(--brand)" : "var(--border-subtle)",
-              background: category === cat ? "rgba(242,169,59,0.15)" : "var(--surface-1)",
-              color: category === cat ? "var(--brand-light)" : "var(--text-secondary)",
-            }}>
+            <button 
+              key={cat} 
+              onClick={() => setCategory(cat)} 
+              className={`px-5 py-2 rounded-full text-sm font-bold cursor-pointer transition-all duration-200 border shadow-sm ${
+                category === cat 
+                  ? "bg-brand-500 text-bg-base border-brand-400 shadow-brand-500/20" 
+                  : "bg-bg-elevated text-text-muted border-border-dim hover:border-border-strong hover:text-white"
+              }`}
+            >
               {cat}
             </button>
           ))}
         </div>
-      </section>
 
-      {/* ═══ CONTENT ═══ */}
-      <section style={{ maxWidth: 1280, margin: "0 auto", padding: "0 24px 80px" }}>
+        {/* ═══ CONTENT GRID ═══ */}
         {loading ? (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 20 }}>
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} style={{ background: "var(--surface-1)", border: "1px solid var(--border-subtle)", borderRadius: 20, overflow: "hidden" }}>
-                <div style={{ height: 180, background: "var(--surface-2)", animation: "pulse 1.5s ease-in-out infinite" }} />
-                <div style={{ padding: 20 }}>
-                  <div style={{ height: 12, background: "var(--surface-2)", borderRadius: 6, marginBottom: 12, width: "60%", animation: "pulse 1.5s ease-in-out infinite" }} />
-                  <div style={{ height: 18, background: "var(--surface-2)", borderRadius: 6, marginBottom: 8, animation: "pulse 1.5s ease-in-out infinite" }} />
-                  <div style={{ height: 14, background: "var(--surface-2)", borderRadius: 6, width: "80%", animation: "pulse 1.5s ease-in-out infinite" }} />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} className="bg-bg-panel border border-border-dim rounded-2xl p-6 h-48 flex flex-col justify-between">
+                <div className="space-y-3">
+                  <div className="h-4 bg-bg-elevated rounded animate-pulse w-3/4" />
+                  <div className="h-4 bg-bg-elevated rounded animate-pulse w-full" />
+                  <div className="h-4 bg-bg-elevated rounded animate-pulse w-5/6" />
+                </div>
+                <div className="flex gap-2">
+                  <div className="w-5 h-5 bg-bg-elevated rounded-full animate-pulse" />
+                  <div className="h-4 bg-bg-elevated rounded animate-pulse w-1/3" />
                 </div>
               </div>
             ))}
           </div>
         ) : error ? (
-          <div style={{ textAlign: "center", padding: "80px 0" }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>📡</div>
-            <h3 style={{ fontSize: "1.2rem", fontWeight: 700, marginBottom: 8 }}>Unable to Load Live News</h3>
-            <p style={{ color: "var(--text-muted)", marginBottom: 24 }}>Backend may be offline. Try again later.</p>
-            <button onClick={() => fetchNews()} style={{ padding: "10px 24px", borderRadius: 12, background: "linear-gradient(135deg,var(--brand),var(--brand-light))", color: "#1a1410", fontWeight: 700, fontSize: 14, cursor: "pointer", border: "none" }}>
-              Retry
+          <div className="flex flex-col items-center justify-center py-20 text-center glass-card rounded-3xl">
+            <Globe size={48} className="text-red-400 mb-6" />
+            <h3 className="text-2xl font-bold text-white mb-3">Connection Lost</h3>
+            <p className="text-text-muted mb-8 max-w-sm">We couldn't connect to the live feed. Please check your connection or try again.</p>
+            <button 
+              onClick={() => fetchNews(category)} 
+              className="px-6 py-3 rounded-xl bg-white text-bg-base font-bold cursor-pointer transition-colors hover:bg-gray-200"
+            >
+              Try Again
             </button>
           </div>
         ) : filtered.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "80px 0", color: "var(--text-muted)" }}>
-            <div style={{ fontSize: 40, marginBottom: 16 }}>🔍</div>
-            <p>No stories match your search.</p>
+          <div className="flex flex-col items-center justify-center py-20 text-center glass-card rounded-3xl">
+            <Search size={48} className="text-text-dim mb-6" />
+            <h3 className="text-xl font-bold text-white mb-2">No stories found</h3>
+            <p className="text-text-muted">Try adjusting your search terms.</p>
           </div>
         ) : (
-          <>
-            {/* Featured Card */}
+          <div className="flex flex-col gap-6">
+            {/* Featured Hero Card */}
             {featured && (
-              <a href={featured.source_url} target="_blank" rel="noreferrer" style={{ display: "block", textDecoration: "none", marginBottom: 28 }}>
-                <div style={{
-                  display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 0,
-                  background: "var(--surface-1)", border: "1px solid var(--border-subtle)",
-                  borderRadius: 24, overflow: "hidden", transition: "all 0.3s ease",
-                  minHeight: 300,
-                }}
-                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--brand)"; (e.currentTarget as HTMLDivElement).style.transform = "translateY(-3px)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "0 16px 50px rgba(0,0,0,0.4)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border-subtle)"; (e.currentTarget as HTMLDivElement).style.transform = ""; (e.currentTarget as HTMLDivElement).style.boxShadow = "none"; }}>
-                  <div style={{
-                    background: `url(${featured.image_url}) center/cover no-repeat`,
-                    backgroundColor: "var(--surface-2)", minHeight: 300,
-                  }} />
-                  <div style={{ padding: 40, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-                    <div>
-                      <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", padding: "4px 10px", borderRadius: 100, background: "rgba(242,169,59,0.15)", color: "var(--brand-light)", border: "1px solid rgba(242,169,59,0.3)" }}>
-                        ⭐ Featured
-                      </span>
-                      <h2 style={{ fontSize: "1.6rem", fontWeight: 800, letterSpacing: "-0.02em", marginTop: 16, marginBottom: 12, lineHeight: 1.3 }}>{featured.title}</h2>
-                      <p style={{ fontSize: 15, color: "var(--text-secondary)", lineHeight: 1.65 }}>{featured.summary}</p>
+              <a 
+                href={featured.source_url} 
+                target="_blank" 
+                rel="noreferrer" 
+                className="group block no-underline relative bg-bg-panel border border-border-strong rounded-[2rem] p-8 sm:p-12 overflow-hidden transition-all duration-500 hover:border-brand-500/50 hover:shadow-2xl hover:shadow-brand-500/10"
+              >
+                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-brand-500/5 rounded-full blur-[100px] group-hover:bg-brand-500/10 transition-colors pointer-events-none" />
+                
+                <div className="relative z-10 flex flex-col h-full justify-between">
+                  <div>
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20 text-[11px] font-bold text-brand-300 uppercase tracking-widest mb-6">
+                      <Flame size={12} className="text-brand-400" /> Top Story
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 24 }}>
-                      {featured.source_url && <img src={getDomainFavicon(featured.source_url)} style={{ width: 16, height: 16, borderRadius: "50%" }} alt="" />}
-                      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-secondary)" }}>{featured.source_name}</span>
-                      <span style={{ color: "var(--border-strong)" }}>•</span>
-                      <span style={{ fontSize: 12, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 4 }}>
-                        <Clock size={11} /> {formatTimeAgo(featured.published_at)}
-                      </span>
-                      <div style={{ flex: 1 }} />
-                      <span style={{ color: "var(--brand-light)", fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
-                        Read <ExternalLink size={12} />
-                      </span>
+                    
+                    <h2 className="text-2xl sm:text-4xl font-display font-extrabold text-white leading-tight mb-6 group-hover:text-brand-300 transition-colors">
+                      {featured.title}
+                    </h2>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-4 sm:gap-6 mt-8">
+                    <div className="flex items-center gap-2">
+                      <img src={getDomainFavicon(featured.source_url)} alt="" className="w-5 h-5 rounded-full bg-bg-elevated p-0.5" />
+                      <span className="text-sm font-semibold text-text-muted">{featured.source_name}</span>
+                    </div>
+                    <span className="w-1 h-1 rounded-full bg-border-strong hidden sm:block" />
+                    <div className="flex items-center gap-1.5 text-sm font-medium text-text-dim">
+                      <Clock size={14} /> {formatTimeAgo(featured.published_at)}
+                    </div>
+                    <span className="w-1 h-1 rounded-full bg-border-strong hidden sm:block" />
+                    <div className="flex items-center gap-1.5 text-sm font-medium text-amber-500/80">
+                      <TrendingUp size={14} /> {featured.points} pts
+                    </div>
+                    
+                    <div className="flex-1" />
+                    <div className="flex items-center gap-2 text-sm font-bold text-brand-400 group-hover:translate-x-1 transition-transform">
+                      Read full article <ExternalLink size={14} />
                     </div>
                   </div>
                 </div>
               </a>
             )}
 
-            {/* Grid */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: 20 }}>
+            {/* Sub-grid of other news */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
               {rest.map(item => (
-                <a href={item.source_url} target="_blank" rel="noreferrer" key={item.id}
-                  style={{ display: "flex", flexDirection: "column", background: "var(--surface-1)", border: "1px solid var(--border-subtle)", borderRadius: 20, overflow: "hidden", textDecoration: "none", transition: "all 0.3s cubic-bezier(0.16,1,0.3,1)" }}
-                  onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-5px)"; e.currentTarget.style.borderColor = "var(--border-strong)"; e.currentTarget.style.boxShadow = "0 12px 30px rgba(0,0,0,0.3)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.borderColor = "var(--border-subtle)"; e.currentTarget.style.boxShadow = "none"; }}>
-                  <div style={{
-                    height: 170, width: "100%",
-                    background: `url(${item.image_url}) center/cover no-repeat`,
-                    backgroundColor: "var(--surface-2)",
-                    borderBottom: "1px solid var(--border-subtle)",
-                  }} />
-                  <div style={{ padding: 20, display: "flex", flexDirection: "column", flex: 1 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                      {item.source_url && <img src={getDomainFavicon(item.source_url)} style={{ width: 14, height: 14, borderRadius: "50%" }} alt="" />}
-                      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)" }}>{item.source_name}</span>
-                      <span style={{ fontSize: 12, color: "var(--border-strong)" }}>•</span>
-                      <span style={{ fontSize: 12, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 3 }}>
-                        <Clock size={11} /> {formatTimeAgo(item.published_at)}
-                      </span>
+                <a 
+                  key={item.id} 
+                  href={item.source_url} 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  className="group flex flex-col bg-bg-panel border border-border-dim hover:border-border-strong rounded-2xl p-6 no-underline transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/50 relative overflow-hidden"
+                >
+                  <div className="flex items-center gap-2.5 mb-4">
+                    <img src={getDomainFavicon(item.source_url)} alt="" className="w-4 h-4 rounded-sm" />
+                    <span className="text-xs font-semibold text-text-muted truncate">{item.source_name}</span>
+                    <span className="text-text-dim/50 text-xs">•</span>
+                    <span className="text-[11px] font-medium text-text-dim flex items-center gap-1 flex-shrink-0">
+                      {formatTimeAgo(item.published_at)}
+                    </span>
+                  </div>
+                  
+                  <h3 className="text-base font-bold text-white mb-6 leading-snug group-hover:text-brand-300 transition-colors line-clamp-3">
+                    {item.title}
+                  </h3>
+                  
+                  <div className="mt-auto flex items-center justify-between border-t border-border-subtle pt-4">
+                    <div className="flex items-center gap-1.5 text-[11px] font-bold text-text-dim">
+                      <TrendingUp size={12} /> {item.points}
                     </div>
-                    <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8, lineHeight: 1.35, letterSpacing: "-0.01em" }}>{item.title}</h3>
-                    <p style={{ fontSize: 13, color: "var(--text-muted)", lineHeight: 1.6, flex: 1, marginBottom: 14 }}>{item.summary}</p>
-                    <div style={{ display: "flex", alignItems: "center", color: "var(--brand-light)", fontSize: 13, fontWeight: 600, gap: 4 }}>
-                      Read article <ExternalLink size={12} />
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-brand-400 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      Read <ExternalLink size={10} />
                     </div>
                   </div>
                 </a>
               ))}
             </div>
-          </>
+          </div>
         )}
-      </section>
-
-      {/* Keyframes moved to globals.css */}
+      </main>
     </div>
   );
 }

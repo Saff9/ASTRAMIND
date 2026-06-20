@@ -14,7 +14,7 @@ import SettingsModal from "@/components/chat/SettingsModal";
 import { 
   GroqLogoIcon, ClaudeIcon, DeepSeekIcon, AstraIcon,
   OpenAIIcon, GeminiIcon, MistralIcon, MetaIcon,
-  KimiIcon, GrokIcon, QwenIcon, QGPTIcon
+  KimiIcon, GrokIcon, QwenIcon, QGPTIcon, PerplexityIcon
 } from "@/components/common/ProviderIcons";
 import { neonAuthClient } from "@/lib/auth-client";
 import { useSettings } from "@/lib/SettingsContext";
@@ -43,15 +43,18 @@ interface ChatSession {
 
 const MODEL_OPTIONS = [
   { id: "claude-4.8",       label: "Claude 4.8",          Icon: ClaudeIcon,   desc: "Next-gen reasoning",       provider: "Anthropic", model: "claude-4.8",       tier: "smart",    speedMs: 1300 },
-  { id: "kimi",             label: "Kimi",                Icon: KimiIcon,     desc: "Moonshot's smart assistant", provider: "Moonshot", model: "kimi",            tier: "smart",    speedMs: 1100 },
-  { id: "meta",             label: "Meta",                Icon: MetaIcon,     desc: "Llama open intelligence",    provider: "Meta",      model: "meta",            tier: "balanced", speedMs: 450 },
-  { id: "grok-coder",       label: "Grok Coder",          Icon: GrokIcon,     desc: "xAI's coding expert",        provider: "xAI",       model: "grok-coder",      tier: "smart",    speedMs: 1200 },
-  { id: "qwen",             label: "Qwen",                Icon: QwenIcon,     desc: "Alibaba's top model",        provider: "Alibaba",   model: "qwen",            tier: "balanced", speedMs: 900 },
-  { id: "deepseek-nlu",     label: "DeepSeek NLU",        Icon: DeepSeekIcon, desc: "Language understanding",      provider: "DeepSeek",  model: "deepseek-nlu",    tier: "balanced", speedMs: 800 },
-  { id: "qgpt",             label: "QGPT",                Icon: QGPTIcon,     desc: "Enhanced GPT model",         provider: "OpenAI",    model: "qgpt",            tier: "smart",    speedMs: 1000 },
   { id: "gpt-4.5",          label: "GPT-4.5",             Icon: OpenAIIcon,   desc: "Flagship multi-modal",     provider: "OpenAI",    model: "gpt-4.5",          tier: "smart",    speedMs: 1200 },
+  { id: "gemini-2.0",       label: "Gemini 2.0",          Icon: GeminiIcon,   desc: "Google's best model",      provider: "Google",    model: "gemini-2.0",       tier: "smart",    speedMs: 820 },
+  { id: "perplexity",       label: "Perplexity",          Icon: PerplexityIcon,desc: "Live search champion",    provider: "Perplexity",model: "sonar-huge",       tier: "smart",    speedMs: 640 },
+  { id: "meta",             label: "Meta",                Icon: MetaIcon,     desc: "Llama open intelligence",  provider: "Meta",      model: "meta",            tier: "balanced", speedMs: 450 },
+  { id: "grok-coder",       label: "Grok Coder",          Icon: GrokIcon,     desc: "xAI's coding expert",      provider: "xAI",       model: "grok-coder",      tier: "smart",    speedMs: 1200 },
+  { id: "qwen",             label: "Qwen",                Icon: QwenIcon,     desc: "Alibaba's top model",      provider: "Alibaba",   model: "qwen",            tier: "balanced", speedMs: 900 },
+  { id: "deepseek-nlu",     label: "DeepSeek NLU",        Icon: DeepSeekIcon, desc: "Language understanding",   provider: "DeepSeek",  model: "deepseek-nlu",    tier: "balanced", speedMs: 800 },
+  { id: "qgpt",             label: "QGPT Ultra",          Icon: QGPTIcon,     desc: "Enhanced GPT model",       provider: "OpenAI",    model: "qgpt",            tier: "smart",    speedMs: 1000 },
+  { id: "mistral-large",    label: "Mistral Large",       Icon: MistralIcon,  desc: "Top European model",       provider: "Mistral",   model: "mistral-large",   tier: "smart",    speedMs: 890 },
+  { id: "kimi",             label: "Kimi",                Icon: KimiIcon,     desc: "Moonshot's assistant",     provider: "Moonshot",  model: "kimi",            tier: "smart",    speedMs: 1100 },
   { id: "claude-sonnet",    label: "Claude 3.7 Sonnet",   Icon: ClaudeIcon,   desc: "Top coding & reasoning",   provider: "Anthropic", model: "claude-3-7-sonnet",tier: "smart",    speedMs: 1600 },
-  { id: "llama-3-70b",      label: "Llama 3.3 70B",       Icon: GroqLogoIcon, desc: "Lightning fast open weight",provider:"Groq",      model: "llama-3.3-70b",    tier: "balanced", speedMs: 400 },
+  { id: "llama-3-70b",      label: "Llama 3.3 70B",       Icon: GroqLogoIcon, desc: "Lightning fast Groq",      provider: "Groq",      model: "llama-3.3-70b",    tier: "balanced", speedMs: 400 },
   { id: "deepseek-r1",      label: "DeepSeek R1",         Icon: DeepSeekIcon, desc: "Advanced reasoning",       provider: "DeepSeek",  model: "deepseek-reasoner",tier: "smart",    speedMs: 2500 },
 ];
 

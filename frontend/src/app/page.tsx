@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { 
   GroqLogoIcon, OpenAIIcon, ClaudeIcon, GeminiIcon, DeepSeekIcon, MistralIcon,
-  KimiIcon, GrokIcon, QwenIcon, QGPTIcon, MetaIcon, AstraIcon
+  KimiIcon, GrokIcon, QwenIcon, QGPTIcon, MetaIcon, AstraIcon, PerplexityIcon
 } from "@/components/common/ProviderIcons";
 import { neonAuthClient } from "@/lib/auth-client";
 
@@ -24,12 +24,17 @@ const PROMPTS = [
 
 const PROVIDERS = [
   { name: "Claude 4.8",    ms: "950ms",  color: "#D97757", Icon: ClaudeIcon },
-  { name: "Kimi",          ms: "820ms",  color: "#14C775", Icon: KimiIcon },
-  { name: "Meta",          ms: "450ms",  color: "#0064E0", Icon: MetaIcon },
+  { name: "GPT-4.5",       ms: "1050ms", color: "#10a37f", Icon: OpenAIIcon },
+  { name: "Gemini 2.0",    ms: "820ms",  color: "#4285F4", Icon: GeminiIcon },
+  { name: "Perplexity",    ms: "640ms",  color: "#20B8CD", Icon: PerplexityIcon },
+  { name: "Meta Llama",    ms: "450ms",  color: "#0064E0", Icon: MetaIcon },
   { name: "Grok Coder",    ms: "1100ms", color: "#FFFFFF", Icon: GrokIcon },
-  { name: "Qwen",          ms: "880ms",  color: "#6A3AE3", Icon: QwenIcon },
-  { name: "DeepSeek NLU",  ms: "750ms",  color: "#4D6BFE", Icon: DeepSeekIcon },
-  { name: "QGPT",          ms: "980ms",  color: "#0080FF", Icon: QGPTIcon },
+  { name: "Qwen Max",      ms: "880ms",  color: "#6A3AE3", Icon: QwenIcon },
+  { name: "DeepSeek R1",   ms: "750ms",  color: "#4D6BFE", Icon: DeepSeekIcon },
+  { name: "Mistral Large", ms: "890ms",  color: "#F47A20", Icon: MistralIcon },
+  { name: "Kimi",          ms: "820ms",  color: "#14C775", Icon: KimiIcon },
+  { name: "Groq LPU",      ms: "45ms",   color: "#F55036", Icon: GroqLogoIcon },
+  { name: "QGPT Ultra",    ms: "980ms",  color: "#0080FF", Icon: QGPTIcon },
 ];
 
 const FEATURES = [
@@ -252,23 +257,37 @@ export default function HomePage() {
         <div className="flex w-[200%] animate-marquee">
           {[...Array(2)].map((_, i) => (
             <div key={i} className="flex w-1/2 justify-around items-center px-10">
-              <div className="flex items-center gap-3 text-white/40 hover:text-white transition-colors duration-300 cursor-default">
-                <OpenAIIcon size={28} /> <span className="font-display font-bold text-xl">OpenAI</span>
+              <div className="flex items-center gap-3 text-text-muted hover:text-white transition-colors duration-300 cursor-default group">
+                <OpenAIIcon size={30} className="transition-transform group-hover:scale-110" /> 
+                <span className="font-display font-bold text-xl group-hover:text-white">ChatGPT</span>
               </div>
-              <div className="flex items-center gap-3 text-white/40 hover:text-white transition-colors duration-300 cursor-default">
-                <ClaudeIcon size={28} /> <span className="font-display font-bold text-xl">Anthropic</span>
+              <div className="flex items-center gap-3 text-text-muted hover:text-white transition-colors duration-300 cursor-default group">
+                <ClaudeIcon size={30} className="transition-transform group-hover:scale-110" /> 
+                <span className="font-display font-bold text-xl group-hover:text-white">Anthropic</span>
               </div>
-              <div className="flex items-center gap-3 text-white/40 hover:text-white transition-colors duration-300 cursor-default">
-                <GeminiIcon size={28} /> <span className="font-display font-bold text-xl">Gemini</span>
+              <div className="flex items-center gap-3 text-text-muted hover:text-white transition-colors duration-300 cursor-default group">
+                <GeminiIcon size={30} className="transition-transform group-hover:scale-110" /> 
+                <span className="font-display font-bold text-xl group-hover:text-white">Gemini</span>
               </div>
-              <div className="flex items-center gap-3 text-white/40 hover:text-white transition-colors duration-300 cursor-default">
-                <DeepSeekIcon size={28} /> <span className="font-display font-bold text-xl">DeepSeek</span>
+              <div className="flex items-center gap-3 text-text-muted hover:text-white transition-colors duration-300 cursor-default group">
+                <DeepSeekIcon size={30} className="transition-transform group-hover:scale-110" /> 
+                <span className="font-display font-bold text-xl group-hover:text-white">DeepSeek</span>
               </div>
-              <div className="flex items-center gap-3 text-white/40 hover:text-white transition-colors duration-300 cursor-default">
-                <MistralIcon size={28} /> <span className="font-display font-bold text-xl">Mistral</span>
+              <div className="flex items-center gap-3 text-text-muted hover:text-white transition-colors duration-300 cursor-default group">
+                <MistralIcon size={30} className="transition-transform group-hover:scale-110" /> 
+                <span className="font-display font-bold text-xl group-hover:text-white">Mistral</span>
               </div>
-              <div className="flex items-center gap-3 text-white/40 hover:text-white transition-colors duration-300 cursor-default">
-                <GroqLogoIcon size={28} /> <span className="font-display font-bold text-xl">Groq</span>
+              <div className="flex items-center gap-3 text-text-muted hover:text-white transition-colors duration-300 cursor-default group">
+                <PerplexityIcon size={30} className="transition-transform group-hover:scale-110" /> 
+                <span className="font-display font-bold text-xl group-hover:text-white">Perplexity</span>
+              </div>
+              <div className="flex items-center gap-3 text-text-muted hover:text-white transition-colors duration-300 cursor-default group">
+                <MetaIcon size={30} className="transition-transform group-hover:scale-110" /> 
+                <span className="font-display font-bold text-xl group-hover:text-white">Meta AI</span>
+              </div>
+              <div className="flex items-center gap-3 text-text-muted hover:text-white transition-colors duration-300 cursor-default group">
+                <GroqLogoIcon size={30} className="transition-transform group-hover:scale-110" /> 
+                <span className="font-display font-bold text-xl group-hover:text-white">Groq</span>
               </div>
             </div>
           ))}
@@ -304,10 +323,10 @@ export default function HomePage() {
           
           <div className="text-center mb-12">
             <h2 className="text-2xl sm:text-3xl font-display font-extrabold mb-3">Dynamic Routing & Latency</h2>
-            <p className="text-text-muted text-sm">Real-time metrics for our supported frontier models.</p>
+            <p className="text-text-muted text-sm">Real-time metrics for our massive selection of supported frontier models.</p>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
             {PROVIDERS.map((p) => {
               const Icon = p.Icon;
               return (
@@ -315,7 +334,7 @@ export default function HomePage() {
                   <div className="w-14 h-14 rounded-xl flex items-center justify-center shadow-inner transition-transform duration-500 group-hover:scale-110" style={{ background: `${p.color}15`, border: `1px solid ${p.color}30` }}>
                     <Icon size={30} />
                   </div>
-                  <span className="text-sm font-semibold text-white mt-2">{p.name}</span>
+                  <span className="text-sm font-semibold text-white mt-2 text-center leading-tight">{p.name}</span>
                   <span className="text-xs font-bold px-3 py-1 rounded-full border tracking-wide" style={{ background: `${p.color}10`, color: p.color, borderColor: `${p.color}20` }}>
                     {p.ms}
                   </span>
