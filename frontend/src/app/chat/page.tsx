@@ -92,7 +92,6 @@ export default function ChatPage() {
   const [sidebarOpen, setSidebarOpen]   = useState(true);
   const [isMobile, setIsMobile]         = useState(false);
   const [modelOpen, setModelOpen]       = useState(false);
-  const [showAllModels, setShowAllModels] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -668,7 +667,6 @@ export default function ChatPage() {
             <div className="relative ml-2">
               <button
                 onClick={() => {
-                  if (modelOpen) setShowAllModels(false);
                   setModelOpen(!modelOpen);
                 }}
                 className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold cursor-pointer border transition-colors ${
@@ -697,13 +695,13 @@ export default function ChatPage() {
                     transition={{ duration: 0.15, ease: "easeOut" }}
                     className="absolute top-[calc(100%+8px)] left-0 w-64 z-[100] bg-bg-panel border border-border-strong rounded-xl p-1.5 shadow-2xl shadow-black/50 max-h-96 overflow-y-auto"
                   >
-                    {(showAllModels ? MODEL_OPTIONS : MODEL_OPTIONS.slice(0, 4)).map((m) => {
+                    {MODEL_OPTIONS.map((m) => {
                       const ModelIcon = m.Icon;
                       const isActive = m.id === modelId;
                       return (
                         <button
                           key={m.id}
-                          onClick={() => { setModelId(m.id); setModelOpen(false); setShowAllModels(false); }}
+                          onClick={() => { setModelId(m.id); setModelOpen(false); }}
                           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm border-none cursor-pointer text-left transition-colors ${
                             isActive 
                               ? "bg-brand-500/15 text-brand-300 font-bold" 
@@ -723,15 +721,6 @@ export default function ChatPage() {
                         </button>
                       );
                     })}
-                    
-                    {!showAllModels && (
-                      <button
-                        onClick={() => setShowAllModels(true)}
-                        className="w-full py-2.5 mt-1 rounded-lg border border-dashed border-border-strong bg-transparent text-text-dim hover:text-white hover:bg-bg-elevated text-xs font-bold cursor-pointer transition-colors"
-                      >
-                        Show {MODEL_OPTIONS.length - 4} more models
-                      </button>
-                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -853,7 +842,7 @@ export default function ChatPage() {
       </main>
 
       {modelOpen && (
-        <div className="fixed inset-0 z-[45]" onClick={() => { setModelOpen(false); setShowAllModels(false); }} />
+        <div className="fixed inset-0 z-[45]" onClick={() => { setModelOpen(false); }} />
       )}
 
       <SettingsModal
