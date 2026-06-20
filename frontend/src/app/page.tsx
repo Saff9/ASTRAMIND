@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Zap, Shield, GitBranch, Globe,
-  Sparkles, ArrowRight, Code2, Search, Lightbulb, MessageSquare, ChevronRight, Download, Smartphone,
+  Sparkles, ArrowRight, Code2, Search, Lightbulb, MessageSquare, ChevronRight, Download, Smartphone, ChevronDown, Check
 } from "lucide-react";
 import { 
   GroqLogoIcon, OpenAIIcon, ClaudeIcon, GeminiIcon, DeepSeekIcon, MistralIcon,
@@ -59,6 +59,8 @@ export default function HomePage() {
   const [displayText, setDisplayText] = useState("");
   const [typing, setTyping] = useState(true);
   const [scrolled, setScrolled] = useState(false);
+  const [selectedModel, setSelectedModel] = useState(PROVIDERS[1]); // Default to GPT-4.5
+  const [showDropdown, setShowDropdown] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -202,12 +204,58 @@ export default function HomePage() {
           </p>
 
           {/* Composer Typing Simulation Card */}
-          <div className="w-full max-w-2xl glass-card rounded-2xl p-6 mb-12 text-left animate-pulse-glow">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-bg-elevated border border-border-strong flex items-center justify-center shadow-inner">
-                <AstraIcon size={14} className="text-brand-400" />
+          <div className="w-full max-w-2xl glass-card rounded-2xl p-6 mb-12 text-left animate-pulse-glow relative">
+            <div className="flex items-center justify-between mb-4 relative">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-bg-elevated border border-border-strong flex items-center justify-center shadow-inner">
+                  <AstraIcon size={14} className="text-brand-400" />
+                </div>
+                <span className="text-sm font-semibold text-text-dim uppercase tracking-wider">Try asking ASTRAMIND...</span>
               </div>
-              <span className="text-sm font-semibold text-text-dim uppercase tracking-wider">Try asking ASTRAMIND...</span>
+              
+              <div className="relative z-20">
+                <button 
+                  onClick={() => setShowDropdown(!showDropdown)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-bg-elevated border border-border-dim hover:border-brand-500/50 text-sm font-semibold text-text-muted hover:text-white transition-all cursor-pointer shadow-sm group"
+                >
+                  <selectedModel.Icon size={14} />
+                  <span>{selectedModel.name}</span>
+                  <ChevronDown size={14} className={`transition-transform duration-200 ${showDropdown ? "rotate-180" : ""}`} />
+                </button>
+
+                {/* Dropdown Menu */}
+                {showDropdown && (
+                  <div className="absolute right-0 mt-2 w-64 glass-panel border border-border-strong rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 z-50">
+                    <div className="p-2 border-b border-border-dim">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-text-dim px-2">Frontier Models</span>
+                    </div>
+                    <div className="max-h-64 overflow-y-auto p-1 custom-scrollbar">
+                      {PROVIDERS.map((p) => {
+                        const Icon = p.Icon;
+                        const isSelected = selectedModel.name === p.name;
+                        return (
+                          <button
+                            key={p.name}
+                            onClick={() => {
+                              setSelectedModel(p);
+                              setShowDropdown(false);
+                            }}
+                            className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                              isSelected ? "bg-brand-500/10 text-brand-300" : "text-text-muted hover:bg-bg-hover hover:text-white"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Icon size={14} />
+                              {p.name}
+                            </div>
+                            {isSelected && <Check size={14} className="text-brand-400" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
             
             <p className="text-lg sm:text-xl font-medium text-white min-h-[60px] leading-relaxed mb-6">
