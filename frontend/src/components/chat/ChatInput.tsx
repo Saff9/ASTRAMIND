@@ -9,6 +9,7 @@ interface ChatInputProps {
   onStop?: () => void;
   isLoading?: boolean;
   model?: string;
+  modelName?: string;
   agentMode?: boolean;
   researchMode?: boolean;
   onAgentModeChange?: (v: boolean) => void;
@@ -58,6 +59,7 @@ export default function ChatInput({
   onStop,
   isLoading = false,
   model,
+  modelName,
   agentMode = false,
   researchMode = false,
   onAgentModeChange,
@@ -328,7 +330,7 @@ export default function ChatInput({
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           disabled={isLoading}
-          placeholder={isListening ? "🎤 Listening... speak now" : "Ask anything... (Shift+Enter for new line)"}
+          placeholder={isListening ? "🎤 Listening... speak now" : `Message ${modelName || "ASTRAMIND"}...`}
           maxLength={32000}
           rows={1}
           autoComplete="off"

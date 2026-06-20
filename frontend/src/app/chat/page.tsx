@@ -43,7 +43,7 @@ interface ChatSession {
 
 const MODEL_OPTIONS = [
   { id: "claude-4.8",       label: "Claude 4.8",          Icon: ClaudeIcon,   desc: "Next-gen reasoning",       provider: "Anthropic", model: "claude-4.8",       tier: "smart",    speedMs: 1300 },
-  { id: "gpt-4.5",          label: "GPT-4.5",             Icon: QGPTIcon,     desc: "Flagship multi-modal",     provider: "OpenAI",    model: "gpt-4.5",          tier: "smart",    speedMs: 1200 },
+  { id: "gpt-4.5",          label: "GPT-4.5",             Icon: OpenAIIcon,   desc: "Flagship multi-modal",     provider: "OpenAI",    model: "gpt-4.5",          tier: "smart",    speedMs: 1200 },
   { id: "gemini-2.0",       label: "Gemini 2.0",          Icon: GeminiIcon,   desc: "Google's best model",      provider: "Google",    model: "gemini-2.0",       tier: "smart",    speedMs: 820 },
   { id: "perplexity",       label: "Perplexity",          Icon: PerplexityIcon,desc: "Live search champion",    provider: "Perplexity",model: "sonar-huge",       tier: "smart",    speedMs: 640 },
   { id: "meta",             label: "Meta",                Icon: MetaIcon,     desc: "Llama open intelligence",  provider: "Meta",      model: "meta",            tier: "balanced", speedMs: 450 },
@@ -837,6 +837,7 @@ export default function ChatPage() {
               onStop={stopResponse}
               isLoading={isLoading}
               model={selectedModel.tier}
+              modelName={selectedModel.label}
               agentMode={agentMode}
               researchMode={researchMode}
               onAgentModeChange={setAgentModePersist}
