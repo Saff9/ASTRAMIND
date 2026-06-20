@@ -33,8 +33,8 @@ const PROVIDERS = [
 ];
 
 const FEATURES = [
-  { icon: <Zap className="w-5 h-5 text-amber-400" />,      title: "Sub-50ms responses",      desc: "Groq's LPU delivers lightning responses. Smart routing picks the fastest available provider." },
-  { icon: <GitBranch className="w-5 h-5 text-indigo-400" />, title: "Multi-provider fallback",  desc: "Never go down. Circuit breakers automatically reroute to secondary providers." },
+  { icon: <Zap className="w-5 h-5 text-brand-400" />,      title: "Sub-50ms responses",      desc: "Groq's LPU delivers lightning responses. Smart routing picks the fastest available provider." },
+  { icon: <GitBranch className="w-5 h-5 text-accent-500" />, title: "Multi-provider fallback",  desc: "Never go down. Circuit breakers automatically reroute to secondary providers." },
   { icon: <Shield className="w-5 h-5 text-emerald-400" />,   title: "Zero-trust security",      desc: "JWT auth, prompt injection detection, content filtering, and rate limiting baked in." },
   { icon: <Globe className="w-5 h-5 text-blue-400" />,    title: "Web-augmented answers",   desc: "Real-time web search for up-to-date answers. No more knowledge cutoffs." },
 ];
@@ -98,62 +98,66 @@ export default function HomePage() {
   }, [promptIdx]);
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-[#0c0c0e] text-[#eeeef2] font-sans">
+    <div className="relative min-h-screen overflow-x-hidden bg-bg-base text-text-main font-sans selection:bg-brand-500/30 selection:text-white">
       
-      {/* ═══ Cosmic Background Decor ═══ */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden z-0" aria-hidden="true">
-        <div className="absolute inset-0 bg-grid-pattern opacity-[0.05]" />
-        <div className="absolute inset-0 bg-grid-pattern-radial opacity-[0.04]" />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[1200px] h-[550px] bg-gradient-to-b from-amber-500/[0.06] via-transparent to-transparent blur-[120px]" />
-        <div className="absolute top-[-100px] left-[10%] w-[400px] h-[400px] rounded-full bg-amber-500/[0.07] blur-[100px] animate-float-1" />
-        <div className="absolute bottom-[5%] right-[5%] w-[500px] h-[500px] rounded-full bg-[#8b7afc]/[0.05] blur-[110px] animate-float-2" />
+      {/* ═══ Background Effects ═══ */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0" aria-hidden="true">
+        <div className="absolute inset-0 bg-grid opacity-30" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-5xl h-[600px] bg-gradient-to-b from-brand-500/10 via-transparent to-transparent blur-[100px]" />
+        <div className="absolute -top-32 left-0 w-[500px] h-[500px] rounded-full bg-brand-400/5 blur-[120px] animate-float-slow" />
+        <div className="absolute bottom-0 right-0 w-[600px] h-[600px] rounded-full bg-accent-500/5 blur-[120px] animate-float-slow" style={{ animationDelay: '-5s' }} />
       </div>
 
       {/* ═══ STICKY HEADER NAV ═══ */}
-      <nav className={`sticky top-0 z-50 transition-all duration-300 ${
-        scrolled 
-          ? "bg-[#111116]/85 backdrop-blur-xl border-b border-white/[0.06] py-3 shadow-[0_4px_30px_rgba(0,0,0,0.5)]" 
-          : "bg-transparent py-5 border-b border-transparent"
-      }`}>
-        {scrolled && <div className="absolute top-0 left-0 right-0 top-highlight" />}
-        
-        <div className="max-w-5xl mx-auto px-6 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5 no-underline group">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-amber-300 flex items-center justify-center shadow-[0_0_20px_rgba(242,169,59,0.3)] transition-transform group-hover:scale-105 duration-300">
-              <AstraIcon size={20} />
+      <motion.nav 
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+          scrolled 
+            ? "bg-bg-panel/80 backdrop-blur-xl border-b border-border-subtle py-3 shadow-lg" 
+            : "bg-transparent py-5"
+        }`}
+      >
+        <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3 no-underline group">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center shadow-lg shadow-brand-500/20 transition-transform duration-300 group-hover:scale-105 group-hover:rotate-3">
+              <AstraIcon size={22} className="text-white" />
             </div>
-            <span className="font-extrabold text-base tracking-tight text-white font-display">ASTRAMIND</span>
+            <span className="font-display font-extrabold text-lg tracking-tight text-white group-hover:text-brand-300 transition-colors">
+              ASTRAMIND
+            </span>
           </Link>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             {!isSignedIn ? (
               <>
-                <Link href="/download" className="hidden sm:flex items-center gap-2 text-xs font-semibold text-[#9898b0] hover:text-white no-underline px-3.5 py-2 border border-white/[0.08] hover:border-white/20 rounded-xl transition-all duration-200">
-                  <Download size={13} /> App
+                <Link href="/download" className="hidden sm:flex items-center gap-2 text-sm font-semibold text-text-muted hover:text-white no-underline px-4 py-2 border border-border-subtle hover:border-border-strong rounded-xl transition-all duration-300 hover:bg-bg-elevated">
+                  <Download size={14} /> App
                 </Link>
                 <button 
                   onClick={() => router.push("/signin")} 
-                  className="bg-transparent border border-white/[0.1] hover:border-white/20 text-[#9898b0] hover:text-white px-5 py-2 rounded-xl text-sm font-semibold cursor-pointer transition-all duration-200"
+                  className="bg-transparent text-text-muted hover:text-white px-4 py-2 text-sm font-semibold cursor-pointer transition-colors duration-200"
                 >
                   Sign in
                 </button>
                 <button 
                   onClick={() => router.push("/signin")} 
-                  className="relative overflow-hidden group bg-gradient-to-r from-amber-500 to-amber-400 text-[#0c0c0e] px-5 py-2 rounded-xl text-sm font-bold cursor-pointer border-none flex items-center gap-2 shadow-[0_4px_15px_rgba(242,169,59,0.2)] hover:shadow-[0_4px_25px_rgba(242,169,59,0.35)] transition-all duration-300 hover:-translate-y-[1px]"
+                  className="relative overflow-hidden group bg-brand-500 hover:bg-brand-400 text-bg-base px-6 py-2.5 rounded-xl text-sm font-bold cursor-pointer transition-all duration-300 hover-lift shadow-lg shadow-brand-500/20 flex items-center gap-2"
                 >
-                  Try free <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                  <span className="relative z-10 flex items-center gap-2">Try free <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" /></span>
                 </button>
               </>
             ) : (
               <>
                 <button 
                   onClick={async () => { await neonAuthClient.signOut(); setSession(null); }} 
-                  className="bg-transparent border border-white/[0.1] text-[#9898b0] hover:text-white px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-all duration-200"
+                  className="bg-transparent text-text-muted hover:text-white px-4 py-2 text-sm font-semibold cursor-pointer transition-colors"
                 >
                   Sign out
                 </button>
                 <Link href="/chat" className="no-underline">
-                  <button className="bg-gradient-to-r from-amber-500 to-amber-400 text-[#0c0c0e] px-5 py-2 rounded-xl text-sm font-bold cursor-pointer border-none flex items-center gap-2 shadow-[0_4px_15px_rgba(242,169,59,0.2)] hover:shadow-[0_4px_25px_rgba(242,169,59,0.35)] transition-all duration-200 hover:-translate-y-[1px]">
+                  <button className="bg-brand-500 hover:bg-brand-400 text-bg-base px-6 py-2.5 rounded-xl text-sm font-bold cursor-pointer transition-all duration-300 hover-lift shadow-lg shadow-brand-500/20 flex items-center gap-2">
                     Open Chat <ArrowRight size={14} />
                   </button>
                 </Link>
@@ -161,59 +165,56 @@ export default function HomePage() {
             )}
           </div>
         </div>
-      </nav>
+      </motion.nav>
 
       {/* ═══ HERO SECTION ═══ */}
-      <section className="relative max-w-3xl mx-auto px-6 pt-16 pb-12 text-center z-10">
+      <section className="relative w-full max-w-4xl mx-auto px-6 pt-32 pb-20 text-center z-10 flex flex-col items-center justify-center min-h-[85vh]">
         <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          className="w-full flex flex-col items-center"
         >
           {/* Badge indicator */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/[0.08] border border-amber-500/20 mb-8">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-            <span className="text-[10px] font-bold text-amber-300 tracking-wider uppercase">
-              10+ Frontier AI Providers · Circuit fallbacks enabled
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-panel border border-brand-500/30 mb-8 shimmer">
+            <span className="w-2 h-2 rounded-full bg-brand-400 animate-pulse" />
+            <span className="text-[11px] font-bold text-brand-300 tracking-widest uppercase">
+              10+ Frontier AI Providers Enabled
             </span>
           </div>
 
           {/* Core Title */}
-          <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight leading-[1.05] mb-6 font-display">
-            <span className="block text-white">Ask anything.</span>
-            <span className="block bg-gradient-to-r from-amber-400 via-amber-200 to-white bg-clip-text text-transparent pb-1">
+          <h1 className="text-5xl sm:text-7xl font-display font-extrabold tracking-tighter leading-[1.1] mb-6">
+            <span className="block text-white mb-2">Ask anything.</span>
+            <span className="block text-gradient-brand pb-2">
               Get smarter answers.
             </span>
           </h1>
 
           {/* Description */}
-          <p className="text-sm sm:text-base text-[#9898b0] leading-relaxed max-w-xl mx-auto mb-10">
-            ASTRAMIND routes your prompt to the best model—Groq, Claude, Gemini, DeepSeek and more—with automated failover, web synthesis, and developer skills.
+          <p className="text-base sm:text-lg text-text-muted leading-relaxed max-w-2xl mx-auto mb-12">
+            ASTRAMIND routes your prompt to the best model—Groq, Claude, Gemini, DeepSeek and more—with automated failover, web synthesis, and lightning-fast developer skills.
           </p>
 
           {/* Composer Typing Simulation Card */}
-          <div className="max-w-2xl mx-auto bg-[#121217]/50 border border-white/[0.07] rounded-2xl p-5 mb-10 shadow-[0_16px_36px_rgba(0,0,0,0.4)] text-left backdrop-blur-md">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-amber-500 to-amber-300 flex items-center justify-center shadow-[0_0_10px_rgba(242,169,59,0.2)]">
-                <AstraIcon size={12} />
+          <div className="w-full max-w-2xl glass-card rounded-2xl p-6 mb-12 text-left animate-pulse-glow">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-bg-elevated border border-border-strong flex items-center justify-center shadow-inner">
+                <AstraIcon size={14} className="text-brand-400" />
               </div>
-              <span className="text-xs font-semibold text-[#5a5a72]">Try asking ASTRAMIND...</span>
+              <span className="text-sm font-semibold text-text-dim uppercase tracking-wider">Try asking ASTRAMIND...</span>
             </div>
             
-            <p className="text-base font-medium text-white min-h-[48px] leading-relaxed mb-5">
+            <p className="text-lg sm:text-xl font-medium text-white min-h-[60px] leading-relaxed mb-6">
               {displayText}
-              <span className={`inline-block w-[2px] h-[1.1em] ml-1 bg-amber-400 align-middle ${
-                typing ? "animate-pulse" : "opacity-0"
-              }`} />
+              <span className={`inline-block w-0.5 h-5 ml-1 bg-brand-400 align-middle ${typing ? "animate-pulse" : "opacity-0"}`} />
             </p>
 
             {/* Suggestions */}
-            <div className="flex flex-wrap gap-2 pt-4 border-t border-white/[0.05]">
+            <div className="flex flex-wrap gap-3 pt-5 border-t border-border-dim">
               {SUGGESTIONS.map((s) => (
-                <Link key={s.label} href="/chat" className="no-underline">
-                  <button 
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#1c1c24]/40 hover:bg-amber-500/[0.08] text-[#9898b0] hover:text-amber-300 border border-white/[0.05] hover:border-amber-500/20 cursor-pointer transition-all duration-300"
-                  >
+                <Link key={s.label} href="/chat" className="no-underline flex-1 min-w-[140px]">
+                  <button className="w-full flex justify-center items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-bg-elevated hover:bg-brand-500/10 text-text-muted hover:text-brand-300 border border-border-dim hover:border-brand-500/30 cursor-pointer transition-all duration-300 hover-lift">
                     {s.icon} {s.label}
                   </button>
                 </Link>
@@ -222,104 +223,100 @@ export default function HomePage() {
           </div>
 
           {/* CTA Action Bar */}
-          <div className="flex flex-wrap gap-3 justify-center items-center mb-4">
+          <div className="flex flex-wrap gap-4 justify-center items-center mb-6">
             <Link href="/chat" className="no-underline">
-              <button className="bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-[#0c0c0e] px-8 py-3.5 rounded-xl text-sm font-bold cursor-pointer border-none flex items-center gap-2 shadow-[0_4px_20px_rgba(242,169,59,0.25)] hover:shadow-[0_4px_30px_rgba(242,169,59,0.4)] transition-all duration-300 hover:-translate-y-[2px]">
-                <Sparkles size={16} /> Start for free
+              <button className="bg-brand-500 hover:bg-brand-400 text-bg-base px-8 py-4 rounded-xl text-base font-bold cursor-pointer transition-all duration-300 hover-lift shadow-lg shadow-brand-500/20 flex items-center gap-2">
+                <Sparkles size={18} /> Start for free
               </button>
             </Link>
             <Link href="#features" className="no-underline">
-              <button className="bg-transparent hover:bg-white/[0.03] text-[#eeeef2] hover:text-white px-6 py-3.5 rounded-xl text-sm font-semibold cursor-pointer border border-white/[0.12] hover:border-white/20 flex items-center gap-1.5 transition-all duration-300 hover:-translate-y-[1px]">
-                See features <ChevronRight size={15} />
+              <button className="bg-bg-elevated hover:bg-bg-hover text-white px-8 py-4 rounded-xl text-base font-semibold cursor-pointer border border-border-subtle hover:border-border-strong flex items-center gap-2 transition-all duration-300 hover-lift">
+                See features <ChevronRight size={18} />
               </button>
             </Link>
           </div>
-          <p className="text-[11px] text-[#5a5a72] mb-5">No card required · 30 free requests/day · Upgrade to Premium for ₹149/mo</p>
           
-          <Link href="/download" className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-white/[0.06] hover:border-white/[0.1] bg-[#121217]/30 hover:bg-[#121217]/50 text-[#9898b0] hover:text-white text-xs no-underline transition-all duration-300">
-            <Smartphone size={12} className="text-amber-400" /> Download for Android
-          </Link>
+          <p className="text-xs text-text-dim font-medium">No credit card required · 30 free requests/day</p>
         </motion.div>
       </section>
 
       {/* ═══ TRUSTED BY MARQUEE ═══ */}
-      <section className="relative z-10 py-10 overflow-hidden border-b border-white/[0.04] mb-12">
-        <p className="text-center text-[10px] font-extrabold tracking-[0.18em] uppercase text-[#5a5a72] mb-6">
+      <section className="relative z-10 py-12 border-y border-border-dim bg-bg-panel/50 backdrop-blur-sm overflow-hidden mb-20">
+        <p className="text-center text-xs font-extrabold tracking-widest uppercase text-text-dim mb-8">
           Supported Architectures & Frameworks
         </p>
         
-        <div className="absolute left-0 top-0 bottom-0 w-[15%] bg-gradient-to-r from-[#0c0c0e] to-transparent z-[2] pointer-events-none" />
-        <div className="absolute right-0 top-0 bottom-0 w-[15%] bg-gradient-to-l from-[#0c0c0e] to-transparent z-[2] pointer-events-none" />
+        <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-bg-base to-transparent z-[2] pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-bg-base to-transparent z-[2] pointer-events-none" />
 
-        <div className="flex w-[200%] marquee-container">
-          <div className="flex w-1/2 justify-between items-center px-10 opacity-30 filter grayscale hover:grayscale-0 hover:opacity-85 transition-all duration-500 animate-[marquee_45s_linear_infinite]">
-            <div className="flex items-center gap-2 text-white">
-              <OpenAIIcon size={22} /> <span className="font-extrabold tracking-tight text-base">OpenAI</span>
+        <div className="flex w-[200%] animate-marquee">
+          {[...Array(2)].map((_, i) => (
+            <div key={i} className="flex w-1/2 justify-around items-center px-10">
+              <div className="flex items-center gap-3 text-white/40 hover:text-white transition-colors duration-300 cursor-default">
+                <OpenAIIcon size={28} /> <span className="font-display font-bold text-xl">OpenAI</span>
+              </div>
+              <div className="flex items-center gap-3 text-white/40 hover:text-white transition-colors duration-300 cursor-default">
+                <ClaudeIcon size={28} /> <span className="font-display font-bold text-xl">Anthropic</span>
+              </div>
+              <div className="flex items-center gap-3 text-white/40 hover:text-white transition-colors duration-300 cursor-default">
+                <GeminiIcon size={28} /> <span className="font-display font-bold text-xl">Gemini</span>
+              </div>
+              <div className="flex items-center gap-3 text-white/40 hover:text-white transition-colors duration-300 cursor-default">
+                <DeepSeekIcon size={28} /> <span className="font-display font-bold text-xl">DeepSeek</span>
+              </div>
+              <div className="flex items-center gap-3 text-white/40 hover:text-white transition-colors duration-300 cursor-default">
+                <MistralIcon size={28} /> <span className="font-display font-bold text-xl">Mistral</span>
+              </div>
+              <div className="flex items-center gap-3 text-white/40 hover:text-white transition-colors duration-300 cursor-default">
+                <GroqLogoIcon size={28} /> <span className="font-display font-bold text-xl">Groq</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2 text-white">
-              <ClaudeIcon size={22} /> <span className="font-bold text-base">Anthropic</span>
+          ))}
+        </div>
+      </section>
+
+      {/* ═══ FEATURES ═══ */}
+      <section id="features" className="max-w-6xl mx-auto px-6 py-20 relative z-10">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl sm:text-4xl font-display font-extrabold tracking-tight mb-4">Built for reliability at scale</h2>
+          <p className="text-text-muted text-lg max-w-2xl mx-auto">
+            Not just another basic API wrapper. A complex, local-first orchestration client designed for speed and power.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {FEATURES.map((f, i) => (
+            <div key={i} className="glass-card rounded-2xl p-8 hover-lift group border-border-subtle hover:border-brand-500/30">
+              <div className="w-12 h-12 rounded-xl bg-bg-elevated border border-border-strong group-hover:border-brand-500/50 flex items-center justify-center mb-6 transition-colors shadow-inner">
+                {f.icon}
+              </div>
+              <h3 className="text-lg font-bold mb-3 text-white tracking-tight">{f.title}</h3>
+              <p className="text-sm text-text-muted leading-relaxed">{f.desc}</p>
             </div>
-            <div className="flex items-center gap-2 text-white">
-              <GeminiIcon size={22} /> <span className="font-bold text-base">Gemini</span>
-            </div>
-            <div className="flex items-center gap-2 text-white">
-              <DeepSeekIcon size={22} /> <span className="font-extrabold text-base">DeepSeek</span>
-            </div>
-            <div className="flex items-center gap-2 text-white">
-              <MistralIcon size={22} /> <span className="font-bold text-base">Mistral</span>
-            </div>
-            <div className="flex items-center gap-2 text-white">
-              <GroqLogoIcon size={22} /> <span className="font-extrabold text-base">Groq</span>
-            </div>
-          </div>
-          <div className="flex w-1/2 justify-between items-center px-10 opacity-30 filter grayscale hover:grayscale-0 hover:opacity-85 transition-all duration-500 animate-[marquee_45s_linear_infinite]">
-            <div className="flex items-center gap-2 text-white">
-              <OpenAIIcon size={22} /> <span className="font-extrabold tracking-tight text-base">OpenAI</span>
-            </div>
-            <div className="flex items-center gap-2 text-white">
-              <ClaudeIcon size={22} /> <span className="font-bold text-base">Anthropic</span>
-            </div>
-            <div className="flex items-center gap-2 text-white">
-              <GeminiIcon size={22} /> <span className="font-bold text-base">Gemini</span>
-            </div>
-            <div className="flex items-center gap-2 text-white">
-              <DeepSeekIcon size={22} /> <span className="font-extrabold text-base">DeepSeek</span>
-            </div>
-            <div className="flex items-center gap-2 text-white">
-              <MistralIcon size={22} /> <span className="font-bold text-base">Mistral</span>
-            </div>
-            <div className="flex items-center gap-2 text-white">
-              <GroqLogoIcon size={22} /> <span className="font-extrabold text-base">Groq</span>
-            </div>
-          </div>
+          ))}
         </div>
       </section>
 
       {/* ═══ MODEL SPEEDS MATRIX ═══ */}
-      <section className="max-w-4xl mx-auto px-6 py-8 relative z-10 flex justify-center">
-        <div className="w-full glass-card-glow rounded-3xl p-7 sm:p-9">
-          <p className="text-center text-[10px] font-bold tracking-wider uppercase text-[#9898b0] mb-8">
-            Dynamic Model Routing and Latency Metrics
-          </p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-4">
+      <section className="max-w-6xl mx-auto px-6 py-20 relative z-10">
+        <div className="w-full glass-panel rounded-[2rem] p-8 sm:p-12 shadow-2xl shadow-brand-500/5 border border-brand-500/10 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-brand-500/5 blur-[100px] rounded-full pointer-events-none" />
+          
+          <div className="text-center mb-12">
+            <h2 className="text-2xl sm:text-3xl font-display font-extrabold mb-3">Dynamic Routing & Latency</h2>
+            <p className="text-text-muted text-sm">Real-time metrics for our supported frontier models.</p>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4">
             {PROVIDERS.map((p) => {
               const Icon = p.Icon;
               return (
-                <div 
-                  key={p.name} 
-                  className="flex flex-col items-center gap-2.5 p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.04] hover:border-white/[0.08] transition-all duration-300 group"
-                >
-                  <div 
-                    className="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-500 group-hover:scale-105"
-                    style={{ background: `${p.color}10`, border: `1px solid ${p.color}20` }}
-                  >
-                    <Icon size={26} />
+                <div key={p.name} className="flex flex-col items-center gap-3 p-4 rounded-2xl bg-bg-elevated border border-border-dim hover:border-border-strong hover:bg-bg-hover transition-all duration-300 hover-lift group">
+                  <div className="w-14 h-14 rounded-xl flex items-center justify-center shadow-inner transition-transform duration-500 group-hover:scale-110" style={{ background: `${p.color}15`, border: `1px solid ${p.color}30` }}>
+                    <Icon size={30} />
                   </div>
-                  <span className="text-xs font-semibold text-white">{p.name}</span>
-                  <span 
-                    className="text-[9px] font-extrabold px-2 py-0.5 rounded-full border"
-                    style={{ background: `${p.color}0d`, color: p.color, borderColor: `${p.color}15` }}
-                  >
+                  <span className="text-sm font-semibold text-white mt-2">{p.name}</span>
+                  <span className="text-xs font-bold px-3 py-1 rounded-full border tracking-wide" style={{ background: `${p.color}10`, color: p.color, borderColor: `${p.color}20` }}>
                     {p.ms}
                   </span>
                 </div>
@@ -329,178 +326,60 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ═══ FEATURES ═══ */}
-      <section id="features" className="max-w-4xl mx-auto px-6 py-16 relative z-10">
-        <div className="text-center mb-12">
-          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-3 font-display">Built for reliability at scale</h2>
-          <p className="text-[#9898b0] text-sm max-w-md mx-auto">
-            Not just another basic API wrapper. A complex, local-first orchestration client.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {FEATURES.map((f, i) => (
-            <div 
-              key={i} 
-              className="glass-card rounded-2xl p-7 hover:border-amber-500/20 group"
-            >
-              <div className="w-10 h-10 rounded-lg bg-white/[0.02] border border-white/[0.05] group-hover:border-amber-500/20 group-hover:bg-amber-500/[0.02] flex items-center justify-center mb-5 transition-all duration-300">
-                {f.icon}
-              </div>
-              <h3 className="text-base font-bold mb-2 text-white tracking-tight">{f.title}</h3>
-              <p className="text-xs text-[#9898b0] leading-relaxed opacity-85">{f.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ═══ HOW IT WORKS ═══ */}
-      <section className="max-w-4xl mx-auto px-6 py-8 relative z-10">
-        <div className="text-center mb-10">
-          <h2 className="text-2xl font-extrabold tracking-tight mb-2.5 font-display">How It Works</h2>
-          <p className="text-[#9898b0] text-xs max-w-xs mx-auto">Get intelligent results in three simple steps</p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {[
-            { step: "01", emoji: "🤖", title: "Select Model Mode", desc: "Choose your preferred model tier or let our system auto-route to the lowest latency provider." },
-            { step: "02", emoji: "💬", title: "Prompt Details", desc: "Input text. The system automatically fetches web references and developer context." },
-            { step: "03", emoji: "⚡", title: "Low Latency Answer", desc: "View real-time markdown answers with syntax code rendering and voice output." },
-          ].map((item, i) => (
-            <div 
-              key={i} 
-              className="glass-card rounded-2xl p-6 text-center relative overflow-hidden group hover:border-amber-500/15"
-            >
-              <div className="absolute top-2 right-4 text-4xl font-black text-white/[0.02] font-display select-none">{item.step}</div>
-              <div className="text-4xl mb-3">{item.emoji}</div>
-              <h3 className="text-sm font-bold mb-2.5 text-white">{item.title}</h3>
-              <p className="text-xs text-[#9898b0] leading-relaxed opacity-85">{item.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ═══ PREMIUM UPGRADE CTA ═══ */}
-      <section className="max-w-3xl mx-auto px-6 py-12 relative z-10">
-        <div className="glass-card-glow rounded-3xl p-8 sm:p-10 text-center relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-tr from-amber-500/[0.03] via-transparent to-[#8b7afc]/[0.03] pointer-events-none" />
-          <div className="text-3xl mb-3">⚡</div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/[0.08] border border-amber-500/20 mb-5">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-            <span className="text-[9px] font-extrabold text-amber-300 tracking-wider uppercase">Premium — ₹149/month</span>
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-3 font-display">
-            Unlock <span className="bg-gradient-to-r from-amber-400 to-amber-200 bg-clip-text text-transparent">Unlimited Capabilities</span>
-          </h2>
-          <p className="text-xs sm:text-sm text-[#9898b0] leading-relaxed max-w-lg mx-auto mb-5">
-            Upgrade to Premium to increase your daily limit to <strong className="text-white">300 requests/day</strong> and gain expert agent tools, deeper research maps, and priority routing.
-          </p>
-          <p className="text-[10px] text-[#5a5a72] mb-6">Expert skills · File operations · Priority support · Cancel anytime</p>
-          
-          <div className="flex flex-wrap gap-3 justify-center">
-            <Link href="/pricing" className="no-underline">
-              <button className="bg-gradient-to-r from-amber-500 to-amber-400 text-[#0c0c0e] px-7 py-3 rounded-lg text-xs font-bold cursor-pointer border-none shadow-[0_4px_15px_rgba(242,169,59,0.2)] hover:shadow-[0_4px_25px_rgba(242,169,59,0.35)] transition-all duration-300 hover:-translate-y-[1px]">
-                🚀 Upgrade to Premium
-              </button>
-            </Link>
-            <Link href="/chat" className="no-underline">
-              <button className="bg-transparent hover:bg-white/[0.03] text-[#eeeef2] hover:text-white px-6 py-3 rounded-lg text-xs font-semibold cursor-pointer border border-white/[0.12] hover:border-white/20 transition-all duration-300 hover:-translate-y-[1px]">
-                Try free first
-              </button>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══ STATS MATRIX ═══ */}
-      <section className="border-t border-b border-white/[0.04] bg-[#121216]/10 py-10 relative z-10">
-        <div className="max-w-4xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-          {[
-            { value: "10+", label: "AI Engines" },
-            { value: "500+", label: "Tokens/sec" },
-            { value: "<50ms", label: "P50 Latency" },
-            { value: "99.99%", label: "Uptime Fallback" },
-          ].map((s) => (
-            <div key={s.label}>
-              <div className="text-2xl font-extrabold bg-gradient-to-r from-amber-400 to-amber-200 bg-clip-text text-transparent font-display mb-1">
-                {s.value}
-              </div>
-              <div className="text-[10px] text-[#5a5a72] font-semibold uppercase tracking-wider">{s.label}</div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ═══ CTA SECTION ═══ */}
-      <section className="max-w-2xl mx-auto px-6 py-16 text-center relative z-10">
-        <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-4 font-display">
-          Ready to think <span className="bg-gradient-to-r from-amber-400 to-amber-200 bg-clip-text text-transparent">beyond boundaries</span>?
-        </h2>
-        <p className="text-xs text-[#9898b0] mb-6 leading-relaxed">
-          Access every frontier model in a single unified low-latency platform.
-        </p>
-        <Link href="/chat" className="no-underline">
-          <button className="bg-gradient-to-r from-amber-500 to-amber-400 text-[#0c0c0e] px-8 py-4 rounded-xl text-sm font-bold cursor-pointer border-none shadow-[0_8px_25px_rgba(242,169,59,0.25)] hover:shadow-[0_8px_35px_rgba(242,169,59,0.35)] transition-all duration-300 hover:-translate-y-[2px]">
-            <Sparkles size={14} className="inline mr-1" /> Start Chatting Now
-          </button>
-        </Link>
-      </section>
-
       {/* ═══ FOOTER ═══ */}
-      <footer className="border-t border-white/[0.04] bg-[#09090b] py-12 px-6 relative z-10">
-        <div className="max-w-5xl mx-auto">
-          
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-8 mb-10">
-            <div className="md:col-span-2">
-              <div className="flex items-center gap-2.5 mb-4">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-500 to-amber-300 flex items-center justify-center shadow-[0_0_15px_rgba(242,169,59,0.25)]">
-                  <AstraIcon size={18} />
+      <footer className="border-t border-border-dim bg-bg-base py-16 px-6 relative z-10 mt-20">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+            <div className="md:col-span-1">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center shadow-lg shadow-brand-500/20">
+                  <AstraIcon size={20} className="text-white" />
                 </div>
-                <span className="font-extrabold text-sm tracking-tight text-white font-display">ASTRAMIND</span>
+                <span className="font-display font-extrabold text-lg tracking-tight text-white">ASTRAMIND</span>
               </div>
-              <p className="text-xs text-[#9898b0] leading-relaxed max-w-[260px]">
-                The world&apos;s fastest AI routing client. Designed for developers and power users.
+              <p className="text-sm text-text-muted leading-relaxed">
+                The ultimate AI routing client. Designed for developers, researchers, and power users.
               </p>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-2">Product</h4>
-              <Link href="/chat" className="text-xs text-[#9898b0] hover:text-amber-300 no-underline transition-colors duration-200">Chat Engine</Link>
-              <Link href="/discover" className="text-xs text-[#9898b0] hover:text-amber-300 no-underline transition-colors duration-200 flex items-center gap-1.5">Discover <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300">NEW</span></Link>
-              <Link href="/pricing" className="text-xs text-[#9898b0] hover:text-amber-300 no-underline transition-colors duration-200 flex items-center gap-1.5">Pricing <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300">₹149</span></Link>
+            <div className="flex flex-col gap-3">
+              <h4 className="text-xs font-bold text-white uppercase tracking-widest mb-3">Product</h4>
+              <Link href="/chat" className="text-sm text-text-muted hover:text-brand-300 no-underline transition-colors">Chat Engine</Link>
+              <Link href="/discover" className="text-sm text-text-muted hover:text-brand-300 no-underline transition-colors flex items-center gap-2">Discover <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-brand-500/20 text-brand-300">NEW</span></Link>
+              <Link href="/pricing" className="text-sm text-text-muted hover:text-brand-300 no-underline transition-colors">Pricing</Link>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-2">Resources</h4>
-              <Link href="#features" className="text-xs text-[#9898b0] hover:text-amber-300 no-underline transition-colors duration-200">Documentation</Link>
-              <Link href="/privacy" className="text-xs text-[#9898b0] hover:text-amber-300 no-underline transition-colors duration-200">Privacy Policy</Link>
-              <Link href="/disclaimer" className="text-xs text-[#9898b0] hover:text-amber-300 no-underline transition-colors duration-200">API Disclaimer</Link>
-              <Link href="/disclaimer" className="text-xs text-[#9898b0] hover:text-amber-300 no-underline transition-colors duration-200">Terms of Service</Link>
+            <div className="flex flex-col gap-3">
+              <h4 className="text-xs font-bold text-white uppercase tracking-widest mb-3">Resources</h4>
+              <Link href="#features" className="text-sm text-text-muted hover:text-brand-300 no-underline transition-colors">Documentation</Link>
+              <Link href="/privacy" className="text-sm text-text-muted hover:text-brand-300 no-underline transition-colors">Privacy Policy</Link>
+              <Link href="/disclaimer" className="text-sm text-text-muted hover:text-brand-300 no-underline transition-colors">Terms of Service</Link>
             </div>
 
-            <div>
-              <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-2">Newsletter</h4>
-              <p className="text-[11px] text-[#9898b0] mb-3">Get release notes and updates.</p>
+            <div className="flex flex-col gap-3">
+              <h4 className="text-xs font-bold text-white uppercase tracking-widest mb-3">Newsletter</h4>
+              <p className="text-sm text-text-muted mb-3">Get release notes and updates.</p>
               <form onSubmit={(e) => e.preventDefault()} className="flex gap-2">
                 <input 
                   type="email" 
                   placeholder="Enter email" 
-                  className="flex-1 px-3 py-1.5 rounded-lg border border-white/[0.08] bg-white/[0.02] text-white text-xs outline-none focus:border-amber-500 transition-colors"
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-border-strong bg-bg-elevated text-white text-sm outline-none focus:border-brand-400 focus:ring-1 focus:ring-brand-400 transition-all"
                   required
                 />
-                <button type="submit" className="bg-[#1c1c24] hover:bg-white text-white hover:text-black border border-white/[0.08] hover:border-transparent px-3 rounded-lg text-xs font-bold cursor-pointer transition-all duration-200">
+                <button type="submit" className="bg-white hover:bg-brand-100 text-bg-base px-4 rounded-xl text-sm font-bold cursor-pointer transition-colors shadow-sm">
                   Join
                 </button>
               </form>
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-between pt-6 border-t border-white/[0.04] gap-4">
-            <p className="text-[11px] text-[#5a5a72]">
-              © 2026 ASTRAMIND. Developed securely on local architecture. Support: saffanakbar942@gmail.com
+          <div className="flex flex-col md:flex-row items-center justify-between pt-8 border-t border-border-dim gap-4">
+            <p className="text-xs text-text-dim">
+              © 2026 ASTRAMIND. Built securely on local architecture.
             </p>
-            <div className="flex gap-4">
+            <div className="flex gap-6">
               {["Twitter", "GitHub", "Discord"].map((social) => (
-                <a key={social} href="#" className="text-[11px] text-[#5a5a72] hover:text-white cursor-pointer transition-colors duration-200 no-underline">{social}</a>
+                <a key={social} href="#" className="text-xs font-medium text-text-dim hover:text-white cursor-pointer transition-colors no-underline">{social}</a>
               ))}
             </div>
           </div>

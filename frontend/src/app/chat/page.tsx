@@ -42,12 +42,10 @@ interface ChatSession {
 }
 
 const MODEL_OPTIONS = [
-  // Top Models (Always shown initially)
   { id: "claude-4.8",       label: "Claude 4.8",          Icon: ClaudeIcon,   desc: "Next-gen reasoning",       provider: "Anthropic", model: "claude-4.8",       tier: "smart",    speedMs: 1300 },
   { id: "kimi",             label: "Kimi",                Icon: KimiIcon,     desc: "Moonshot's smart assistant", provider: "Moonshot", model: "kimi",            tier: "smart",    speedMs: 1100 },
   { id: "meta",             label: "Meta",                Icon: MetaIcon,     desc: "Llama open intelligence",    provider: "Meta",      model: "meta",            tier: "balanced", speedMs: 450 },
   { id: "grok-coder",       label: "Grok Coder",          Icon: GrokIcon,     desc: "xAI's coding expert",        provider: "xAI",       model: "grok-coder",      tier: "smart",    speedMs: 1200 },
-  // The rest (Shown on 'Show more')
   { id: "qwen",             label: "Qwen",                Icon: QwenIcon,     desc: "Alibaba's top model",        provider: "Alibaba",   model: "qwen",            tier: "balanced", speedMs: 900 },
   { id: "deepseek-nlu",     label: "DeepSeek NLU",        Icon: DeepSeekIcon, desc: "Language understanding",      provider: "DeepSeek",  model: "deepseek-nlu",    tier: "balanced", speedMs: 800 },
   { id: "qgpt",             label: "QGPT",                Icon: QGPTIcon,     desc: "Enhanced GPT model",         provider: "OpenAI",    model: "qgpt",            tier: "smart",    speedMs: 1000 },
@@ -64,7 +62,6 @@ const EMPTY_SUGGESTIONS = [
   "Summarize the key ideas from Atomic Habits",
 ];
 
-// ─── Search intent detection ─────────────────────────────────────────────────
 const SEARCH_KEYWORDS = [
   "latest", "today", "current", "news", "now", "2024", "2025", "2026",
   "weather", "stock", "price", "who is", "what is", "what happened",
@@ -100,7 +97,6 @@ export default function ChatPage() {
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const selectedModel = MODEL_OPTIONS.find((m) => m.id === modelId) || MODEL_OPTIONS[0];
-
   const router = useRouter();
 
   useEffect(() => {
@@ -120,11 +116,7 @@ export default function ChatPage() {
             accessToken: data.session.id
           };
           setSession(mappedSession);
-          
-          // Sync user to Neon (fire-and-forget, non-blocking)
           fetch("/api/users/sync", { method: "POST" }).catch(() => {/* silent */});
-          
-          // Load persisted chat sessions
           const storedSessions = localStorage.getItem(`chat_sessions_${data.user.email}`);
           if (storedSessions) {
             try {
@@ -135,26 +127,6 @@ export default function ChatPage() {
                 setMessages(parsed[0].messages);
               }
             } catch { /* session parse error */ }
-          } else {
-            // Check for legacy single-chat history
-            const legacyHistory = localStorage.getItem(`chat_history_${data.user.email}`);
-            if (legacyHistory) {
-              try {
-                const parsed = JSON.parse(legacyHistory);
-                const newSessionId = crypto.randomUUID();
-                const migratedSession: ChatSession = {
-                  id: newSessionId,
-                  title: parsed.find((m: any) => m.role === "user")?.content.slice(0, 30) + "..." || "Migrated Chat",
-                  updatedAt: Date.now(),
-                  messages: parsed
-                };
-                setSessions([migratedSession]);
-                setCurrentSessionId(newSessionId);
-                setMessages(parsed);
-                localStorage.setItem(`chat_sessions_${data.user.email}`, JSON.stringify([migratedSession]));
-                localStorage.removeItem(`chat_history_${data.user.email}`);
-              } catch { /* migration fail */ }
-            }
           }
         }
       } catch (err) {
@@ -233,27 +205,18 @@ export default function ChatPage() {
 
   const setAgentModePersist = useCallback((v: boolean) => {
     setAgentMode(v);
-    try {
-      localStorage.setItem("astramind-agent-mode", v ? "true" : "false");
-    } catch {
-      /* ignore */
-    }
+    try { localStorage.setItem("astramind-agent-mode", v ? "true" : "false"); } catch {}
   }, []);
 
   const setResearchModePersist = useCallback((v: boolean) => {
     setResearchMode(v);
-    try {
-      localStorage.setItem("astramind-research-mode", v ? "true" : "false");
-    } catch {
-      /* ignore */
-    }
+    try { localStorage.setItem("astramind-research-mode", v ? "true" : "false"); } catch {}
   }, []);
 
   const stopResponse = useCallback(() => {
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
     setIsLoading(false);
-    // Mark any loading message as stopped
     setMessages((prev) =>
       prev.map((m) =>
         m.loading ? { ...m, loading: false, content: m.content || "_Response stopped._" } : m
@@ -276,7 +239,6 @@ export default function ChatPage() {
     }
     lastMessageTime.current = now;
 
-    // ── DuckDuckGo auto-search ──────────────────────────────────────────────
     let webSources: Array<{ title: string; url: string; snippet?: string }> = [];
     let enrichedPrompt = text;
     if (!researchMode && detectSearchIntent(text)) {
@@ -359,7 +321,6 @@ export default function ChatPage() {
         local_time: new Date().toString(),
       };
 
-      // Use the unified agent streaming endpoint when agent mode is on
       const endpoint = agentMode ? `${apiBase}/api/v1/agent/stream` : `${apiBase}/api/v1/chat`;
 
       const response = await fetch(endpoint, {
@@ -379,10 +340,8 @@ export default function ChatPage() {
       const decoder = new TextDecoder();
       let streamedContent = "";
       let vibrationTriggered = false;
-      let streamDone = false; // ← flag to exit outer while loop
-      // Accumulated agent events for this message
+      let streamDone = false; 
       const accumulatedAgentEvents: AgentEvent[] = [];
-      // Buffer for partial SSE lines across chunks
       let lineBuffer = "";
 
       while (!streamDone) {
@@ -397,7 +356,6 @@ export default function ChatPage() {
         const chunk = decoder.decode(value, { stream: true });
         lineBuffer += chunk;
         const lines = lineBuffer.split("\n");
-        // Keep the last (potentially partial) line in buffer
         lineBuffer = lines.pop() ?? "";
 
         for (const line of lines) {
@@ -407,8 +365,6 @@ export default function ChatPage() {
 
           try {
             const parsed = JSON.parse(str);
-
-            // Agent tool events — update in real-time
             if (parsed.type === "thinking" || parsed.type === "tool_start" || parsed.type === "tool_result") {
               accumulatedAgentEvents.push(parsed as AgentEvent);
               setMessages((prev) => prev.map((m) =>
@@ -417,11 +373,8 @@ export default function ChatPage() {
               continue;
             }
 
-            if (parsed.type === "agent_done") continue; // Internal signal, not shown
-
-            // ✅ FIXED: set flag to exit outer while loop, not just inner for
+            if (parsed.type === "agent_done") continue;
             if (parsed.type === "done") { streamDone = true; break; }
-
             if (parsed.type === "error" || parsed.error) {
               const errMsg = parsed.message || parsed.error || "Stream error";
               setMessages((prev) => prev.map((m) =>
@@ -430,7 +383,6 @@ export default function ChatPage() {
               return;
             }
 
-            // Text content — agent endpoint sends {type:"text",content:"..."}, chat endpoint varies
             const delta: string =
               (parsed.type === "text" && typeof parsed.content === "string" ? parsed.content : null) ??
               (typeof parsed.content === "string" && !["thinking", "tool_start", "tool_result", "agent_done", "error", "done"].includes(parsed.type ?? "") ? parsed.content : null) ??
@@ -445,13 +397,10 @@ export default function ChatPage() {
                   : m
               ));
             }
-          } catch {
-            // Ignore partial JSON / keep-alive pings
-          }
+          } catch { }
         }
       }
 
-      // Stream complete
       setMessages((prev) => prev.map((m) =>
         m.id === loadId
           ? {
@@ -476,7 +425,6 @@ export default function ChatPage() {
     }
   }, [isLoading, selectedModel, session, messages, agentMode, researchMode, vibration]);
 
-  // Must come after handleSend to avoid 'used before declaration' error
   const handleRegenerate = useCallback(async () => {
     const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
     if (!lastUserMsg || isLoading) return;
@@ -489,12 +437,10 @@ export default function ChatPage() {
   }, [messages, isLoading, handleSend]);
 
   const handleFeedback = useCallback((messageId: string, type: "up" | "down") => {
-    // In production: POST to /api/v1/feedback
     console.log(`Feedback ${type} for message ${messageId}`);
   }, []);
 
   const startNewChat = useCallback(() => {
-    // Abort any in-progress stream
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
     setIsLoading(false);
@@ -531,7 +477,6 @@ export default function ChatPage() {
   const exportChat = (format: "json" | "doc" | "pdf") => {
     if (messages.length === 0) return;
     const title = `ASTRAMIND_Chat_${new Date().toISOString().split("T")[0]}`;
-    
     if (format === "pdf") {
       window.print();
     } else if (format === "json") {
@@ -551,12 +496,12 @@ export default function ChatPage() {
   const MIcon = selectedModel.Icon;
 
   return (
-    <div className="flex h-dvh overflow-hidden bg-[#0c0c0e] text-[#eeeef2] relative font-sans">
+    <div className="flex h-dvh overflow-hidden bg-bg-base text-text-main relative font-sans selection:bg-brand-500/30 selection:text-white">
       
       {/* Background spotlights */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0" aria-hidden="true">
-        <div className="absolute top-[10%] left-[20%] w-[350px] h-[350px] rounded-full bg-amber-500/[0.03] blur-[100px] animate-float-1" />
-        <div className="absolute bottom-[20%] right-[10%] w-[400px] h-[400px] rounded-full bg-[#8b7afc]/[0.03] blur-[100px] animate-float-2" />
+        <div className="absolute top-[10%] left-[20%] w-[350px] h-[350px] rounded-full bg-brand-500/5 blur-[100px] animate-float-slow" />
+        <div className="absolute bottom-[20%] right-[10%] w-[400px] h-[400px] rounded-full bg-accent-500/5 blur-[100px] animate-float-slow" style={{ animationDelay: '-5s' }} />
       </div>
 
       {/* ═══ MOBILE OVERLAY ═══ */}
@@ -580,21 +525,21 @@ export default function ChatPage() {
           x: isMobile && !sidebarOpen ? -260 : 0 
         }}
         transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-        className="flex-shrink-0 h-full z-50 bg-[#111116]/95 backdrop-blur-md border-r border-white/[0.06] flex flex-col overflow-hidden"
+        className="flex-shrink-0 h-full z-50 bg-bg-panel/95 backdrop-blur-md border-r border-border-dim flex flex-col overflow-hidden"
         style={{ position: isMobile ? "absolute" : "relative" }}
       >
         <div className="w-[260px] h-full flex flex-col">
           {/* Sidebar header */}
-          <div className="p-4 border-b border-white/[0.06] flex items-center justify-between">
+          <div className="p-4 border-b border-border-dim flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-300 flex items-center justify-center shadow-[0_0_15px_rgba(242,169,59,0.25)]">
-                <AstraIcon size={16} />
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center shadow-lg shadow-brand-500/20">
+                <AstraIcon size={16} className="text-white" />
               </div>
-              <span className="font-extrabold text-sm tracking-tight text-white font-display">ASTRAMIND</span>
+              <span className="font-display font-extrabold text-sm tracking-tight text-white">ASTRAMIND</span>
             </div>
             <button
               onClick={() => setSidebarOpen(false)}
-              className="p-1.5 rounded-lg bg-transparent border-none text-[#5a5a72] hover:text-white cursor-pointer hover:bg-white/[0.04] flex items-center transition-colors"
+              className="p-1.5 rounded-lg bg-transparent border-none text-text-muted hover:text-white cursor-pointer hover:bg-bg-hover flex items-center transition-colors"
             >
               <SidebarClose size={15} />
             </button>
@@ -604,21 +549,21 @@ export default function ChatPage() {
           <div className="p-3 pb-1.5">
             <button
               onClick={startNewChat}
-              className="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold bg-amber-500/[0.07] hover:bg-amber-500/[0.12] text-amber-300 border border-amber-500/20 cursor-pointer transition-all duration-200"
+              className="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 border border-brand-500/20 cursor-pointer transition-all duration-300 shadow-sm"
             >
-              <Plus size={15} className="flex-shrink-0" />
+              <Plus size={16} className="flex-shrink-0" />
               New conversation
             </button>
           </div>
 
-          {/* Conversation list with date groupings */}
+          {/* Conversation list */}
           <div className="flex-1 overflow-y-auto px-3 py-2">
             {sessions.length > 0 ? (() => {
               const todayStart = new Date(); todayStart.setHours(0,0,0,0);
               const yesterdayStart = new Date(todayStart); yesterdayStart.setDate(todayStart.getDate() - 1);
               const weekStart = new Date(todayStart); weekStart.setDate(todayStart.getDate() - 7);
 
-              const groups: Array<{ label: string; items: typeof sessions }> = [
+              const groups = [
                 { label: "Today", items: sessions.filter(s => s.updatedAt >= todayStart.getTime()) },
                 { label: "Yesterday", items: sessions.filter(s => s.updatedAt >= yesterdayStart.getTime() && s.updatedAt < todayStart.getTime()) },
                 { label: "This Week", items: sessions.filter(s => s.updatedAt >= weekStart.getTime() && s.updatedAt < yesterdayStart.getTime()) },
@@ -626,33 +571,33 @@ export default function ChatPage() {
               ].filter(g => g.items.length > 0);
 
               return (
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-2">
                   {groups.map((group) => (
-                    <div key={group.label} className="flex flex-col gap-0.5">
-                      <p className="px-2 py-1.5 text-[9px] font-extrabold tracking-wider uppercase text-[#5a5a72]">
+                    <div key={group.label} className="flex flex-col gap-1">
+                      <p className="px-2 py-1.5 text-xs font-bold tracking-widest uppercase text-text-dim">
                         {group.label}
                       </p>
                       {group.items.map((s) => (
                         <div
                           key={s.id}
                           onClick={() => loadSession(s.id)}
-                          className={`group flex justify-between items-center px-3 py-2 rounded-xl cursor-pointer transition-all duration-150 border ${
+                          className={`group flex justify-between items-center px-3 py-2 rounded-xl cursor-pointer transition-all duration-200 border ${
                             currentSessionId === s.id 
-                              ? "bg-white/[0.04] border-white/[0.06] text-white" 
-                              : "bg-transparent border-transparent text-[#9898b0] hover:bg-white/[0.02]"
+                              ? "bg-bg-hover border-border-strong text-white shadow-sm" 
+                              : "bg-transparent border-transparent text-text-muted hover:bg-bg-elevated hover:text-text-main"
                           }`}
                         >
                           <div className="overflow-hidden text-ellipsis whitespace-nowrap flex-1 pr-2">
-                            <p className="text-[12.5px] font-medium overflow-hidden text-ellipsis">{s.title}</p>
-                            <p className="text-[10px] text-[#5a5a72] mt-0.5">
+                            <p className="text-[13px] font-medium overflow-hidden text-ellipsis">{s.title}</p>
+                            <p className="text-[10px] text-text-dim mt-0.5">
                               {s.messages.length} msg{s.messages.length !== 1 ? "s" : ""}
                             </p>
                           </div>
                           <button
                             onClick={(e) => deleteSession(e, s.id)}
-                            className="p-1 rounded-lg bg-transparent border-none text-[#5a5a72] hover:text-[#f5645a] hover:bg-[#f5645a]/10 cursor-pointer flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="p-1 rounded-lg bg-transparent border-none text-text-dim hover:text-red-400 hover:bg-red-500/10 cursor-pointer flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
                           >
-                            <Trash2 size={13} />
+                            <Trash2 size={14} />
                           </button>
                         </div>
                       ))}
@@ -661,52 +606,32 @@ export default function ChatPage() {
                 </div>
               );
             })() : (
-              <p className="text-xs text-[#5a5a72] text-center py-6">No recent chats</p>
+              <p className="text-xs text-text-dim text-center py-6">No recent chats</p>
             )}
           </div>
 
           {/* Sidebar footer */}
-          <div className="p-3 border-t border-white/[0.06] flex flex-col gap-0.5">
+          <div className="p-3 border-t border-border-dim flex flex-col gap-1">
             <Link href="/" className="no-underline">
-              <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs bg-transparent border-none cursor-pointer text-[#9898b0] hover:text-white hover:bg-white/[0.03] transition-all">
-                <ArrowLeft size={14} />
+              <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium bg-transparent border-none cursor-pointer text-text-muted hover:text-white hover:bg-bg-hover transition-colors">
+                <ArrowLeft size={16} />
                 Back to Home
               </button>
             </Link>
             
             <button
               onClick={() => setSettingsOpen(true)}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs bg-transparent border-none cursor-pointer text-[#9898b0] hover:text-white hover:bg-white/[0.03] transition-all"
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium bg-transparent border-none cursor-pointer text-text-muted hover:text-white hover:bg-bg-hover transition-colors"
             >
-              <Settings size={14} />
+              <Settings size={16} />
               Settings
             </button>
 
             <Link href="/discover" className="no-underline">
-              <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs bg-transparent border-none cursor-pointer text-[#9898b0] hover:text-white hover:bg-white/[0.03] transition-all">
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
-                </svg>
+              <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium bg-transparent border-none cursor-pointer text-text-muted hover:text-white hover:bg-bg-hover transition-colors">
+                <CompassIcon />
                 Discover
-                <span className="ml-auto text-[8px] font-extrabold px-1.5 py-0.5 bg-amber-500/10 text-amber-300 rounded">NEW</span>
-              </button>
-            </Link>
-
-            <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs bg-transparent border-none cursor-pointer text-[#9898b0] hover:text-white hover:bg-white/[0.03] transition-all">
-              <Wrench size={14} />
-              Tools
-            </button>
-
-            <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs bg-transparent border-none cursor-pointer text-[#9898b0] hover:text-white hover:bg-white/[0.03] transition-all">
-              <Info size={14} />
-              About
-            </button>
-
-            <Link href="/privacy" className="no-underline">
-              <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs bg-transparent border-none cursor-pointer text-[#9898b0] hover:text-white hover:bg-white/[0.03] transition-all">
-                <Shield size={14} />
-                Privacy
+                <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 bg-brand-500/20 text-brand-300 rounded">NEW</span>
               </button>
             </Link>
           </div>
@@ -717,42 +642,42 @@ export default function ChatPage() {
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative z-10">
 
         {/* Top Header Bar */}
-        <header className="flex-shrink-0 h-14 flex items-center justify-between px-4 bg-[#111116]/80 backdrop-blur-md border-b border-white/[0.06] relative z-40 shadow-[0_2px_15px_rgba(0,0,0,0.3)]">
+        <header className="flex-shrink-0 h-16 flex items-center justify-between px-4 bg-bg-panel/80 backdrop-blur-xl border-b border-border-dim relative z-40 shadow-sm">
           <div className="flex items-center gap-2">
             {!sidebarOpen && (
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="p-1.5 rounded-lg bg-transparent border-none text-[#9898b0] hover:text-white cursor-pointer hover:bg-white/[0.03] flex"
+                className="p-2 rounded-lg bg-transparent border-none text-text-muted hover:text-white cursor-pointer hover:bg-bg-hover flex"
               >
-                <SidebarOpen size={16} />
+                <SidebarOpen size={18} />
               </button>
             )}
 
             <button
               onClick={startNewChat}
               title="New chat"
-              className="p-1.5 rounded-lg bg-transparent border-none text-[#9898b0] hover:text-white cursor-pointer hover:bg-white/[0.03] flex"
+              className="p-2 rounded-lg bg-transparent border-none text-text-muted hover:text-white cursor-pointer hover:bg-bg-hover flex"
             >
-              <SquarePen size={16} />
+              <SquarePen size={18} />
             </button>
 
             {/* Model Selector Dropdown Button */}
-            <div className="relative ml-1">
+            <div className="relative ml-2">
               <button
                 onClick={() => {
                   if (modelOpen) setShowAllModels(false);
                   setModelOpen(!modelOpen);
                 }}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer border transition-colors ${
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold cursor-pointer border transition-colors ${
                   modelOpen 
-                    ? "bg-[#1c1c24] border-white/[0.12] text-white" 
-                    : "bg-[#16161c] border-white/[0.06] text-[#9898b0] hover:text-white"
+                    ? "bg-bg-hover border-border-strong text-white shadow-sm" 
+                    : "bg-bg-elevated border-border-dim text-text-muted hover:text-white hover:border-border-subtle"
                 }`}
               >
-                <MIcon size={14} />
+                <MIcon size={16} />
                 {selectedModel.label}
                 <svg 
-                  className={`w-3 h-3 transition-transform duration-200 ${modelOpen ? "rotate-180" : "rotate-0"}`} 
+                  className={`w-3.5 h-3.5 transition-transform duration-200 ${modelOpen ? "rotate-180" : "rotate-0"}`} 
                   viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
                 >
                   <path d="M6 9l6 6 6-6" />
@@ -767,7 +692,7 @@ export default function ChatPage() {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 8, scale: 0.96 }}
                     transition={{ duration: 0.15, ease: "easeOut" }}
-                    className="absolute top-[calc(100%+6px)] left-0 w-60 z-[100] bg-[#16161c] border border-white/[0.08] rounded-xl p-1 shadow-[0_12px_40px_rgba(0,0,0,0.6)] max-h-96 overflow-y-auto"
+                    className="absolute top-[calc(100%+8px)] left-0 w-64 z-[100] bg-bg-panel border border-border-strong rounded-xl p-1.5 shadow-2xl shadow-black/50 max-h-96 overflow-y-auto"
                   >
                     {(showAllModels ? MODEL_OPTIONS : MODEL_OPTIONS.slice(0, 4)).map((m) => {
                       const ModelIcon = m.Icon;
@@ -776,19 +701,19 @@ export default function ChatPage() {
                         <button
                           key={m.id}
                           onClick={() => { setModelId(m.id); setModelOpen(false); setShowAllModels(false); }}
-                          className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs border-none cursor-pointer text-left transition-colors ${
+                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm border-none cursor-pointer text-left transition-colors ${
                             isActive 
-                              ? "bg-amber-500/10 text-amber-300 font-bold" 
-                              : "bg-transparent text-[#9898b0] hover:bg-white/[0.03] hover:text-white"
+                              ? "bg-brand-500/15 text-brand-300 font-bold" 
+                              : "bg-transparent text-text-muted hover:bg-bg-hover hover:text-white"
                           }`}
                         >
-                          <ModelIcon size={15} />
+                          <ModelIcon size={16} />
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold leading-tight">{m.label}</p>
-                            <p className="text-[10px] text-[#5a5a72] mt-0.5 truncate">{m.desc}</p>
+                            <p className="text-[11px] text-text-dim mt-0.5 truncate">{m.desc}</p>
                           </div>
                           {isActive && (
-                            <svg className="w-3.5 h-3.5 flex-shrink-0 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <svg className="w-4 h-4 flex-shrink-0 text-brand-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                               <path d="M5 13l4 4L19 7" />
                             </svg>
                           )}
@@ -799,7 +724,7 @@ export default function ChatPage() {
                     {!showAllModels && (
                       <button
                         onClick={() => setShowAllModels(true)}
-                        className="w-full py-2.5 mt-1 rounded-lg border border-dashed border-white/[0.1] bg-transparent text-[#5a5a72] hover:text-white hover:bg-white/[0.02] text-[11px] font-bold cursor-pointer transition-colors"
+                        className="w-full py-2.5 mt-1 rounded-lg border border-dashed border-border-strong bg-transparent text-text-dim hover:text-white hover:bg-bg-elevated text-xs font-bold cursor-pointer transition-colors"
                       >
                         Show {MODEL_OPTIONS.length - 4} more models
                       </button>
@@ -811,11 +736,11 @@ export default function ChatPage() {
           </div>
 
           {/* Right Action Menu */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             {!session && (
               <button 
                 onClick={() => router.push("/signin")} 
-                className="px-3.5 py-1.5 rounded-lg bg-white text-black text-xs font-bold border-none cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-white hover:bg-gray-100 text-bg-base text-sm font-bold border-none cursor-pointer transition-colors shadow-sm"
               >
                 Sign In
               </button>
@@ -825,34 +750,19 @@ export default function ChatPage() {
             <div className="relative">
               <button 
                 onClick={() => setExportOpen(!exportOpen)} 
-                className="p-1.5 rounded-lg bg-transparent border-none text-[#9898b0] hover:text-white cursor-pointer hover:bg-white/[0.03] flex"
+                className="p-2 rounded-lg bg-transparent border-none text-text-muted hover:text-white cursor-pointer hover:bg-bg-hover flex"
               >
-                <Download size={15} />
+                <Download size={18} />
               </button>
               {exportOpen && (
                 <>
                   <div className="fixed inset-0 z-[45]" onClick={() => setExportOpen(false)} />
                   <div 
-                    className="absolute top-full right-0 mt-1.5 bg-[#16161c] border border-white/[0.08] rounded-lg p-1 w-28 z-[100] shadow-[0_8px_24px_rgba(0,0,0,0.5)]"
+                    className="absolute top-full right-0 mt-2 bg-bg-panel border border-border-strong rounded-xl p-1.5 w-36 z-[100] shadow-2xl shadow-black/50"
                   >
-                    <button 
-                      onClick={() => { exportChat("pdf"); setExportOpen(false); }} 
-                      className="w-full p-2 bg-transparent border-none rounded-md text-white text-xs text-left cursor-pointer hover:bg-white/[0.03]"
-                    >
-                      Save as PDF
-                    </button>
-                    <button 
-                      onClick={() => { exportChat("doc"); setExportOpen(false); }} 
-                      className="w-full p-2 bg-transparent border-none rounded-md text-white text-xs text-left cursor-pointer hover:bg-white/[0.03]"
-                    >
-                      Export DOC
-                    </button>
-                    <button 
-                      onClick={() => { exportChat("json"); setExportOpen(false); }} 
-                      className="w-full p-2 bg-transparent border-none rounded-md text-white text-xs text-left cursor-pointer hover:bg-white/[0.03]"
-                    >
-                      Export JSON
-                    </button>
+                    <button onClick={() => { exportChat("pdf"); setExportOpen(false); }} className="w-full px-3 py-2.5 bg-transparent border-none rounded-lg text-white text-sm font-medium text-left cursor-pointer hover:bg-bg-hover transition-colors">Save as PDF</button>
+                    <button onClick={() => { exportChat("doc"); setExportOpen(false); }} className="w-full px-3 py-2.5 bg-transparent border-none rounded-lg text-white text-sm font-medium text-left cursor-pointer hover:bg-bg-hover transition-colors">Export DOC</button>
+                    <button onClick={() => { exportChat("json"); setExportOpen(false); }} className="w-full px-3 py-2.5 bg-transparent border-none rounded-lg text-white text-sm font-medium text-left cursor-pointer hover:bg-bg-hover transition-colors">Export JSON</button>
                   </div>
                 </>
               )}
@@ -863,29 +773,27 @@ export default function ChatPage() {
         {/* Scrollable Message Area */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden relative min-h-0">
           {messages.length === 0 ? (
-            // Redesigned Empty State suggestions
-            <div className="h-full flex flex-col items-center justify-center p-6 text-center max-w-xl mx-auto z-10 relative">
+            <div className="h-full flex flex-col items-center justify-center p-6 text-center max-w-2xl mx-auto z-10 relative">
               <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-300 flex items-center justify-center shadow-[0_8px_25px_rgba(242,169,59,0.3)] mb-6"
+                className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center shadow-lg shadow-brand-500/20 mb-6"
               >
-                <AstraIcon size={30} />
+                <AstraIcon size={32} className="text-white" />
               </motion.div>
               
-              <h1 className="text-2xl font-extrabold tracking-tight mb-2 font-display text-white">How can I help?</h1>
-              <p className="text-xs text-[#9898b0] mb-8">
-                Orchestrating <span className="text-amber-300 font-bold">{selectedModel.label}</span> · {selectedModel.desc}
+              <h1 className="text-3xl font-display font-extrabold tracking-tight mb-2 text-white">How can I help?</h1>
+              <p className="text-sm text-text-muted mb-10">
+                Orchestrating <span className="text-brand-300 font-bold">{selectedModel.label}</span> · {selectedModel.desc}
               </p>
 
-              {/* Suggestions grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
                 {EMPTY_SUGGESTIONS.map((s) => (
                   <button 
                     key={s} 
                     onClick={() => handleSend(s)} 
-                    className="text-left p-4 rounded-2xl text-xs sm:text-[13px] font-normal bg-[#16161c]/60 hover:bg-[#1a1a22]/70 border border-white/[0.05] hover:border-amber-500/20 text-[#9898b0] hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5"
+                    className="text-left p-4 rounded-2xl text-sm font-medium bg-bg-elevated hover:bg-bg-hover border border-border-dim hover:border-brand-500/30 text-text-muted hover:text-white cursor-pointer transition-all duration-300 hover-lift"
                   >
                     {s}
                   </button>
@@ -893,9 +801,9 @@ export default function ChatPage() {
               </div>
             </div>
           ) : (
-            <div className="max-w-3xl mx-auto px-6 py-8">
+            <div className="max-w-4xl mx-auto px-6 py-8">
               {messages.map((msg) => (
-                <div key={msg.id} className="mb-7">
+                <div key={msg.id} className="mb-8">
                   <MessageBubble
                     {...msg}
                     sources={msg.sources}
@@ -912,12 +820,12 @@ export default function ChatPage() {
         </div>
 
         {/* Input composer area */}
-        <div className="flex-shrink-0 p-3 sm:p-4 bg-[#0c0c0e]">
-          <div className="max-w-3xl mx-auto">
+        <div className="flex-shrink-0 p-4 sm:p-6 bg-gradient-to-t from-bg-base via-bg-base/95 to-transparent">
+          <div className="max-w-4xl mx-auto relative">
             {searchingWeb && (
-              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/[0.08] border border-amber-500/15 w-fit mx-auto mb-3.5 shadow-sm">
-                <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                <span className="text-[11px] text-amber-300 font-semibold">Searching the web...</span>
+              <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/20 w-fit mx-auto mb-4 shadow-sm backdrop-blur-md">
+                <div className="w-2 h-2 rounded-full bg-brand-400 animate-pulse" />
+                <span className="text-xs text-brand-300 font-bold tracking-wide">Searching the web...</span>
               </div>
             )}
             
@@ -932,20 +840,18 @@ export default function ChatPage() {
               onResearchModeChange={setResearchModePersist}
             />
             
-            <p className="text-center text-[10px] text-[#5a5a72] mt-2.5">
+            <p className="text-center text-xs text-text-dim mt-4">
               AI can make mistakes. Verify critical output. ·{" "}
-              <a href="/disclaimer" className="text-[#5a5a72] underline underline-offset-2 hover:text-[#9898b0]">Disclaimer</a>
+              <a href="/disclaimer" className="text-text-dim underline underline-offset-2 hover:text-text-muted transition-colors">Disclaimer</a>
             </p>
           </div>
         </div>
       </main>
 
-      {/* Click-away overlay to close model selector */}
       {modelOpen && (
         <div className="fixed inset-0 z-[45]" onClick={() => { setModelOpen(false); setShowAllModels(false); }} />
       )}
 
-      {/* Settings Dialog */}
       <SettingsModal
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
@@ -960,5 +866,15 @@ export default function ChatPage() {
         }}
       />
     </div>
+  );
+}
+
+// Quick helper to render a compass icon
+function CompassIcon(props: any) {
+  return (
+    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="12" cy="12" r="10"></circle>
+      <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
+    </svg>
   );
 }
