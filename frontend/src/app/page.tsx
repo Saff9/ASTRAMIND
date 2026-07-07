@@ -309,35 +309,35 @@ export default function HomePage() {
           {[...Array(2)].map((_, i) => (
             <div key={i} className="flex w-1/2 justify-around items-center px-10">
               <div className="flex items-center gap-3 text-text-muted hover:text-white transition-colors duration-300 cursor-default group">
-                <Code2 size={24} className="text-brand-400 transition-transform group-hover:scale-110" /> 
+                <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg" alt="Python" className="w-7 h-7 transition-transform group-hover:scale-110" /> 
                 <span className="font-display font-bold text-xl group-hover:text-white">Python 3</span>
               </div>
               <div className="flex items-center gap-3 text-text-muted hover:text-white transition-colors duration-300 cursor-default group">
-                <Code2 size={24} className="text-[#3b82f6] transition-transform group-hover:scale-110" /> 
+                <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/cplusplus/cplusplus-original.svg" alt="C++" className="w-7 h-7 transition-transform group-hover:scale-110" /> 
                 <span className="font-display font-bold text-xl group-hover:text-white">C++ (GCC)</span>
               </div>
               <div className="flex items-center gap-3 text-text-muted hover:text-white transition-colors duration-300 cursor-default group">
-                <Code2 size={24} className="text-[#f59e0b] transition-transform group-hover:scale-110" /> 
+                <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/java/java-original.svg" alt="Java" className="w-7 h-7 transition-transform group-hover:scale-110" /> 
                 <span className="font-display font-bold text-xl group-hover:text-white">Java (JDK)</span>
               </div>
               <div className="flex items-center gap-3 text-text-muted hover:text-white transition-colors duration-300 cursor-default group">
-                <Code2 size={24} className="text-[#10b981] transition-transform group-hover:scale-110" /> 
+                <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/javascript/javascript-original.svg" alt="JavaScript" className="w-7 h-7 transition-transform group-hover:scale-110" /> 
                 <span className="font-display font-bold text-xl group-hover:text-white">JavaScript</span>
               </div>
               <div className="flex items-center gap-3 text-text-muted hover:text-white transition-colors duration-300 cursor-default group">
-                <Code2 size={24} className="text-[#6366f1] transition-transform group-hover:scale-110" /> 
+                <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/typescript/typescript-original.svg" alt="TypeScript" className="w-7 h-7 transition-transform group-hover:scale-110" /> 
                 <span className="font-display font-bold text-xl group-hover:text-white">TypeScript</span>
               </div>
               <div className="flex items-center gap-3 text-text-muted hover:text-white transition-colors duration-300 cursor-default group">
-                <GitBranch size={24} className="text-[#ef4444] transition-transform group-hover:scale-110" /> 
+                <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/git/git-original.svg" alt="Git" className="w-7 h-7 transition-transform group-hover:scale-110" /> 
                 <span className="font-display font-bold text-xl group-hover:text-white">Git (VCS)</span>
               </div>
               <div className="flex items-center gap-3 text-text-muted hover:text-white transition-colors duration-300 cursor-default group">
-                <Code2 size={24} className="text-[#a855f7] transition-transform group-hover:scale-110" /> 
+                <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/mysql/mysql-original.svg" alt="SQL" className="w-7 h-7 transition-transform group-hover:scale-110" /> 
                 <span className="font-display font-bold text-xl group-hover:text-white">SQL Databases</span>
               </div>
               <div className="flex items-center gap-3 text-text-muted hover:text-white transition-colors duration-300 cursor-default group">
-                <Globe size={24} className="text-[#ec4899] transition-transform group-hover:scale-110" /> 
+                <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/html5/html5-original.svg" alt="HTML5" className="w-7 h-7 transition-transform group-hover:scale-110" /> 
                 <span className="font-display font-bold text-xl group-hover:text-white">HTML & CSS</span>
               </div>
             </div>
