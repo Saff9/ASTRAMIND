@@ -140,25 +140,25 @@ function getToolIcon(tool: string) {
 // ─── Model icon mapping ───────────────────────────────────────────────────────
 
 function getModelInfo(modelId?: string) {
-  if (!modelId) return { name: "ASTRAMIND", Icon: AstraIcon };
+  if (!modelId) return { name: "Prof. Astra", Icon: AstraIcon };
   
   switch(modelId) {
     case "claude-4.8":
-    case "claude-3-7-sonnet": return { name: "Claude", Icon: ClaudeIcon };
-    case "gpt-4.5": return { name: "GPT-4.5", Icon: QGPTIcon };
-    case "qgpt": return { name: "QGPT Ultra", Icon: OpenAIIcon };
-    case "gemini-2.0": return { name: "Gemini", Icon: GeminiIcon };
+    case "claude-3-7-sonnet": return { name: "Prof. Astra (Claude)", Icon: ClaudeIcon };
+    case "gpt-4.5": return { name: "Prof. Astra (GPT-4.5)", Icon: OpenAIIcon };
+    case "qgpt": return { name: "Prof. Astra (QGPT Ultra)", Icon: OpenAIIcon };
+    case "gemini-2.0": return { name: "Prof. Astra (Gemini)", Icon: GeminiIcon };
     case "sonar-huge":
-    case "perplexity": return { name: "Perplexity", Icon: PerplexityIcon };
-    case "meta": return { name: "Meta Llama", Icon: MetaIcon };
-    case "grok-coder": return { name: "Grok", Icon: GrokIcon };
-    case "qwen": return { name: "Qwen", Icon: QwenIcon };
+    case "perplexity": return { name: "Prof. Astra (Perplexity)", Icon: PerplexityIcon };
+    case "meta": return { name: "Prof. Astra (Meta Llama)", Icon: MetaIcon };
+    case "grok-coder": return { name: "Prof. Astra (Grok)", Icon: GrokIcon };
+    case "qwen": return { name: "Prof. Astra (Qwen)", Icon: QwenIcon };
     case "deepseek-nlu":
-    case "deepseek-reasoner": return { name: "DeepSeek", Icon: DeepSeekIcon };
-    case "mistral-large": return { name: "Mistral", Icon: MistralIcon };
-    case "kimi": return { name: "Kimi", Icon: KimiIcon };
-    case "llama-3.3-70b": return { name: "Groq Llama", Icon: GroqLogoIcon };
-    default: return { name: "ASTRAMIND", Icon: AstraIcon };
+    case "deepseek-reasoner": return { name: "Prof. Astra (DeepSeek)", Icon: DeepSeekIcon };
+    case "mistral-large": return { name: "Prof. Astra (Mistral)", Icon: MistralIcon };
+    case "kimi": return { name: "Prof. Astra (Kimi)", Icon: KimiIcon };
+    case "llama-3.3-70b": return { name: "Prof. Astra (Groq Llama)", Icon: GroqLogoIcon };
+    default: return { name: "Prof. Astra", Icon: AstraIcon };
   }
 }
 

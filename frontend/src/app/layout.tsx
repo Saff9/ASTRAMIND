@@ -19,13 +19,13 @@ const pacifico = Pacifico({ variable: "--font-pacifico", subsets: ["latin"], wei
 const spaceMono = Space_Mono({ variable: "--font-space-mono", subsets: ["latin"], weight: ["400", "700"], display: "optional", preload: false });
 
 export const metadata: Metadata = {
-  title: "ASTRAMIND — The Intelligent AI Orchestration Platform",
-  description: "Access GPT-4.5, Claude 3.7, Gemini 2.0, DeepSeek R1, and 15+ other cutting-edge AI models in one unified, lightning-fast platform with real-time web search.",
-  keywords: ["AI", "Artificial Intelligence", "GPT-4", "Claude", "Gemini", "DeepSeek", "LLM", "Chatbot", "AI Orchestration", "ASTRAMIND"],
+  title: "ASTRAMIND — Your Socratic Programming Professor",
+  description: "Learn programming (Python, C++, Java, JS/TS, Git) with Prof. Astra. An interactive, Socratic coding professor that builds critical thinking, quizzes your understanding, and finds the best resources.",
+  keywords: ["AI Programming Professor", "Learn Python", "Learn C++", "Learn Java", "Socratic Coding Tutor", "AI Programming Mentor", "ASTRAMIND", "Prof. Astra"],
   authors: [{ name: "ASTRAMIND Team" }],
   openGraph: {
-    title: "ASTRAMIND — AI, your way",
-    description: "The world's fastest multi-AI platform. Chat with GPT-4, Claude, Gemini, and more in one unified interface.",
+    title: "ASTRAMIND — Socratic AI Programming Professor",
+    description: "Learn Python, C++, Java, JS/TS, Git and more with Prof. Astra. Interactive Socratic lessons, real-time code execution guidance, resources, and custom quizzes.",
     url: "https://astramind-lake.vercel.app/",
     siteName: "ASTRAMIND",
     images: [
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
         url: "https://astramind-lake.vercel.app/og-image.png",
         width: 1200,
         height: 630,
-        alt: "ASTRAMIND AI Platform Preview",
+        alt: "ASTRAMIND Programming Professor Preview",
       },
     ],
     locale: "en_US",
@@ -41,8 +41,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "ASTRAMIND — The Ultimate AI Assistant",
-    description: "One interface. Every frontier model. Sub-50ms latency. Try ASTRAMIND for free today.",
+    title: "ASTRAMIND — Interactive Socratic Programming Professor",
+    description: "Learn Python, C++, Java, JS/TS, Git and more with Prof. Astra. Socratic lessons, quizzes, and live resource finding.",
     images: ["https://astramind-lake.vercel.app/og-image.png"],
     creator: "@astramind_ai",
   },
@@ -65,8 +65,8 @@ const jsonLd = {
   "@type": "SoftwareApplication",
   "name": "ASTRAMIND",
   "operatingSystem": "Web",
-  "applicationCategory": "UtilitiesApplication",
-  "description": "An intelligent AI orchestration layer allowing users to chat with OpenAI, Anthropic, Google, and other leading language models from a single interface.",
+  "applicationCategory": "EducationalApplication",
+  "description": "An interactive, Socratic AI Programming Professor named Prof. Astra, teaching Python, C/C++, Java, JavaScript, TypeScript, and software engineering concepts.",
   "offers": {
     "@type": "Offer",
     "price": "0",

@@ -15,11 +15,11 @@ import {
 import { neonAuthClient } from "@/lib/auth-client";
 
 const PROMPTS = [
-  "Explain quantum entanglement simply",
-  "Write a Python web scraper",
-  "Analyze the French Revolution",
-  "Debug my async/await code",
-  "Summarize this research paper",
+  "Teach me Python recursion step-by-step Socratic style",
+  "Why is my C++ pointer causing a segmentation fault?",
+  "Give me an intermediate JavaScript logic quiz!",
+  "Explain the difference between Git rebase and merge",
+  "Professor, how do I structure Java abstract classes?",
 ];
 
 const PROVIDERS = [
@@ -38,17 +38,17 @@ const PROVIDERS = [
 ];
 
 const FEATURES = [
-  { icon: <Zap className="w-5 h-5 text-brand-400" />,      title: "Sub-50ms responses",      desc: "Groq's LPU delivers lightning responses. Smart routing picks the fastest available provider." },
-  { icon: <GitBranch className="w-5 h-5 text-accent-500" />, title: "Multi-provider fallback",  desc: "Never go down. Circuit breakers automatically reroute to secondary providers." },
-  { icon: <Shield className="w-5 h-5 text-emerald-400" />,   title: "Zero-trust security",      desc: "JWT auth, prompt injection detection, content filtering, and rate limiting baked in." },
-  { icon: <Globe className="w-5 h-5 text-blue-400" />,    title: "Web-augmented answers",   desc: "Real-time web search for up-to-date answers. No more knowledge cutoffs." },
+  { icon: <Zap className="w-5 h-5 text-brand-400" />,      title: "Socratic Pedagogy",      desc: "Develop deep critical thinking. Prof. Astra guides you step-by-step rather than just spoon-feeding you the code." },
+  { icon: <GitBranch className="w-5 h-5 text-accent-500" />, title: "Interactive Quizzes",    desc: "End each topic with custom code challenges, multiple-choice quizzes, and conceptual questions." },
+  { icon: <Shield className="w-5 h-5 text-emerald-400" />,   title: "Pre-installed Sandbox",  desc: "Simulate and learn built-in tools. Run Python, Git, JDK, Node.js, and GCC (C/C++) in local-first paths." },
+  { icon: <Globe className="w-5 h-5 text-blue-400" />,    title: "Resource Finder",        desc: "Find the absolute best official docs, books, and interactive resources tailored for your level." },
 ];
 
 const SUGGESTIONS = [
-  { icon: <Code2 className="w-4 h-4" />,       label: "Write code" },
-  { icon: <Search className="w-4 h-4" />,       label: "Search the web" },
-  { icon: <Lightbulb className="w-4 h-4" />,    label: "Brainstorm ideas" },
-  { icon: <MessageSquare className="w-4 h-4" />, label: "Answer questions" },
+  { icon: <Code2 className="w-4 h-4" />,       label: "Learn Python" },
+  { icon: <Search className="w-4 h-4" />,       label: "Socratic C++ Tutor" },
+  { icon: <Lightbulb className="w-4 h-4" />,    label: "Quiz Me on Java" },
+  { icon: <MessageSquare className="w-4 h-4" />, label: "Git & Web Dev Help" },
 ];
 
 export default function HomePage() {
@@ -186,21 +186,21 @@ export default function HomePage() {
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-panel border border-brand-500/30 mb-8 shimmer">
             <span className="w-2 h-2 rounded-full bg-brand-400 animate-pulse" />
             <span className="text-[11px] font-bold text-brand-300 tracking-widest uppercase">
-              10+ Frontier AI Providers Enabled
+              Personal Socratic Coding Professor
             </span>
           </div>
 
           {/* Core Title */}
           <h1 className="text-5xl sm:text-7xl font-display font-extrabold tracking-tighter leading-[1.1] mb-6">
-            <span className="block text-white mb-2">Ask anything.</span>
+            <span className="block text-white mb-2">Learn to Code.</span>
             <span className="block text-gradient-brand pb-2">
-              Get smarter answers.
+              Develop Critical Thinking.
             </span>
           </h1>
 
           {/* Description */}
           <p className="text-base sm:text-lg text-text-muted leading-relaxed max-w-2xl mx-auto mb-12">
-            ASTRAMIND routes your prompt to the best model—Groq, Claude, Gemini, DeepSeek and more—with automated failover, web synthesis, and lightning-fast developer skills.
+            ASTRAMIND is your personal human-like programming professor, <strong>Prof. Astra</strong>. Expert in Python, C/C++, Java, JS/TS, and Git. Designed to guide beginners and intermediates Socratic-style through challenges, quizzes, and resources.
           </p>
 
           {/* Composer Typing Simulation Card */}
@@ -299,7 +299,7 @@ export default function HomePage() {
       {/* ═══ TRUSTED BY MARQUEE ═══ */}
       <section className="relative z-10 py-12 border-y border-border-dim bg-bg-panel/50 backdrop-blur-sm overflow-hidden mb-20">
         <p className="text-center text-xs font-extrabold tracking-widest uppercase text-text-dim mb-8">
-          Supported Architectures & Frameworks
+          Core Languages & Environments Taught
         </p>
         
         <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-bg-base to-transparent z-[2] pointer-events-none" />
@@ -309,36 +309,36 @@ export default function HomePage() {
           {[...Array(2)].map((_, i) => (
             <div key={i} className="flex w-1/2 justify-around items-center px-10">
               <div className="flex items-center gap-3 text-text-muted hover:text-white transition-colors duration-300 cursor-default group">
-                <OpenAIIcon size={30} className="transition-transform group-hover:scale-110" /> 
-                <span className="font-display font-bold text-xl group-hover:text-white">ChatGPT</span>
+                <Code2 size={24} className="text-brand-400 transition-transform group-hover:scale-110" /> 
+                <span className="font-display font-bold text-xl group-hover:text-white">Python 3</span>
               </div>
               <div className="flex items-center gap-3 text-text-muted hover:text-white transition-colors duration-300 cursor-default group">
-                <ClaudeIcon size={30} className="transition-transform group-hover:scale-110" /> 
-                <span className="font-display font-bold text-xl group-hover:text-white">Anthropic</span>
+                <Code2 size={24} className="text-[#3b82f6] transition-transform group-hover:scale-110" /> 
+                <span className="font-display font-bold text-xl group-hover:text-white">C++ (GCC)</span>
               </div>
               <div className="flex items-center gap-3 text-text-muted hover:text-white transition-colors duration-300 cursor-default group">
-                <GeminiIcon size={30} className="transition-transform group-hover:scale-110" /> 
-                <span className="font-display font-bold text-xl group-hover:text-white">Gemini</span>
+                <Code2 size={24} className="text-[#f59e0b] transition-transform group-hover:scale-110" /> 
+                <span className="font-display font-bold text-xl group-hover:text-white">Java (JDK)</span>
               </div>
               <div className="flex items-center gap-3 text-text-muted hover:text-white transition-colors duration-300 cursor-default group">
-                <DeepSeekIcon size={30} className="transition-transform group-hover:scale-110" /> 
-                <span className="font-display font-bold text-xl group-hover:text-white">DeepSeek</span>
+                <Code2 size={24} className="text-[#10b981] transition-transform group-hover:scale-110" /> 
+                <span className="font-display font-bold text-xl group-hover:text-white">JavaScript</span>
               </div>
               <div className="flex items-center gap-3 text-text-muted hover:text-white transition-colors duration-300 cursor-default group">
-                <MistralIcon size={30} className="transition-transform group-hover:scale-110" /> 
-                <span className="font-display font-bold text-xl group-hover:text-white">Mistral</span>
+                <Code2 size={24} className="text-[#6366f1] transition-transform group-hover:scale-110" /> 
+                <span className="font-display font-bold text-xl group-hover:text-white">TypeScript</span>
               </div>
               <div className="flex items-center gap-3 text-text-muted hover:text-white transition-colors duration-300 cursor-default group">
-                <PerplexityIcon size={30} className="transition-transform group-hover:scale-110" /> 
-                <span className="font-display font-bold text-xl group-hover:text-white">Perplexity</span>
+                <GitBranch size={24} className="text-[#ef4444] transition-transform group-hover:scale-110" /> 
+                <span className="font-display font-bold text-xl group-hover:text-white">Git (VCS)</span>
               </div>
               <div className="flex items-center gap-3 text-text-muted hover:text-white transition-colors duration-300 cursor-default group">
-                <MetaIcon size={30} className="transition-transform group-hover:scale-110" /> 
-                <span className="font-display font-bold text-xl group-hover:text-white">Meta AI</span>
+                <Code2 size={24} className="text-[#a855f7] transition-transform group-hover:scale-110" /> 
+                <span className="font-display font-bold text-xl group-hover:text-white">SQL Databases</span>
               </div>
               <div className="flex items-center gap-3 text-text-muted hover:text-white transition-colors duration-300 cursor-default group">
-                <GroqLogoIcon size={30} className="transition-transform group-hover:scale-110" /> 
-                <span className="font-display font-bold text-xl group-hover:text-white">Groq</span>
+                <Globe size={24} className="text-[#ec4899] transition-transform group-hover:scale-110" /> 
+                <span className="font-display font-bold text-xl group-hover:text-white">HTML & CSS</span>
               </div>
             </div>
           ))}
@@ -348,9 +348,9 @@ export default function HomePage() {
       {/* ═══ FEATURES ═══ */}
       <section id="features" className="max-w-6xl mx-auto px-6 py-20 relative z-10">
         <div className="text-center mb-16">
-          <h2 className="text-3xl sm:text-4xl font-display font-extrabold tracking-tight mb-4">Built for reliability at scale</h2>
+          <h2 className="text-3xl sm:text-4xl font-display font-extrabold tracking-tight mb-4">The Socratic Coding Journey</h2>
           <p className="text-text-muted text-lg max-w-2xl mx-auto">
-            Not just another basic API wrapper. A complex, local-first orchestration client designed for speed and power.
+            A real professor doesn't just hand you the answer. Prof. Astra leverages advanced pedagogy to turn you into a software engineer.
           </p>
         </div>
 
@@ -373,8 +373,8 @@ export default function HomePage() {
           <div className="absolute top-0 right-0 w-96 h-96 bg-brand-500/5 blur-[100px] rounded-full pointer-events-none" />
           
           <div className="text-center mb-12">
-            <h2 className="text-2xl sm:text-3xl font-display font-extrabold mb-3">Dynamic Routing & Latency</h2>
-            <p className="text-text-muted text-sm">Real-time metrics for our massive selection of supported frontier models.</p>
+            <h2 className="text-2xl sm:text-3xl font-display font-extrabold mb-3">Under the Hood: Prof. Astra's Multi-LLM Brain Network</h2>
+            <p className="text-text-muted text-sm">We dynamically route logic across 10+ frontier engines to compile concepts, check syntax, and deliver lessons.</p>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
@@ -408,7 +408,7 @@ export default function HomePage() {
                 <span className="font-display font-extrabold text-lg tracking-tight text-white">ASTRAMIND</span>
               </div>
               <p className="text-sm text-text-muted leading-relaxed">
-                The ultimate AI routing client. Designed for developers, researchers, and power users.
+                Your Socratic Programming Professor. Teaching Python, C++, Java, JS/TS, Git, and software engineering with interactive quizzes and resource curation.
               </p>
             </div>
 

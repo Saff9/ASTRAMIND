@@ -59,10 +59,10 @@ const MODEL_OPTIONS = [
 ];
 
 const EMPTY_SUGGESTIONS = [
-  "Explain how transformers work in machine learning",
-  "Write a REST API in FastAPI with JWT auth",
-  "What are the best practices for React performance?",
-  "Summarize the key ideas from Atomic Habits",
+  "Professor, quiz me on Python memory management & loop efficiency!",
+  "Help me understand how pointers work in C & C++ step-by-step.",
+  "Give me an intermediate challenge in JavaScript / TypeScript.",
+  "Explain Git rebasing and when I should use it over git merge.",
 ];
 
 const SEARCH_KEYWORDS = [
@@ -298,10 +298,26 @@ export default function ChatPage() {
       }
       if (rawToken) headers["Authorization"] = `Bearer ${rawToken}`;
 
-      const history = messages
-        .filter((m) => !m.loading && (m.role === "user" || m.role === "assistant") && m.content && !m.content.startsWith("**Error:**"))
-        .slice(-100)
-        .map((m) => ({ role: m.role, content: m.content }));
+      const systemInstruction = {
+        role: "system",
+        content: `You are a brilliant, warm, and highly engaging Human Programming Professor named Prof. Astra. You are NOT just another generic AI. Your primary goal is to guide students (from absolute beginners to intermediates) in learning programming, software engineering concepts, and developing strong critical thinking skills.
+Key Pedagogical Guidelines:
+1. Socratic Teaching: Do NOT just output the full code solution immediately when asked. Explain the underlying concept first, give a small example, ask guiding questions, and prompt the student to think. Ask "Why?", "How?", and "When?" to make them reflect and arrive at the solution themselves.
+2. Skill Levels: Adapt to the student's level. For beginners, use simple analogies and explain code line-by-line. For intermediates, discuss design patterns, edge cases, and optimization.
+3. Interactive Challenges: End your explanations with a short, engaging quiz question, fill-in-the-blank, or coding challenge based on what was discussed to test their understanding.
+4. Pre-installed Sandbox: Remind them that in our virtual teaching workspace, they have pre-installed toolchains including Python 3, Node.js/TypeScript, GCC (C/C++ compiler), JDK (Java), and Git. Guide them on using these tools to practice and compile their code.
+5. Resource Finder: Whenever relevant, recommend high-quality learning resources, such as official docs (e.g., docs.python.org, MDN), reputable textbooks, or interactive platforms.
+6. Support all major languages: Python, C, C++, Java, JavaScript, TypeScript, SQL, Rust, Go, HTML/CSS, etc.
+Always address the student with warmth, intellectual rigor, and encouragement as a real human professor would.`
+      };
+
+      const history = [
+        systemInstruction,
+        ...messages
+          .filter((m) => !m.loading && (m.role === "user" || m.role === "assistant") && m.content && !m.content.startsWith("**Error:**"))
+          .slice(-100)
+          .map((m) => ({ role: m.role, content: m.content }))
+      ];
 
       let custom_skills: string | undefined;
       let acp_tools: string | undefined;
@@ -311,7 +327,7 @@ export default function ChatPage() {
       }
 
       const requestBody = {
-        prompt: enrichedPrompt,
+        prompt: `[System Instruction: Act as Prof. Astra, Socratic Programming Professor. Socratic teaching, quizzes, resource finding, pre-installed Python/Git/GCC/Java/Node sandbox. Do not dump complete code immediately.]\n\n${enrichedPrompt}`,
         model: selectedModel.tier || "fast",
         stream: true,
         messages: history.length > 0 ? history : undefined,
@@ -775,9 +791,9 @@ export default function ChatPage() {
                 <AstraIcon size={32} className="text-white" />
               </motion.div>
               
-              <h1 className="text-3xl font-display font-extrabold tracking-tight mb-2 text-white">How can I help?</h1>
+              <h1 className="text-3xl font-display font-extrabold tracking-tight mb-2 text-white">Class is in Session!</h1>
               <p className="text-sm text-text-muted mb-10">
-                Orchestrating <span className="text-brand-300 font-bold">{selectedModel.label}</span> · {selectedModel.desc}
+                I am <span className="text-brand-300 font-bold">Prof. Astra</span>, your Socratic programming professor. Ready to develop your critical thinking? Ask me to explain a concept or start a quiz!
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
